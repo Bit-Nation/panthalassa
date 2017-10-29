@@ -1,5 +1,5 @@
-const secureStorageSpecification = require('./secureStorageSpecification');
-const errors = require('./../errors');
+const secureStorageSpecification = require('./../../lib/specification/secureStorageSpecification');
+const errors = require('./../../lib/errors');
 
 /**
  * Tests the secure storage specification
@@ -25,7 +25,7 @@ describe('secureStorageSpecification', () => {
         // Expect that listed required methods are the same
         // than the exported once form secureStorageSpecification.requiredMethods
         expect(secureStorageSpecification.requiredMethods)
-            .toBe(requiredMethods);
+            .toEqual(requiredMethods);
 
         // Create secure storage implementation
         const secureStorageImplementation = {};
@@ -46,7 +46,7 @@ describe('secureStorageSpecification', () => {
      */
     test('does not satisfy specification', () => {
 
-        expect(secureStorageSpecification({})).toThrow(errors.UnsatisfiedSecureStorageImplementationError)
+        expect(() => secureStorageSpecification.check({})).toThrow('Missing method: "set" in secure storage implementation');
 
     });
 
