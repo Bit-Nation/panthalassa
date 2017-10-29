@@ -1,10 +1,10 @@
 [ignore]
+./lib
 
 [include]
 ./src
 
 [libs]
-./lib
 
 [lints]
 
