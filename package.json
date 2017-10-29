@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npm run flow:build && jest",
+    "test": "npm run flow:build && jest ./src",
     "flow:lint": "flow",
     "flow:build": "flow-remove-types src/ -d lib --pretty"
   },
