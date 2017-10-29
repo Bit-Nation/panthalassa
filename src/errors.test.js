@@ -21,7 +21,7 @@ describe('errors', () => {
 
         const error = new errors.UnsatisfiedSecureStorageImplementationError('foo');
 
-        expect(error.prototype.message)
+        expect(error.message)
             .toBe('Missing method: "foo" in secure storage implementation');
 
     });
