@@ -1,3 +1,5 @@
+// @flow
+
 class InvalidPrivateKeyError extends Error{}
 
 /**
@@ -5,7 +7,7 @@ class InvalidPrivateKeyError extends Error{}
  */
 class UnsatisfiedSecureStorageImplementationError extends Error{
 
-    constructor(missingMethodName) {
+    constructor(missingMethodName: string) {
 
         super('Missing method: "'+missingMethodName+'" in secure storage implementation');
 
