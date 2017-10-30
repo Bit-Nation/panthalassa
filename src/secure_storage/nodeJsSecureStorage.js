@@ -3,6 +3,10 @@ const aes = require('crypto-js/aes');
 const dirty = require('dirty');
 const fs = require('fs');
 
+/////////////////////////////////////////////////////////////////////////////////////
+// This key value storage is not save. It's only intend to be used for development //
+/////////////////////////////////////////////////////////////////////////////////////
+
 /**
  * todo change return type any to a function that returns a promise
  * @param db
