@@ -31,19 +31,17 @@ describe('nodeJsSecureStorage', () => {
 
         const ss = nodeJsSecureStorage('./lib/'+Math.random());
 
+        const remove = ss
+            .set('key', 'value')
+            .then(res => {
+                expect(res).toBeUndefined();
+                return ss
+                    .remove('key')
+            });
+
+
         //Expect the promise to resolve in undefined if it succeed
-        return expect(new Promise((rej, res) => {
-
-            return ss.set('key', 'value')
-                .then(res => {
-                    return ss.has('key')
-                })
-                .then(res => {
-                    expect(res).toBeTruthy();
-                    res(ss.remove('key'));
-                });
-
-        })).resolves.toBeUndefined();
+        return expect(remove).resolves.toBeUndefined();
 
     });
 
