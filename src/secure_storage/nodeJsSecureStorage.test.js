@@ -13,6 +13,20 @@ describe('nodeJsSecureStorage', () => {
 
     });
 
+    test('get', () => {
+
+        const ss = nodeJsSecureStorage('./lib/'+Math.random());
+
+        const name = ss
+            .set('name', 'Florian')
+            .then(res => {
+                return ss.get('name');
+            });
+
+        return expect(name).resolves.toBe('Florian');
+
+    });
+
     test('remove', () => {
 
         const ss = nodeJsSecureStorage('./lib/'+Math.random());
