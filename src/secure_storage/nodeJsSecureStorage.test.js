@@ -49,14 +49,14 @@ describe('nodeJsSecureStorage', () => {
 
         const ss = nodeJsSecureStorage('./lib/'+Math.random());
 
-        //Expect a promise that resolves in true if the key is present
-        return expect(new Promise((res, rej) => {
-            ss
-                .set('key', 'value')
-                .then(res => {
-
-                })
-        })).resolves.toBeTruthy();
+        //Expect a promise that resolves with true if the key is present
+        return expect(ss
+            .set('key', 'value')
+            .then(res => {
+                return ss
+                    .has('key');
+            })
+        ).resolves.toBeTruthy();
 
     });
 
