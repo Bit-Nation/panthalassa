@@ -12,10 +12,13 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "dirty": "^1.1.0",
     "flow-bin": "^0.57.3",
-    "flow-remove-types": "^1.2.3"
+    "flow-remove-types": "^1.2.3",
+    "jest": "^21.2.1"
   },
   "dependencies": {
+    "crypto-js": "^3.1.9-1",
     "ethereumjs-util": "^5.1.2",
     "promise": "^8.0.1"
   }
