@@ -70,23 +70,10 @@ describe('nodeJsSecureStorage', () => {
     //Test successfully creation and deletion of secure storage
     test('destroyStorage', () => {
 
-        const path = './lib/'+Math.random();
-
         const ss = nodeJsSecureStorage('./lib/'+Math.random());
 
-        expect(fs.existsSync(path))
-            .toBeTruthy();
-
         //Expect promise to resolve in undefined if the storage get's destroyed
-        return expect(new Promise((res, rej) => {
-
-            ss.destroyStorage()
-                .then(result => {
-                    res(result);
-                })
-                .catch(err => rej(err));
-
-        })).resolves.toBeUndefinded();
+        return expect(ss.destroyStorage()).resolves.toBeUndefined();
 
     });
 
