@@ -153,7 +153,12 @@ describe('savePrivateKey', () => {
                     //RAW key
                     expect(secureStorageMock.set).toBeCalledWith(
                         'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS,
-                        '0x'+PRIVATE_KEY
+                        JSON.stringify({
+                            encryption_algo: '',
+                            value: '0x'+PRIVATE_KEY,
+                            encrypted: false,
+                            version: '1.0.0'
+                        })
                     );
 
                     //Expect that set function is called with key
@@ -208,7 +213,12 @@ describe('savePrivateKey', () => {
                     //the related address of the private key as a "key" and with the encrypted private key
                     expect(secureStorageMock.set).toBeCalledWith(
                         'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS,
-                        ENCRYPTED_PRIVATE_KEY
+                        JSON.stringify({
+                            encryption_algo: 'AES-256',
+                            value: ENCRYPTED_PRIVATE_KEY,
+                            encrypted: true,
+                            version: '1.0.0'
+                        })
                     );
 
                     //Expect that set function is called with key
@@ -223,13 +233,13 @@ describe('savePrivateKey', () => {
 
     });
 
-    test('save private key only one password', () => {
+    test('try to save private key with one password', () => {
 
         return expect(utils().savePrivateKey(+PRIVATE_KEY, 'pw')).rejects.toEqual(new errors.PasswordMismatch());
 
     });
 
-    test('save private key with special chars', () => {
+    test('test rejection when try to save with password that contain special chars', () => {
 
         //Mock the secure storage
         const secureStorageMock = {
