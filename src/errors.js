@@ -4,6 +4,8 @@ class InvalidPrivateKeyError extends Error{}
 
 class PasswordMismatch extends Error{}
 
+class PasswordContainsSpecialChars extends Error{}
+
 /**
  * Is thrown if a method on the secure storage implementation is missing
  */
@@ -20,5 +22,6 @@ class UnsatisfiedSecureStorageImplementationError extends Error{
 module.exports = {
     InvalidPrivateKeyError,
     UnsatisfiedSecureStorageImplementationError,
-    PasswordMismatch
+    PasswordMismatch,
+    PasswordContainsSpecialChars
 };
