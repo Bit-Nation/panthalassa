@@ -2,9 +2,14 @@ require('promise/lib/rejection-tracking').enable();
 const utils = require('../../lib/ethereum/utils');
 const ethereumjsUtil = require('ethereumjs-util');
 const errors = require('../../lib/errors');
+const aes = require('crypto-js/aes');
 
 // Private key dummy
 const PRIVATE_KEY = "6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22";
+
+const PRIVATE_ENCRYPTED_KEY = "U2FsdGVkX19v+/+HvGOKNducd7IAcLoAYBSHXCyErATbUz05WvTQVN9zfKakcPFfKeLfUID1xHPpESC/8aN1XRx1gz8wq8WUyEie6zxwK7Z9Zi3eMQMzL/zSDQ+TI8A8";
+
+const PRIVATE_KEY_ADDRESS = "0xb293D530769790b82c187f9CD1a4fA0acDcaAb82";
 
 describe('createPrivateKey', () => {
     "use strict";
@@ -113,6 +118,99 @@ describe('createPrivateKey', () => {
         });
 
         return expect(assertionPromise).resolves.toBeTruthy();
+
+    });
+
+    test('private key generation', () => {
+
+        return expect(new Promise((res, rej) => {
+
+            utils
+                .createPrivateKey()
+                .then(key => {
+                    resolve(ethereumjsUtil.isValidPrivate(key));
+                })
+                .catch(err => rej(err));
+
+        })).toBeTruthy();
+
+    });
+
+    //Save private key unencrypted
+    test('save private key unencrypted', () => {
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get(){},
+            set: jest.fn,
+            remove(){},
+            has(){},
+            destroyStorage(){}
+        };
+
+        const testPromise = new Promise((res, rej) => {
+
+            utils.raw.savePrivateKey(secureStorageMock)(PRIVATE_KEY)
+                .then(result => {
+
+                    //The secure storage should have been called once
+                    expect(secureStorageMock.set).toHaveBeenCalled();
+
+                    //Expect that secure storage set is called with the prefix priv_eth_key and
+                    //the related address of the private key as a "key" and with the private
+                    //RAW key
+                    expect(secureStorageMock.set).toBeCalledWith(
+                        'priv_eth_key#'+PRIVATE_KEY_ADDRESS,
+                        PRIVATE_KEY
+                    );
+
+                    //Expect that set function is called with key
+                    res(result);
+
+                })
+                .catch(err => rej(err))
+
+        });
+
+        return expect(testPromise).resolves.toBeUndefined();
+
+    });
+
+    test('save the private key encrypted', () => {
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get(){},
+            set: jest.fn,
+            remove(){},
+            has(){},
+            destroyStorage(){}
+        };
+
+        const testPromise = new Promise((res, rej) => {
+
+            utils.raw.savePrivateKey(secureStorageMock)(PRIVATE_KEY)
+                .then(result => {
+
+                    //The secure storage should have been called once
+                    expect(secureStorageMock.set).toHaveBeenCalled();
+
+                    //Expect that secure storage set is called with the prefix priv_eth_key and
+                    //the related address of the private key as a "key" and with the encrypted private key
+                    expect(secureStorageMock.set).toBeCalledWith(
+                        'priv_eth_key#'+PRIVATE_KEY_ADDRESS,
+                        PRIVATE_ENCRYPTED_KEY
+                    );
+
+                    //Expect that set function is called with key
+                    res(result);
+
+                })
+                .catch(err => rej(err))
+
+        });
+
+        return expect(testPromise).resolves.toBeUndefined();
 
     });
 
