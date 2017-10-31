@@ -90,7 +90,12 @@ const savePrivateKey = (secureStorage: any, ethjsUtils: ethereumjsUtils, aes: an
                 //Save the private key
                 secureStorage.set(
                     PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey,
-                    aes.encrypt(privateKey, pw).toString()
+                    JSON.stringify({
+                        encryption_algo: 'AES-256',
+                        value: aes.encrypt(privateKey, pw).toString(),
+                        encrypted: true,
+                        version: '1.0.0'
+                    })
                 )
                     .then(result => res(result))
                     .catch(err => rej(err));
@@ -99,9 +104,15 @@ const savePrivateKey = (secureStorage: any, ethjsUtils: ethereumjsUtils, aes: an
             }
 
             //Save the private key
+            //@Todo make the json data set a type (maybe)
             secureStorage.set(
                 PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey,
-                privateKey
+                JSON.stringify({
+                    encryption_algo : '',
+                    value: privateKey,
+                    encrypted: false,
+                    version: '1.0.0'
+                })
             )
                 .then(result => res(result))
                 .catch(err => rej(err));
