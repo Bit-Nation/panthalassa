@@ -91,7 +91,7 @@ const savePrivateKey = (secureStorage: any, ethjsUtils: ethereumjsUtils, aes: an
                 secureStorage.set(
                     PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey,
                     JSON.stringify({
-                        encryption_algo: 'AES-256',
+                        encryption: 'AES-256',
                         value: aes.encrypt(privateKey, pw).toString(),
                         encrypted: true,
                         version: '1.0.0'
@@ -108,7 +108,7 @@ const savePrivateKey = (secureStorage: any, ethjsUtils: ethereumjsUtils, aes: an
             secureStorage.set(
                 PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey,
                 JSON.stringify({
-                    encryption_algo : '',
+                    encryption : '',
                     value: privateKey,
                     encrypted: false,
                     version: '1.0.0'

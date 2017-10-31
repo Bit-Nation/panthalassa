@@ -154,7 +154,7 @@ describe('savePrivateKey', () => {
                     expect(secureStorageMock.set).toBeCalledWith(
                         'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS,
                         JSON.stringify({
-                            encryption_algo: '',
+                            encryption: '',
                             value: '0x'+PRIVATE_KEY,
                             encrypted: false,
                             version: '1.0.0'
@@ -214,7 +214,8 @@ describe('savePrivateKey', () => {
                     expect(secureStorageMock.set).toBeCalledWith(
                         'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS,
                         JSON.stringify({
-                            encryption_algo: 'AES-256',
+                            encryption
+                                : 'AES-256',
                             value: ENCRYPTED_PRIVATE_KEY,
                             encrypted: true,
                             version: '1.0.0'
