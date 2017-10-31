@@ -77,4 +77,40 @@ describe('nodeJsSecureStorage', () => {
 
     });
 
+    //Fetch items and filter for eth key's
+    test('fetchItems', () => {
+
+        const ss = nodeJsSecureStorage('./lib/'+Math.random());
+
+        const filteredResults = ss
+            .set('eth#1', 'eth_key_1')
+            .then(() => {
+                return ss.set('mesh#1', 'mesh_key_1');
+            })
+            .then(() => {
+                return ss.set('eth#3', 'eth_key_3');
+            })
+            .then(() => {
+
+                return ss.fetchItems((key, value) => {
+
+                    return key.indexOf('eth') !== -1;
+
+                });
+
+            });
+
+        return expect(filteredResults).resolves.toEqual([
+            {
+                key: 'eth#1',
+                value: 'eth_key_1'
+            },
+            {
+                key: 'eth#3',
+                value: 'eth_key_3'
+            }
+        ]);
+
+    })
+
 });
