@@ -144,7 +144,9 @@ describe('createPrivateKey', () => {
         //Mock the secure storage
         const secureStorageMock = {
             get(){},
-            set: jest.fn,
+            set: jest.fn(() => {
+                return new Promise((res, rej) => { res() })
+            }),
             remove(){},
             has(){},
             destroyStorage(){}
@@ -152,7 +154,7 @@ describe('createPrivateKey', () => {
 
         const testPromise = new Promise((res, rej) => {
 
-            utils.raw.savePrivateKey(secureStorageMock)(PRIVATE_KEY)
+            utils.raw.savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY)
                 .then(result => {
 
                     //The secure storage should have been called once
@@ -162,7 +164,7 @@ describe('createPrivateKey', () => {
                     //the related address of the private key as a "key" and with the private
                     //RAW key
                     expect(secureStorageMock.set).toBeCalledWith(
-                        'priv_eth_key#'+PRIVATE_KEY_ADDRESS,
+                        'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS,
                         PRIVATE_KEY
                     );
 
