@@ -104,7 +104,7 @@ const savePrivateKey = (secureStorage: any, ethjsUtils: ethereumjsUtils, aes: an
 
 };
 
-module.exports = ((secureStorage:any) : {} => {
+module.exports = (secureStorage:any) : {} => {
     "use strict";
 
     return {
@@ -116,4 +116,4 @@ module.exports = ((secureStorage:any) : {} => {
         }
     }
 
-})();
+};
