@@ -119,6 +119,39 @@ const destroyStorage = (fs:any, path:string) : any => {
 
 };
 
+/**
+ * Fetch items based on filter function (key, value) are passed to the function.
+ * @param db
+ * @returns {function(*)}
+ */
+const fetchItems = (db) : ((filter: (key:string, value:string) => boolean) => Promise<Array<{key: string, value: string}>>) => {
+    "use strict";
+
+    return (filter: (key:string, value:string) => boolean) : Promise<Array<{key: string, value: string}>> => {
+
+        return new Promise((res, rej) => {
+
+            const elements:Array<{key: string, value: string}> = [];
+
+            db.forEach(function(key, val) {
+
+                if(true === filter(key, val)){
+                    elements.push({
+                        key: key,
+                        value: val
+                    })
+                }
+
+            });
+
+            res(elements);
+
+        });
+
+    };
+
+};
+
 module.exports = (path:string) => {
     "use strict";
 
@@ -130,12 +163,14 @@ module.exports = (path:string) => {
         remove: remove(db),
         has: has(db, get(db)),
         destroyStorage: destroyStorage(fs, path),
+        fetchItems: fetchItems(db),
         raw: {
             set,
             get,
             remove,
             has,
-            destroyStorage
+            destroyStorage,
+            fetchItems
         }
     }
 
