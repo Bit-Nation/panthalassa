@@ -35,7 +35,7 @@ describe('createPrivateKey', () => {
         };
 
         // promise that resolves with the private key as a string or an error
-        const privateKeyPromise = utils.raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
+        const privateKeyPromise = utils().raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
         
         // expect to reject since we pass a error in the randomBytes mock
         return expect(privateKeyPromise).rejects.toBe(error);
@@ -57,7 +57,7 @@ describe('createPrivateKey', () => {
         };
 
         // promise that resolves with the private key as a string or an error
-        const privateKeyPromise = utils.raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
+        const privateKeyPromise = utils().raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
 
         // the promise should be rejected with an InvalidPrivateKeyError instance
         return expect(privateKeyPromise).rejects.toEqual(new errors.InvalidPrivateKeyError());
@@ -82,7 +82,7 @@ describe('createPrivateKey', () => {
         };
 
         // promise that resolves with the private key as a string or an error
-        const privateKeyPromise = utils.raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
+        const privateKeyPromise = utils().raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
 
         // Expect the private key promise to resolve with the private key we used to have node's crypto.randomBytes method
         return expect(privateKeyPromise).resolves.toBe(PRIVATE_KEY);
@@ -95,7 +95,7 @@ describe('createPrivateKey', () => {
      */
     test('test create valid key with automatic dependency injection', () => {
 
-        const promiseOfKey = utils.createPrivateKey();
+        const promiseOfKey = utils().createPrivateKey();
 
         // This promise is only used to help with the assertion.
         // Since the privateKey can't be mocked in this test case
@@ -125,7 +125,7 @@ describe('createPrivateKey', () => {
 
         return expect(new Promise((res, rej) => {
 
-            utils
+            utils()
                 .createPrivateKey()
                 .then(key => {
                     res(ethereumjsUtil.isValidPrivate(Buffer.from(key, 'hex')));
@@ -152,7 +152,7 @@ describe('createPrivateKey', () => {
 
         const testPromise = new Promise((res, rej) => {
 
-            utils.raw.savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY)
+            utils().raw.savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY)
                 .then(result => {
 
                     //The secure storage should have been called once
@@ -208,7 +208,7 @@ describe('createPrivateKey', () => {
                 })
             };
 
-            utils.raw.savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY, 'mypw', 'mypw')
+            utils().raw.savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY, 'mypw', 'mypw')
                 .then(result => {
 
                     //The secure storage should have been called once
@@ -231,6 +231,26 @@ describe('createPrivateKey', () => {
 
         return expect(testPromise).resolves.toBeUndefined();
 
+    });
+
+    test('save private key only one password', () => {
+
+        return expect(utils().savePrivateKey(+PRIVATE_KEY, 'pw')).rejects.toEqual(new errors.PasswordMismatch());
+
+    });
+
+    test('save private key with special chars', () => {
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get(){},
+            set(){},
+            remove(){},
+            has(){},
+            destroyStorage(){}
+        };
+
+        return expect(utils(secureStorageMock).savePrivateKey(PRIVATE_KEY, "pw \n", "pw \n")).rejects.toEqual(new errors.PasswordContainsSpecialChars());
     });
 
 });
