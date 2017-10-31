@@ -120,22 +120,7 @@ describe('createPrivateKey', () => {
         return expect(assertionPromise).resolves.toBeTruthy();
 
     });
-
-    test('private key generation', () => {
-
-        return expect(new Promise((res, rej) => {
-
-            utils()
-                .createPrivateKey()
-                .then(key => {
-                    res(ethereumjsUtil.isValidPrivate(Buffer.from(key, 'hex')));
-                })
-                .catch(err => rej(err));
-
-        })).toBeTruthy();
-
-    });
-
+    
     //Save private key unencrypted
     test('save private key unencrypted', () => {
 
@@ -252,5 +237,10 @@ describe('createPrivateKey', () => {
 
         return expect(utils(secureStorageMock).savePrivateKey(PRIVATE_KEY, "pw \n", "pw \n")).rejects.toEqual(new errors.PasswordContainsSpecialChars());
     });
+
+});
+
+describe('savePrivateKey', () => {
+    "use strict";
 
 });
