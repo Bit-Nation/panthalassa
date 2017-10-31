@@ -79,6 +79,14 @@ const savePrivateKey = (secureStorage: any, ethjsUtils: ethereumjsUtils, aes: an
                     return;
                 }
 
+                //Special chars mach pattern
+                const specialCharsPattern = /[ !@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+
+                // $FlowFixMe From a logical point of view the password can't be null / undefined here
+                if(specialCharsPattern.test(pw) || specialCharsPattern.test(pwConfirm)){
+                    rej(new errors.PasswordContainsSpecialChars());
+                }
+
                 //Save the private key
                 secureStorage.set(
                     PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey,
