@@ -24,21 +24,23 @@ describe('createPrivateKey', () => {
         //Dummy error that will be passed from node js
         class NativeNodeError extends Error{}
 
+        const error = new NativeNodeError();
+
         //Fake nodes crypto module
         const crypto = {
             randomBytes: jest.fn((size, cb) => {
 
                 //cb is the callback function that is passed to the randomBytes method https://nodejs.org/docs/latest-v6.x/api/crypto.html#crypto_crypto_randombytes_size_callback
-                cb(new NativeNodeError(), null);
+                cb(error, null);
 
             })
         };
 
         // promise that resolves with the private key as a string or an error
         const privateKeyPromise = utils.raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
-
+        
         // expect to reject since we pass a error in the randomBytes mock
-        return expect(privateKeyPromise).rejects.toBeInstanceOf(NativeNodeError);
+        return expect(privateKeyPromise).rejects.toBe(error);
 
     });
 
