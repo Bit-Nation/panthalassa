@@ -62,7 +62,7 @@ describe('createPrivateKey', () => {
         const privateKeyPromise = utils.raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
 
         // the promise should be rejected with an InvalidPrivateKeyError instance
-        return expect(privateKeyPromise).rejects.toBeInstanceOf(errors.InvalidPrivateKeyError);
+        return expect(privateKeyPromise).rejects.toEqual(new errors.InvalidPrivateKeyError());
 
     });
 
