@@ -157,6 +157,40 @@ const allKeyPairs = (secureStorage:any) : (() => Promise<*>) => {
     }
 };
 
+/**
+ * Fetches a private key based on the
+ * @param secureStorage
+ * @returns {function(string)}
+ */
+const getPrivateKey = (secureStorage) : ((address:string) => Promise<*>) => {
+    "use strict";
+
+    return (address:string) => {
+        return new Promise((res, rej) => {
+
+            const key = PRIVATE_ETH_KEY_PREFIX+address;
+
+            secureStorage
+                .has(key)
+                .then(hasPrivateKey => {
+
+                    if(false === hasPrivateKey){
+                        rej(new errors.NoEquivalentPrivateKey());
+                        return;
+                    }
+
+                    return secureStorage
+                        .get(key);
+
+                })
+                .then(privateKey => res(JSON.parse(privateKey)))
+                .catch(err => rej(err));
+
+        });
+    }
+
+};
+
 module.exports = (secureStorage:any) : {} => {
     "use strict";
 
@@ -164,6 +198,7 @@ module.exports = (secureStorage:any) : {} => {
         createPrivateKey: createPrivateKey(crypto, ethereumjsUtils.isValidPrivate),
         savePrivateKey: savePrivateKey(secureStorage, ethereumjsUtils, aes),
         allKeyPairs: allKeyPairs(secureStorage),
+        getPrivateKey: getPrivateKey(secureStorage),
         raw: {
             createPrivateKey: createPrivateKey,
             savePrivateKey: savePrivateKey
