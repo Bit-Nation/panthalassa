@@ -81,7 +81,17 @@
 ### Events
 
 * `eth:decrypt-private-key`
-
+    * Why? You may ask why there is need for this event. The thing is, that Panthalassa does some background work and need a way to tell pangea "Hey, we are using the private key to do some stuff, please show an alert and ask the user to decrypt his private key". Let me explain how this event relates to the `eth.decryptPrivateKey` method. When you call the `decryptPrivateKey` method a Promise will be returned. The ONLY way to resolve the promise is, to call the event "successor" function with the correct password. When you call the successor with the correct password the promise returned by `eth.decryptPrivateKey` will be resolved as well as the promise returned by the "successor" callback. If you have any question's about this feel free to open an issue.
+    * Parameter: The parameters will arrive in an object
+        * successor: callback
+            * Parameter: 
+                * password: string
+            * Return: Promise that will be rejected or resolved
+        * killer: callback
+            * Parameter: -
+            * Return: -
+        * reason: string
+        * topic: string
 ## FAQ
 
 **I heard this is supposed to be the backend of pangea, how can the be?**
