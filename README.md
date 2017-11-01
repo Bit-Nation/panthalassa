@@ -59,8 +59,28 @@
     * Parameter:
         * address: Is an ethereum address
     * Returns: Void promise
-
+    
+* `eth.decryptPrivateKey(privateKey: object, reason:string, topic:string) : Promise<void>`
+    * Parameter: 
+        * privateKey: Is a object that contains a key(ethereum address) and an object as value
+          ````js
+          //PrivateKey
+          {
+              key: '0x2F3D5824C04cc1ABbC070568860A8f7b838b1cab',
+              value: {
+                  encryption: 'AES-256',
+                  value: 'ac750146531db743fdfb71d83d08ea8cd66b1f9aa24ebc42184f2c33955a9bd5',
+                  encrypted: false,
+                  version: '1.0.0'
+              }
+          }
+          ````
+        * reason: This string can be something like "Encrypt you private key to display it". It is used for the alert. 
+        * topic: Can be something like "Sign transaction"
+    * Response: The response will be a Promise that resolves with the raw private key BUT you need to subscribe to the `eth:decrypt-private-key` event in order to be able to resolve the promise. Read more about it in the event section.
 ### Events
+
+* `eth:decrypt-private-key`
 
 ## FAQ
 
