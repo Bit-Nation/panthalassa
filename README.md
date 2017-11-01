@@ -6,8 +6,8 @@
 
 ## FAQ
 
-**I heard this is supposed to be the backend of pangea, how can the be?**
->ok, so your backend is not a common backend where you make a few http request, get some data back and done. Our backend is a decentraliced meshnetwork (it will be in some days). That means, each device in the network is a "server" (not really a server but a node). There for this need's to run on each device (like smartphones and laptops). The owner of the device will be able to communicate with other people in the network since he is a node in it.
+**I heard this is supposed to be the backend of The Pangea Jurisdiction, can you please explain?**
+>Ok, so your backend is not a common backend where you make a few http request, get some data back and done. Instead, our backend is a decentraliced meshnetwork. Meaning each device in the network is a "server" (not really a server but a node). Therefor it needs to run on each device (like smartphones and laptops). The owner of the device will be able to communicate with other people in the network since the device becomes a node in the network.
 
 ## Specification
 
