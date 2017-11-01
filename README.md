@@ -4,6 +4,44 @@
 ## Api
 > Panthalassa is under heavy development. Things will change fast.
 
+### Integration
+1. Install the project
+2. Use `reqiure('Panthalassa')` to include it
+3. Install the mobile secure storage
+
+### Methods
+
+#### ETH
+* `eth.createPrivateKey() : Promise<string>`
+    * Parameter: - 
+    * Returns: A promise that resolves with a string
+
+* `eth.savePrivateKey(privateKey: string, pw: ?string, pwConfirm: ?string) : Promise<void>`
+    * Parameter:
+        * privateKey, should be the private key in hex form.
+        * pw, OPTIONAL. The password which will be used for encryption.
+        * pw, OPTIONAL. The password which will be used for encryption.
+    * Returns: Void promise
+
+* `eth.allKeyPairs() : Promise<Array<{key:string, value:any}>>`
+    * Parameter: -
+    * Returns: Array of key value objects
+        ````js
+          [
+              {
+                  key: '0x2F3D5824C04cc1ABbC070568860A8f7b838b1cab',
+                  value: {
+                      encryption: 'AES-256',
+                      value: 'ac750146531db743fdfb71d83d08ea8cd66b1f9aa24ebc42184f2c33955a9bd5',
+                      encrypted: false,
+                      version: '1.0.0'
+                  }
+              }
+          ]
+        ````    
+
+### Events
+
 ## FAQ
 
 **I heard this is supposed to be the backend of pangea, how can the be?**
