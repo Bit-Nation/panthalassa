@@ -412,3 +412,62 @@ describe('getPrivateKey', () => {
     });
 
 });
+
+describe('deletePrivateKey', () => {
+    "use strict";
+
+    test('delete key that does not exist', () => {
+
+        const PRIVATE_KEY_ADDRESS = '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94';
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get(){},
+            set(){},
+            remove(){},
+            has(){
+                return new Promise((res, rej) => res(false))
+            },
+            destroyStorage(){}
+        };
+
+        return expect(utils(secureStorageMock).deletePrivateKey(PRIVATE_KEY_ADDRESS))
+            .rejects
+            .toEqual(new errors.NoEquivalentPrivateKey())
+
+    });
+
+    test('delete private key successfully', () => {
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get(){},
+            set(){},
+            remove: jest.fn(),
+            has(){
+                return new Promise((res, rej) => res(true))
+            },
+            destroyStorage(){}
+        };
+
+        return expect(new Promise((res, rej) => {
+
+            utils(secureStorageMock)
+                .deletePrivateKey(PRIVATE_KEY_ADDRESS)
+                .then(response => {
+
+                    //When the promise resolve remove should have been called once
+                    expect(secureStorageMock.remove).toHaveBeenCalled();
+                    
+                    res(response);
+
+                })
+                .catch(err => rej(err));
+
+        }))
+            .resolves
+            .toBeUndefined();
+
+    });
+
+});
