@@ -7,7 +7,7 @@
     "test": "npm run flow:build && jest ./src",
     "flow:lint": "flow",
     "flow:build": "flow-remove-types src/ -d lib --pretty",
-    "db:flush" : "rm -rf databse"
+    "db:flush" : "rm -rf database/* && echo \"*\" > database/.gitignore"
   },
   "keywords": [],
   "author": "",
