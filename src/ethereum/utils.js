@@ -162,7 +162,7 @@ const allKeyPairs = (secureStorage:any) : (() => Promise<*>) => {
  * @param secureStorage
  * @returns {function(string)}
  */
-const getPrivateKey = (secureStorage) : ((address:string) => Promise<*>) => {
+const getPrivateKey = (secureStorage) : ((address:string) => Promise<void>) => {
     "use strict";
 
     return (address:string) => {
@@ -191,6 +191,43 @@ const getPrivateKey = (secureStorage) : ((address:string) => Promise<*>) => {
 
 };
 
+/**
+ *
+ * @param secureStorage
+ * @returns {function(string)}
+ */
+const deletePrivateKey = (secureStorage) => {
+    "use strict";
+
+    return (address:string) : Promise<void> => {
+
+        return new Promise((res, rej) => {
+
+            const key = PRIVATE_ETH_KEY_PREFIX+address;
+
+            secureStorage
+                .has(key)
+                .then(hasPrivateKey => {
+
+                    if(false === hasPrivateKey){
+                        rej(new errors.NoEquivalentPrivateKey());
+                        return;
+                    }
+
+                    return secureStorage
+                        .remove(key);
+
+
+                })
+                .then(result => res(result))
+                .catch(err => rej(err));
+
+        });
+
+    }
+
+};
+
 module.exports = (secureStorage:any) : {} => {
     "use strict";
 
@@ -199,6 +236,7 @@ module.exports = (secureStorage:any) : {} => {
         savePrivateKey: savePrivateKey(secureStorage, ethereumjsUtils, aes),
         allKeyPairs: allKeyPairs(secureStorage),
         getPrivateKey: getPrivateKey(secureStorage),
+        deletePrivateKey: deletePrivateKey(secureStorage),
         raw: {
             createPrivateKey: createPrivateKey,
             savePrivateKey: savePrivateKey
