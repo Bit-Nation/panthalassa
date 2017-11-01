@@ -5,9 +5,36 @@
 > Panthalassa is under heavy development. Things will change fast.
 
 ### Integration
-1. Install the project
-2. Use `reqiure('Panthalassa')` to include it
-3. Install the mobile secure storage
+1. Install the Panthalassa.
+2. Install the [Secure Storage](#secure-storage)
+````js
+
+//Create a instance of secure storage (check the secure storage for more information)
+const secureStorage = reqiure('MY_SECURE_STORAGE').factory()
+
+//Load panthalassa
+const panthalassa = require('Panthalassa');
+
+//Create your instance. 
+const panthalassaInstance = panthalassa.factory(secureStorage);
+
+````
+
+#### Panthalassa Methods
+> After instantiating Panthalassa
+
+*  `panthalassa.on(event:string, callback:function)`
+    * Parameter: 
+        * event, should be the event name to listen on
+        * callback, should be a function
+*  `panthalassa.boot() : Promise<{...any}`
+    * Parameter: -
+    * Returns: A Promise that resolves with all methods from the "Methods" section
+ 
+* `panthalassa.emit(event:string)`
+    * Parameter:
+        * event, should be a string
+    * Returns: -
 
 ### Methods
 
