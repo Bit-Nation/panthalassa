@@ -228,7 +228,73 @@ const deletePrivateKey = (secureStorage) => {
 
 };
 
-module.exports = (secureStorage:any) : {} => {
+/**
+ * Decrypt the private key. Will emit an event that contains method's to solve this problem
+ * @param pubEE
+ * @param crypto
+ * @param ethjsUtils
+ * @returns {function({}, string, string)}
+ */
+const decryptPrivateKey = (pubEE:any, crypto: any, ethjsUtils: ethereumjsUtils): ((privateKey: {}, reason: string, topic: string) => Promise<string>) => {
+    "use strict";
+
+    return (privateKey: {}, reason:string, topic: string) => {
+
+        return new Promise((mRes, mRej) => {
+
+            //break if the algo is unknown
+            if(privateKey.encryption !== 'AES-256'){
+                mRej(new errors.InvalidEncryptionAlgorithm());
+            }
+
+            //Call this to decrypt the password
+            function successor(pw:string) : Promise<void>{
+
+                return new Promise((res, rej) => {
+
+                    const decryptedPrivateKey = crypto
+                        .AES
+                        .decrypt(privateKey.value.toString(), pw)
+                        .toString(crypto.enc.Utf8);
+
+                    //When aes decryption failes a empty string is returned
+                    if('' === decryptedPrivateKey){
+                        rej(new errors.FailedToDecryptPrivateKeyPasswordInvalid);
+                        return;
+                    }
+
+                    //Check if decrypted key is valid
+                    if(!ethjsUtils.isValidPrivate(Buffer.from(decryptedPrivateKey, 'hex'))){
+                        rej(new errors.DecryptedValueIsNotAPrivateKey());
+                        return;
+                    }
+
+                    res();
+                    mRes(decryptedPrivateKey);
+
+                });
+
+            }
+
+            //Call this to kill the decryption proccess
+            const killer = () => {
+                mRej(new errors.CanceledAction());
+            };
+
+            pubEE.emit('eth:decrypt-private-key', {
+                successor: successor,
+                killer: killer,
+                reason: reason,
+                topic: topic
+            })
+
+        });
+
+    }
+
+};
+
+module.exports = (secureStorage:any, pubEE:any, ) : {} => {
     "use strict";
 
     return {
@@ -237,9 +303,11 @@ module.exports = (secureStorage:any) : {} => {
         allKeyPairs: allKeyPairs(secureStorage),
         getPrivateKey: getPrivateKey(secureStorage),
         deletePrivateKey: deletePrivateKey(secureStorage),
+        decryptPrivateKey: decryptPrivateKey(pubEE, aes, ethereumjsUtils),
         raw: {
             createPrivateKey: createPrivateKey,
-            savePrivateKey: savePrivateKey
+            savePrivateKey: savePrivateKey,
+            decryptPrivateKey: decryptPrivateKey
         }
     }
 
