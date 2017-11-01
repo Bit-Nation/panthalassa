@@ -15,11 +15,10 @@ const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
  * @returns {function()}
  * Todo change the promise * to real typehint
  */
-const createPrivateKey = (crypto, isValidPrivateKey: (key: Buffer) => boolean) : (() => Promise<*>) => {
+const createPrivateKey = (crypto, isValidPrivateKey: (key: Buffer) => boolean) : (() => Promise<string>) => {
     "use strict";
 
-    //Todo change the promise * to real typehint
-    return () : Promise<*> => {
+    return () : Promise<string> => {
 
         return new Promise((res, rej) => {
 
@@ -159,13 +158,14 @@ const allKeyPairs = (secureStorage:any) : (() => Promise<*>) => {
 
 /**
  * Fetches a private key based on the
+ * Todo use a type for to represent a encrypted key
  * @param secureStorage
  * @returns {function(string)}
  */
-const getPrivateKey = (secureStorage) : ((address:string) => Promise<void>) => {
+const getPrivateKey = (secureStorage) : ((address:string) => Promise<{...any}>) => {
     "use strict";
 
-    return (address:string) => {
+    return (address:string) : Promise<{...any}> => {
         return new Promise((res, rej) => {
 
             const key = PRIVATE_ETH_KEY_PREFIX+address;
@@ -235,10 +235,10 @@ const deletePrivateKey = (secureStorage) => {
  * @param ethjsUtils
  * @returns {function({}, string, string)}
  */
-const decryptPrivateKey = (pubEE:any, crypto: any, ethjsUtils: ethereumjsUtils): ((privateKey: {}, reason: string, topic: string) => Promise<string>) => {
+const decryptPrivateKey = (pubEE:any, crypto: any, ethjsUtils: ethereumjsUtils): ((privateKey: {value: string}, reason: string, topic: string) => Promise<string>) => {
     "use strict";
 
-    return (privateKey: {}, reason:string, topic: string) => {
+    return (privateKey: {value: string}, reason:string, topic: string) : Promise<string> => {
 
         return new Promise((mRes, mRej) => {
 
@@ -294,7 +294,7 @@ const decryptPrivateKey = (pubEE:any, crypto: any, ethjsUtils: ethereumjsUtils):
 
 };
 
-module.exports = (secureStorage:any, pubEE:any, ) : {} => {
+module.exports = (secureStorage:any, pubEE:any) : any => {
     "use strict";
 
     return {
