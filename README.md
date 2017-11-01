@@ -39,6 +39,22 @@
               }
           ]
         ````    
+* `eth.getPrivateKey(address:string) : Promise<{}>`
+    * Parameter:
+        * address: Is a ethereum address
+    * Returns: Promise that resolves with one key value pair. The key value pair will look like this (the key prop is the public address and the value is the private key + information about encryption etc): 
+    ````js
+      //PrivateKey
+      {
+          key: '0x2F3D5824C04cc1ABbC070568860A8f7b838b1cab',
+          value: {
+              encryption: 'AES-256',
+              value: 'ac750146531db743fdfb71d83d08ea8cd66b1f9aa24ebc42184f2c33955a9bd5',
+              encrypted: false,
+              version: '1.0.0'
+          }
+      }
+    ````
 
 ### Events
 
