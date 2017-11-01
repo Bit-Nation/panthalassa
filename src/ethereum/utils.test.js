@@ -332,3 +332,83 @@ describe('allKeys', () => {
     })
 
 });
+
+describe('getPrivateKey', () => {
+    "use strict";
+
+    test("fetch private successfully by address", () => {
+
+        // KeyPair 1
+        const PRIVATE_KEY = 'bb11dbe3b53369ea7a731330f17943dd71a813a1e65c82f3766d5732fc85b3da';
+
+        const PRIVATE_KEY_ADDRESS = '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94';
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get: (key) => {
+
+                return new Promise((res, rej) => {
+
+                    //Only resolve if key matched the expected one
+                    if(key === 'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS){
+
+                        //Since the key is saved as a json string stringify the return value
+                        res(JSON.stringify({
+                            encryption: '',
+                            encrypted: false,
+                            version: '1.0.0',
+                            value: PRIVATE_KEY
+                        }));
+
+                        return;
+                    }
+
+                    res();
+
+                });
+
+
+
+            },
+            set(){},
+            remove(){},
+            has(){ return new Promise((res, rej) => res(true)) },
+            destroyStorage(){}
+        };
+
+        return expect(utils(secureStorageMock).getPrivateKey(PRIVATE_KEY_ADDRESS))
+            .resolves
+            .toEqual({
+                encryption: '',
+                encrypted: false,
+                version: '1.0.0',
+                value: PRIVATE_KEY
+            });
+
+    });
+
+    test("try to fetch private key that doesn't exist", () => {
+
+        // KeyPair 1
+        const PRIVATE_KEY = 'bb11dbe3b53369ea7a731330f17943dd71a813a1e65c82f3766d5732fc85b3da';
+
+        const PRIVATE_KEY_ADDRESS = '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94';
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get(){},
+            set(){},
+            remove(){},
+            has(){
+                return new Promise((res, rej) => res(false))
+            },
+            destroyStorage(){}
+        };
+
+        return expect(utils(secureStorageMock).getPrivateKey(PRIVATE_KEY_ADDRESS))
+            .rejects
+            .toEqual(new errors.NoEquivalentPrivateKey())
+
+    });
+
+});
