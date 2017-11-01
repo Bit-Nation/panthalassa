@@ -254,3 +254,81 @@ describe('savePrivateKey', () => {
     });
     
 });
+
+describe('allKeys', () => {
+    "use strict";
+
+    test('try to fetch all', () => {
+
+        //KeyPair 1
+        const PRIVATE_KEY_ONE = 'U2FsdGVkX19kYXZNtfZ2DhfNuao89++6weoGrSdWRA7JvlteIT0fqOfz4x+cTIw7JZy2IB3HbZUEwtlJQccT2+6bJ7aCbNSptaZ3/GHr5eFBGbc3TMpTrAGQOSztIWdq';
+
+        const PRIVATE_KEY_ONE_ADDRESS = '0xb293D530769790b82c187f9CD1a4fA0acDcaAb82';
+
+        // KeyPair 2
+        const PRIVATE_KEY_TWO = 'bb11dbe3b53369ea7a731330f17943dd71a813a1e65c82f3766d5732fc85b3da';
+
+        const PRIVATE_KEY_TWO_ADDRESS = '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94';
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get: () => {},
+            set(){},
+            remove(){},
+            has(){},
+            destroyStorage(){},
+            fetchItems: jest.fn(() => {
+
+                return new Promise((res, rej) => {
+
+                    // Data mock
+                    res([
+                        {
+                            key: 'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ONE_ADDRESS,
+                            value: JSON.stringify({
+                                encryption: 'AES-256',
+                                encrypted: true,
+                                version: '1.0.0',
+                                value: PRIVATE_KEY_ONE
+                            })
+                        },
+                        {
+                            key: 'PRIVATE_ETH_KEY#'+PRIVATE_KEY_TWO_ADDRESS,
+                            value: JSON.stringify({
+                                encryption: '',
+                                encrypted: false,
+                                version: '1.0.0',
+                                value: PRIVATE_KEY_TWO
+                            })
+                        }
+                    ]);
+
+                });
+
+            })
+        };
+
+        expect(utils(secureStorageMock).allKeyPairs()).resolves.toEqual([
+            {
+                key: PRIVATE_KEY_ONE_ADDRESS,
+                value: {
+                    encryption: 'AES-256',
+                    encrypted: true,
+                    version: '1.0.0',
+                    value: PRIVATE_KEY_ONE
+                },
+            },
+            {
+                key: PRIVATE_KEY_TWO_ADDRESS,
+                value: {
+                    encryption: '',
+                    encrypted: false,
+                    version: '1.0.0',
+                    value: PRIVATE_KEY_TWO
+                }
+            }
+        ])
+
+    })
+
+});
