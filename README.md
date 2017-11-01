@@ -41,7 +41,7 @@
         ````    
 * `eth.getPrivateKey(address:string) : Promise<{}>`
     * Parameter:
-        * address: Is a ethereum address
+        * address: Is an ethereum address
     * Returns: Promise that resolves with one key value pair. The key value pair will look like this (the key prop is the public address and the value is the private key + information about encryption etc): 
     ````js
       //PrivateKey
@@ -55,6 +55,10 @@
           }
       }
     ````
+* `eth.deletePrivateKey(address:string) : Promise<void}>`
+    * Parameter:
+        * address: Is an ethereum address
+    * Returns: Void promise
 
 ### Events
 
