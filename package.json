@@ -6,7 +6,8 @@
   "scripts": {
     "test": "npm run flow:build && jest ./src",
     "flow:lint": "flow",
-    "flow:build": "flow-remove-types src/ -d lib --pretty"
+    "flow:build": "flow-remove-types src/ -d lib --pretty",
+    "db:flush" : "rm -rf databse"
   },
   "keywords": [],
   "author": "",
