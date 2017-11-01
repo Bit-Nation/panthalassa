@@ -123,12 +123,47 @@ const savePrivateKey = (secureStorage: any, ethjsUtils: ethereumjsUtils, aes: an
 
 };
 
+/**
+ *
+ * @param secureStorage
+ * @returns {function()}
+ */
+const allKeyPairs = (secureStorage:any) : (() => Promise<*>) => {
+    "use strict";
+
+    return () => {
+        return new Promise((res, rej) => {
+            secureStorage
+
+                .fetchItems((key:string, value:string) => {
+
+                    // Filter eth keys
+                    return key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1;
+
+                })
+                .then(keyValuePairs => {
+
+                    //transform key value pairs. remove key eth prefix and transform json string to json
+                    keyValuePairs
+                        .map((keyValuePair) => {
+                            //Transform keypair
+                            keyValuePair.key.split(PRIVATE_ETH_KEY_PREFIX).pop();
+                            keyValuePair.value = JSON.parse(keyValuePair.value)
+                        });
+
+                })
+                .catch(err => rej(err));
+        })
+    }
+};
+
 module.exports = (secureStorage:any) : {} => {
     "use strict";
 
     return {
         createPrivateKey: createPrivateKey(crypto, ethereumjsUtils.isValidPrivate),
         savePrivateKey: savePrivateKey(secureStorage, ethereumjsUtils, aes),
+        allKeyPairs: allKeyPairs(secureStorage),
         raw: {
             createPrivateKey: createPrivateKey,
             savePrivateKey: savePrivateKey
