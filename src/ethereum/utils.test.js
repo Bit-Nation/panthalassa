@@ -3,6 +3,8 @@ const utils = require('../../lib/ethereum/utils');
 const ethereumjsUtil = require('ethereumjs-util');
 const errors = require('../../lib/errors');
 const aes = require('crypto-js/aes');
+const crypto = require('crypto-js');
+const EE = require('eventemitter3');
 
 // Private key dummy
 const PRIVATE_KEY = "6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22";
@@ -467,6 +469,105 @@ describe('deletePrivateKey', () => {
         }))
             .resolves
             .toBeUndefined();
+
+    });
+
+});
+
+describe('decryptPrivateKey', () => {
+    "use strict";
+
+    test('decrypt successfully', () => {
+
+        const pubEE = new EE();
+
+        const PRIVATE_KEY_ONE = 'U2FsdGVkX19GTRU0W5qgP9nCA0+4PVM3LmbIxQRW6d6Ky1i5fwaU9Cj4DbHoWLw/hRivOJJasxCSP6by6MxWNZjCOsqzkKl1ud99+QgU4oHUYncnni35rETjW+QHDTni';
+
+        return expect(new Promise((res, rej) => {
+
+            //Listen for decryption dialog
+            pubEE.on('eth:decrypt-private-key', (eventData) => {
+                expect(eventData.topic).toBe('ethereum');
+                expect(eventData.reason).toBe('display private key');
+                eventData.successor("mypw")
+                    .then(privateKey => {})
+                    .catch(err => reject(err));
+            });
+
+            //Boot decryption function
+            const decryptPrivatekey = utils()
+                .raw
+                .decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+
+            decryptPrivatekey({encryption: 'AES-256', value: PRIVATE_KEY_ONE}, 'display private key', 'ethereum')
+                .then(privateKey => res(privateKey))
+                .catch(err => rej(err));
+
+        }))
+            .resolves
+            .toEqual("bb11dbe3b53369ea7a731330f17943dd71a813a1e65c82f3766d5732fc85b3da");
+
+    });
+
+    test('decryption failed (wrong password)', () => {
+
+        const pubEE = new EE();
+
+        return expect(new Promise((res, rej) => {
+
+            //Listen for decryption dialog
+            pubEE.on('eth:decrypt-private-key', (eventData) => {
+                expect(eventData.topic).toBe('ethereum');
+                expect(eventData.reason).toBe('display private key');
+                eventData.successor("wrong-pw")
+                    .then(privateKey => res(privateKey))
+                    .catch(err => rej(err));
+            });
+
+            //Boot decryption function
+            const decryptPrivatekey = utils()
+                .raw
+                .decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+
+            decryptPrivatekey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum');
+
+        }))
+            .rejects
+            .toEqual(new errors.FailedToDecryptPrivateKeyPasswordInvalid());
+
+    });
+
+    test('unknown encryption algorithm', () => {
+
+        return expect(utils().decryptPrivateKey({encryption: 'NO_NAME'})).rejects.toEqual(new errors.InvalidEncryptionAlgorithm());
+
+    });
+
+    test('decrypted value is not a private key', () => {
+
+        const pubEE = new EE();
+
+        return expect(new Promise((res, rej) => {
+
+            //Listen for decryption dialog
+            pubEE.on('eth:decrypt-private-key', (eventData) => {
+                expect(eventData.topic).toBe('ethereum');
+                expect(eventData.reason).toBe('display private key');
+                eventData.successor("wrong-pw")
+                    .then(privateKey => res(privateKey))
+                    .catch(err => rej(err));
+            });
+
+            //Boot decryption function
+            const decryptPrivatekey = utils()
+                .raw
+                .decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+
+            decryptPrivatekey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum');
+
+        }))
+            .rejects
+            .toEqual(new errors.DecryptedValueIsNotAPrivateKey());
 
     });
 
