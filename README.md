@@ -9,4 +9,4 @@
 #### Secure Storage
 > The secure storage is used to save critical information such as private keys in a save environment. 
 
-You can find the specification (here)[./src/specification/secureStorageInterface.js]
+You can find the specification [here](./src/specification/secureStorageInterface.js)
