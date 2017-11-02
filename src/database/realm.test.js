@@ -8,6 +8,22 @@ describe('realm', () => {
 
         expect(customRealm.db).toBeInstanceOf(Promise);
 
-    })
+    });
+
+    /**
+     * Test database write function. The write methods takes a function
+     * that will be executed in the realm write context
+     */
+    test('db write action successfully', () => {
+
+        expect(customRealm.write((realm) => {})).resolves.toBeUndefined();
+
+    });
+
+    test('db write rejection', () => {
+
+        
+
+    });
 
 });
