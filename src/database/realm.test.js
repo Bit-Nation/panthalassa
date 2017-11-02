@@ -16,13 +16,15 @@ describe('realm', () => {
      */
     test('db write action successfully', () => {
 
-        expect(customRealm.write((realm) => {})).resolves.toBeUndefined();
+        return expect(customRealm.write((realm) => {})).resolves.toBeUndefined();
 
     });
 
     test('db write rejection', () => {
 
-        
+        class MyTestError extends Error{};
+
+        return expect(customRealm.write((realm) => { throw new MyTestError() })).rejects.toEqual(new MyTestError);
 
     });
 
