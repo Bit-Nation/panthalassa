@@ -6,7 +6,7 @@ describe('realm', () => {
 
     test('db return promise', () => {
 
-        expect(customRealm.db).toBeInstanceOf(Promise);
+        return expect(customRealm.db).toBeInstanceOf(Promise);
 
     });
 
