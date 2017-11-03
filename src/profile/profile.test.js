@@ -1,4 +1,4 @@
-const profile = require('./profile');
+const profile = require('./../../lib/profile/profile');
 const errors = require('./../../lib/errors');
 const { spawn } = require('child_process');
 
@@ -184,10 +184,24 @@ describe('profile', () => {
 
         test('true', () => {
 
-            return profile
-                .hasProfile()
+            const realmMock = {
+                objects: jest.fn()
+            };
+
+            realmMock
+                .objects
+                .mockReturnValueOnce([
+                    {
+                        //This just needs to be an object in the array,
+                        //since the objects are counted in hasProfile
+                    }
+                ]);
+
+            const p = profile(realmMock);
+
+            return expect(p.hasProfile())
                 .resolves
-                .toTruthy();
+                .toBeTruthy();
 
         });
 
