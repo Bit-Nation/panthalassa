@@ -17,6 +17,10 @@ class CanceledAction extends Error{}
 
 class DecryptedValueIsNotAPrivateKey extends Error{}
 
+class NoProfilePresent extends Error{}
+
+class NoPublicProfilePresent extends Error{}
+
 /**
  * Is thrown if a method on the secure storage implementation is missing
  */
