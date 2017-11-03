@@ -207,10 +207,17 @@ describe('profile', () => {
 
         test('false', () => {
 
-            return profile
-                .hasProfile()
+            const realmMock = {
+                objects: jest.fn()
+            };
+
+            realmMock
+                .objects
+                .mockReturnValueOnce([]);
+
+            return expect(profile(realmMock).hasProfile())
                 .resolves
-                .toFalsy();
+                .toBeFalsy();
 
         })
 
