@@ -43,5 +43,7 @@ module.exports = {
     InvalidEncryptionAlgorithm,
     FailedToDecryptPrivateKeyPasswordInvalid,
     CanceledAction,
-    DecryptedValueIsNotAPrivateKey
+    DecryptedValueIsNotAPrivateKey,
+    NoProfilePresent,
+    NoPublicProfilePresent
 };
