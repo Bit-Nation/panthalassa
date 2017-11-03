@@ -29,3 +29,58 @@ describe('realm', () => {
     });
 
 });
+
+describe('query', () => {
+    "use strict";
+
+    test('successful', () => {
+
+        //Since the realm db is nothing more than an object we can just create a fake obj
+        const realmFakeDb = {"I am the realm fake db": true};
+
+        //Test query
+        const query = (realm) => {
+
+            expect(realm).toBe(realmFakeDb);
+
+            //Return some data which represent a query result
+            return [
+                'cat',
+                'dog'
+            ]
+
+        };
+
+        return expect(customRealm.raw.query(realmFakeDb)(query))
+            .resolves
+            .toEqual([
+                'cat',
+                'dog'
+            ]);
+
+    });
+
+    test('with error', () => {
+
+        class MyTestError extends Error{}
+
+        //Since the realm db is nothing more than an object we can just create a fake obj
+        const realmFakeDb = {"I am the realm fake db": true};
+
+        //Test query that throws error
+        const query = (realm) => {
+
+            expect(realm).toBe(realmFakeDb);
+
+            throw new MyTestError();
+
+        };
+
+        //Expect query promise rejection
+        return expect(customRealm.raw.query(realmFakeDb)(query))
+            .rejects
+            .toEqual(new MyTestError());
+
+    });
+
+});
