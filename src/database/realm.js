@@ -26,6 +26,30 @@ const db = (realm:Realm) => {
 
 };
 
+/**
+ *
+ * @param realm
+ * @returns {function(*)}
+ */
+const query = (realm:any) : ((queryAction: (realm:any) => any) => Promise<any>) => {
+    "use strict";
+
+    return (queryAction: (realm) => any) : Promise<*> => {
+
+        return new Promise((res, rej) => {
+
+            try{
+                res(queryAction(realm));
+            }catch (e){
+                rej(e);
+            }
+
+        });
+
+    }
+
+};
+
 module.exports = {
 
     db: db(Realm),
@@ -52,9 +76,12 @@ module.exports = {
 
     },
 
+    query: query(module.exports.db),
+
     raw: {
         db,
-        ProfileSchema
+        ProfileSchema,
+        query
     }
 
 };
