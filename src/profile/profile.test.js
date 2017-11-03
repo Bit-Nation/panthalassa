@@ -219,7 +219,23 @@ describe('profile', () => {
                 .resolves
                 .toBeFalsy();
 
-        })
+        });
+
+        test('error during fetch', () => {
+
+            class TestError extends Error{};
+
+            const realmMock = {
+                objects: () => {
+                    throw new TestError();
+                }
+            };
+
+            return expect(profile(realmMock).hasProfile())
+                .rejects
+                .toEqual(new TestError());
+
+        });
 
     });
 
