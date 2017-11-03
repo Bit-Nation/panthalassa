@@ -180,5 +180,27 @@ describe('profile', () => {
 
     });
 
+    describe('hasProfile', () => {
+
+        test('true', () => {
+
+            return profile
+                .hasProfile()
+                .resolves
+                .toTruthy();
+
+        });
+
+        test('false', () => {
+
+            return profile
+                .hasProfile()
+                .resolves
+                .toFalsy();
+
+        })
+
+    });
+
 });
 
