@@ -1,3 +1,4 @@
 {
-  "presets": ["flow-node"]
+  "presets": ["flow-node"],
+  "plugins": ["es6-promise"]
 }

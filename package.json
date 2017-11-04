@@ -25,11 +25,12 @@
     "jest": "^21.2.1"
   },
   "dependencies": {
+    "babel-plugin-es6-promise": "^1.1.1",
     "crypto-js": "^3.1.9-1",
+    "es6-promise": "^4.1.1",
     "ethereumjs-util": "^5.1.2",
     "eventemitter3": "^2.0.3",
     "flow-bin": "^0.57.3",
-    "promise": "^8.0.1",
     "realm": "^2.0.2"
   }
 }
