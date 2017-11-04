@@ -6,13 +6,19 @@
   "scripts": {
     "test": "npm run flow:build && jest ./src",
     "flow:lint": "flow",
-    "flow:build": "flow-remove-types src/ -d lib --pretty",
-    "db:flush" : "rm -rf database/* && echo \"*\" > database/.gitignore"
+    "build": "node_modules/.bin/babel src/ -d lib",
+    "db:flush": "rm -rf database/* && echo \"*\" > database/.gitignore"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-plugin-transform-async-to-generator": "^6.24.1",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
+    "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-plugin-transform-runtime": "^6.23.0",
     "dirty": "^1.1.0",
     "flow-remove-types": "^1.2.3",
     "jest": "^21.2.1"
