@@ -24,7 +24,7 @@ describe('queries', () => {
             .mockReturnValueOnce(profiles);
 
         expect(queries.findProfiles(realmMock)).toBe(profiles);
-        
+
         expect(realmMock.objects).toBeCalledWith('Profile')
 
     })
