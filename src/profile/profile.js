@@ -1,13 +1,20 @@
 //@flow
-const querys = require('./../../lib/database/queries');
+import {findProfiles} from './../database/queries'
+import {DB} from "../database/db";
+
+export interface Profile {
+
+    hasProfile() : Promise<boolean>
+
+}
 
 /**
- * Check if the user has a profile
+ *
  * @param db
  * @param query
  * @returns {function()}
  */
-const hasProfile = (db:any, query: (realm:any) => Array<*>) : (() => Promise<boolean>) => {
+export function hasProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() => Promise<boolean>) {
     "use strict";
     return () : Promise<boolean> => {
 
@@ -29,19 +36,20 @@ const hasProfile = (db:any, query: (realm:any) => Array<*>) : (() => Promise<boo
         });
 
     }
-};
+}
 
 /**
  *
  * @param db
- * @returns {{hasProfile: (function()), raw: {hasProfile: (function(any, *))}}}
  */
-module.exports = (db:any) => {
-    "use strict";
-    return {
-        hasProfile: hasProfile(db, querys.findProfiles),
-        raw: {
-            hasProfile
-        }
-    }
-};
+export default function (db:DB) : Profile {
+
+    const profileImplementation : Profile = {
+
+        hasProfile: hasProfile(db, findProfiles)
+
+    };
+
+    return profileImplementation;
+
+}
