@@ -1,5 +1,8 @@
-const nodeJsSecureStorage = require('./../../lib/secure_storage/nodeJsSecureStorage');
+import nodeJsSecureStorage from "./nodeJsSecureStorage";
+
 const fs = require('fs');
+import './nodeJsSecureStorage';
+import {set} from './nodeJsSecureStorage'
 
 describe('nodeJsSecureStorage', () => {
     "use strict";

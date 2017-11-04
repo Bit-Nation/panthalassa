@@ -2,6 +2,7 @@
 const aes = require('crypto-js/aes');
 const dirty = require('dirty');
 const fs = require('fs');
+import {SecureStorage} from "../specification/secureStorageInterface";
 
 /////////////////////////////////////////////////////////////////////////////////////
 // This key value storage is not save. It's only intend to be used for development //
@@ -12,7 +13,7 @@ const fs = require('fs');
  * @param db
  * @returns {function(string, any)}
  */
-const set = (db:any): any => {
+export function set(db:any): any {
     "use strict";
 
     return (key:string, value:any) : Promise<void> => {
@@ -20,9 +21,14 @@ const set = (db:any): any => {
             db.set(key, value, () => res())
         })
     }
-};
+}
 
-const get = (db:any) : any => {
+/**
+ *
+ * @param db
+ * @returns {function(string)}
+ */
+export function get(db:any) : (key:string) => Promise<*> {
     "use strict";
 
     return (key:string) : Promise<*> => {
@@ -35,14 +41,14 @@ const get = (db:any) : any => {
 
     };
 
-};
+}
 
 /**
  * Todo change return type any
  * @param db
  * @returns {function(string)}
  */
-const remove = (db) : any => {
+export function remove(db) : (key:string) => Promise<void> {
     "use strict";
 
     return (key:string) : Promise<void> => {
@@ -54,40 +60,32 @@ const remove = (db) : any => {
         })
     };
 
-};
+}
 
 /**
- * Todo change return type any
+ *
  * @param db
- * @param get function to fetch a value from the database
  * @returns {function(string)}
  */
-const has = (db:any, get: (key:string) => any) : any => {
+export function has(db:any) : (key:string) => Promise<*> {
     "use strict";
 
     return (key:string) : Promise<boolean> => {
 
         return new Promise((res, rej) => {
 
-            get(key)
-                // The promise will only be resolved when a key exist
-                // so we can just resolve the parent promise
-                .then(result => {
+            if('undefined' === typeof db.get(key)){
+                res(false);
+                return;
+            }
 
-                    if('undefined' === typeof result){
-                        res(false);
-                    }
-
-                    res(true);
-
-                })
-                .catch(err => rej(err));
+            res(true);
 
         });
 
     };
 
-};
+}
 
 /**
  * Todo change return type any
@@ -95,7 +93,7 @@ const has = (db:any, get: (key:string) => any) : any => {
  * @param path
  * @returns {Promise}
  */
-const destroyStorage = (fs:any, path:string) : any => {
+export function destroyStorage(fs:any, path:string) : () => Promise<void> {
     "use strict";
 
     return () => {
@@ -117,17 +115,17 @@ const destroyStorage = (fs:any, path:string) : any => {
 
     }
 
-};
+}
 
 /**
  * Fetch items based on filter function (key, value) are passed to the function.
  * @param db
  * @returns {function(*)}
  */
-const fetchItems = (db) : ((filter: (key:string, value:string) => boolean) => Promise<Array<{key: string, value: string}>>) => {
+export function fetchItems(db) : ((filter: (key:string, value:string) => boolean) => Promise<Array<{key: string, value: string}>>) {
     "use strict";
 
-    return (filter: (key:string, value:string) => boolean) : Promise<Array<{key: string, value: string}>> => {
+    return (filter: (key:string, value:any) => boolean) : Promise<Array<{key: string, value: string}>> => {
 
         return new Promise((res, rej) => {
 
@@ -152,26 +150,29 @@ const fetchItems = (db) : ((filter: (key:string, value:string) => boolean) => Pr
 
 };
 
-module.exports = (path:string) => {
-    "use strict";
+/**
+ *
+ * @param path
+ */
+export default function(path:string) : SecureStorage {
 
     const db = dirty(path);
 
-    return {
-        set: set(db),
-        get: get(db),
-        remove: remove(db),
-        has: has(db, get(db)),
-        destroyStorage: destroyStorage(fs, path),
-        fetchItems: fetchItems(db),
-        raw: {
-            set,
-            get,
-            remove,
-            has,
-            destroyStorage,
-            fetchItems
-        }
-    }
+    const secureStorageImplementation : SecureStorage = {
 
-};
+        set: set(db),
+
+        get: get(db),
+
+        remove: remove(db),
+
+        has: has(db),
+
+        fetchItems: fetchItems(db),
+
+        destroyStorage: destroyStorage(fs, path)
+
+    };
+
+    return secureStorageImplementation;
+}
