@@ -1,6 +1,8 @@
 const profile = require('./../../lib/profile/profile');
 const errors = require('./../../lib/errors');
 const { spawn } = require('child_process');
+const db = require('../../lib/database/db');
+const queries = require('../../lib/database/queries');
 
 describe('profile', () => {
     "use strict";
@@ -184,22 +186,15 @@ describe('profile', () => {
 
         test('true', () => {
 
-            const realmMock = {
-                objects: jest.fn()
+            const fakeQuery = () => {
+                return [
+                    //Since we count the object's returned by the query
+                    //it's ok to return empty objects as a dummy
+                    {}
+                ]
             };
 
-            realmMock
-                .objects
-                .mockReturnValueOnce([
-                    {
-                        //This just needs to be an object in the array,
-                        //since the objects are counted in hasProfile
-                    }
-                ]);
-
-            const p = profile(realmMock);
-
-            return expect(p.hasProfile())
+            return expect(profile().raw.hasProfile(db.factory(), fakeQuery)())
                 .resolves
                 .toBeTruthy();
 
@@ -207,15 +202,7 @@ describe('profile', () => {
 
         test('false', () => {
 
-            const realmMock = {
-                objects: jest.fn()
-            };
-
-            realmMock
-                .objects
-                .mockReturnValueOnce([]);
-
-            return expect(profile(realmMock).hasProfile())
+            return expect(profile(db.factory()).hasProfile())
                 .resolves
                 .toBeFalsy();
 
@@ -223,15 +210,11 @@ describe('profile', () => {
 
         test('error during fetch', () => {
 
-            class TestError extends Error{};
+            class TestError extends Error{}
 
-            const realmMock = {
-                objects: () => {
-                    throw new TestError();
-                }
-            };
+            const database = db.factory();
 
-            return expect(profile(realmMock).hasProfile())
+            return expect(profile().raw.hasProfile(database, () => { throw new TestError()})())
                 .rejects
                 .toEqual(new TestError());
 
