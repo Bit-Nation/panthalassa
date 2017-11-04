@@ -1,4 +1,4 @@
-const database = require('./../../lib/database/db');
+const database = require('./db');
 
 describe('write', () => {
     "use strict";

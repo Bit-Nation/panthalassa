@@ -3,11 +3,19 @@ const Realm = require('realm');
 const schemata = require('./schemata');
 
 /**
+ * Interface for database
+ */
+export interface DB {
+    query(queryAction: (realm:any) => any) : Promise<any>;
+    write(writeAction: (realm:any) => void) : Promise<void>;
+}
+
+/**
  *
  * @param realm
  * @returns {function(*)}
  */
-const query = (realm:any) : ((queryAction: (realm:any) => any) => Promise<any>) => {
+export function query(realm:any) : ((queryAction: (realm:any) => any) => Promise<any>){
     "use strict";
 
     return (queryAction: (realm) => any) : Promise<*> => {
@@ -24,14 +32,14 @@ const query = (realm:any) : ((queryAction: (realm:any) => any) => Promise<any>) 
 
     }
 
-};
+}
 
 /**
- * Executes a write function
+ * Executes a writeAction
  * @param realm
  * @returns {function(*)}
  */
-const write = (realm: {...any}) : ((writeAction: (realm:any) => void) => Promise<void>) => {
+export function write(realm: {...any}) : ((writeAction: (realm:any) => void) => Promise<void>){
 
     "use strict";
     return (writeAction: (realm:any) => void) : Promise<void> => {
@@ -53,7 +61,7 @@ const write = (realm: {...any}) : ((writeAction: (realm:any) => void) => Promise
 
     }
 
-};
+}
 
 /**
  * Creates a realm instance
@@ -70,21 +78,19 @@ const realmFactory = () : {...any} => {
 
 };
 
-module.exports = {
-    factory: () => {
-        "use strict";
+/**
+ * Creates a DB
+ * @returns {DB}
+ */
+export function factory() : DB {
 
-        const r = realmFactory();
+    const r = realmFactory();
 
-        return {
-            write: write(r),
-            query: query(r)
-        }
+    const dbImplementation : DB = {
+        query: query(r),
+        write: write(r)
+    };
 
-    },
-    raw: {
-        write,
-        query,
-        realmFactory
-    }
-};
+    return dbImplementation;
+}
+
