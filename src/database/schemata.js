@@ -1,5 +1,5 @@
 // Profile
-const ProfileSchema  = {
+export const ProfileSchema  = {
     name: 'Profile',
     primaryKey: 'id',
     properties: {
@@ -8,8 +8,4 @@ const ProfileSchema  = {
         description: 'string',
         image: 'string'
     },
-};
-
-module.exports = {
-    ProfileSchema
 };
