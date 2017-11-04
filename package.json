@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run build && jest ./lib",
     "flow:lint": "flow",
-    "build": "rm -rf ./lib && node_modules/.bin/babel src/ -d lib",
+    "build": "npm run flow:lint && rm -rf ./lib && node_modules/.bin/babel src/ -d lib",
     "db:flush": "rm -rf ./database && mkdir database && echo \"*\" > database/.gitignore"
   },
   "keywords": [],
