@@ -1,6 +1,6 @@
 const profile = require('./../../lib/profile/profile');
 const errors = require('./../../lib/errors');
-const { spawn } = require('child_process');
+const execSync = require('child_process').execSync;
 const db = require('../../lib/database/db');
 const queries = require('../../lib/database/queries');
 
@@ -16,7 +16,7 @@ describe('profile', () => {
         test('create profile', () => {
 
             // Kill the database
-            spawn.execSync('npm run db:flush');
+            execSync('npm run db:flush');
 
             return expect(new Promise((res, rej) => {
 
@@ -45,7 +45,7 @@ describe('profile', () => {
         test('try to update profile', () => {
 
             // Kill the database
-            spawn.execSync('npm run db:flush');
+            execSync('npm run db:flush');
 
             const profilePromise = profile
 
