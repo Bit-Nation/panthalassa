@@ -1,29 +1,30 @@
 //@flow
+const querys = require('./../../lib/database/queries');
 
 /**
- *
- * @param realm
+ * Check if the user has a profile
+ * @param db
+ * @param query
  * @returns {function()}
  */
-const hasProfile = (realm:any) : (() => Promise<boolean>) => {
+const hasProfile = (db:any, query: (realm:any) => Array<*>) : (() => Promise<boolean>) => {
     "use strict";
     return () : Promise<boolean> => {
 
         return new Promise((res, rej) => {
 
-            try {
-                const profiles = realm.objects('Profile');
+            db.query(query)
+                .then(profiles => {
 
-                if(profiles.length >= 1){
-                    res(true);
-                    return;
-                }
+                    if(profiles.length >= 1){
+                        res(true);
+                        return;
+                    }
 
-                res(false);
+                    res(false);
 
-            }catch (e){
-                rej(e);
-            }
+                })
+                .catch(e => rej(e));
 
         });
 
@@ -32,13 +33,13 @@ const hasProfile = (realm:any) : (() => Promise<boolean>) => {
 
 /**
  *
- * @param realm
- * @returns {{hasProfile}}
+ * @param db
+ * @returns {{hasProfile: (function()), raw: {hasProfile: (function(any, *))}}}
  */
-module.exports = (realm:any) => {
+module.exports = (db:any) => {
     "use strict";
     return {
-        hasProfile: hasProfile(realm),
+        hasProfile: hasProfile(db, querys.findProfiles),
         raw: {
             hasProfile
         }
