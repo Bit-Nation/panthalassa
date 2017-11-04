@@ -1,4 +1,4 @@
-const queries = require('./../../lib/database/queries');
+import {findProfiles} from './queries'
 
 describe('queries', () => {
     "use strict";
@@ -23,7 +23,7 @@ describe('queries', () => {
             .objects
             .mockReturnValueOnce(profiles);
 
-        expect(queries.findProfiles(realmMock)).toBe(profiles);
+        expect(findProfiles(realmMock)).toBe(profiles);
 
         expect(realmMock.objects).toBeCalledWith('Profile')
 

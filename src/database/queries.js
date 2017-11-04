@@ -2,12 +2,8 @@
  * Profile search query
  * @param realm
  */
-function findProfiles(realm) {
+export function findProfiles(realm) {
 
     return realm.objects('Profile')
 
 }
-
-module.exports = {
-    findProfiles
-};
