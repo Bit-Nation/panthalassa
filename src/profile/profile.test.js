@@ -1,8 +1,8 @@
-const profile = require('./../../lib/profile/profile');
-const errors = require('./../../lib/errors');
+import {} from './../errors';
 const execSync = require('child_process').execSync;
-const db = require('../../lib/database/db');
-const queries = require('../../lib/database/queries');
+import {DB, factory} from "../database/db";
+import {} from './../database/queries';
+import profile, {hasProfile} from './../profile/profile';
 
 describe('profile', () => {
     "use strict";
@@ -18,21 +18,10 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            return expect(new Promise((res, rej) => {
-
-                profile
-                    .setProfile('pseudoName', 'I am a florian', 'base64...')
-                    .then(result => {
-                        return profile.getProfile();
-                    })
-                    .then(profile => {
-                        res(profile);
-                    })
-                    .catch(err => {
-                        rej(err);
-                    })
-
-            }))
+            return expect(profile.setProfile('pseudoName', 'I am a florian', 'base64...')
+                .then(result => {
+                    return profile.getProfile();
+                }))
                 .resvoles
                 .toEqual({
                     pseudo: 'pseudoName',
@@ -194,7 +183,7 @@ describe('profile', () => {
                 ]
             };
 
-            return expect(profile().raw.hasProfile(db.factory(), fakeQuery)())
+            return expect(hasProfile(factory(), fakeQuery)())
                 .resolves
                 .toBeTruthy();
 
@@ -202,7 +191,7 @@ describe('profile', () => {
 
         test('false', () => {
 
-            return expect(profile(db.factory()).hasProfile())
+            return expect(profile(factory()).hasProfile())
                 .resolves
                 .toBeFalsy();
 
@@ -212,9 +201,7 @@ describe('profile', () => {
 
             class TestError extends Error{}
 
-            const database = db.factory();
-
-            return expect(profile().raw.hasProfile(database, () => { throw new TestError()})())
+            return expect(hasProfile(factory(), () => { throw new TestError()})())
                 .rejects
                 .toEqual(new TestError());
 
