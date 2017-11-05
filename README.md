@@ -130,3 +130,11 @@ const panthalassaInstance = panthalassa.factory(secureStorage);
 > The secure storage is used to save critical information such as private keys in a save environment. 
 
 You can find the specification [here](./src/specification/secureStorageInterface.js)
+
+## Development
+
+We are using docker for development.
+
+1. Get docker
+2. Run `docker-compose up -d`
+3. Run `docker-compose exec node bash`
