@@ -18,8 +18,10 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            return expect(profile.setProfile('pseudoName', 'I am a florian', 'base64...')
-                .then(result => {
+            const db:DB = factory();
+
+            return expect(profile(db).setProfile('pseudoName', 'I am a florian', 'base64...')
+                .then(_ => {
                     return profile.getProfile();
                 }))
                 .resvoles
