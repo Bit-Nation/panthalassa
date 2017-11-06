@@ -3,6 +3,7 @@ const execSync = require('child_process').execSync;
 import {DB, factory} from "../database/db";
 import {} from './../database/queries';
 import profile, {hasProfile} from './../profile/profile';
+import {has} from "../secure_storage/nodeJsSecureStorage";
 
 describe('profile', () => {
     "use strict";
@@ -58,52 +59,73 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            const profilePromise = profile
+            const db = factory();
 
-                //Create profile
-                .setProfile('pseudoName', 'I am a florian', 'base64...')
+            const p = profile(db);
 
-                //After saving fetch it and return the promise
-                .then(_ => {
+            const testPromie = new Promise((res, rej) => {
 
-                    return profile.getProfile();
+                p
 
-                })
+                    //Create profile
+                    .setProfile('pseudoName', 'I am a florian', 'base64...')
 
-                //The profile content should match since get profile
-                //fetched the profile
-                .then(profileContent => {
+                    //After saving fetch it and return the promise
+                    .then(_ => {
 
-                    //Assert profile matches
-                    expect(profileContent).toEqual({
-                        pseudo: 'pseudoName',
-                        description: 'I am a florian',
-                        image: 'base64...'
-                    });
+                        return p.getProfile();
 
-                    //Update profile after ensure that it was written to the db
-                    return profile
-                        .setProfile({
-                            pseudo: 'pseudoNameUpdated',
+                    })
+
+                    //The profile content should match since get profile
+                    //fetched the profile
+                    .then(profileContent => {
+
+                        const profileAsObj = {
+                            pseudo: profileContent.pseudo,
+                            description: profileContent.description,
+                            image: profileContent.image,
+                            id: profileContent.id
+                        };
+
+                        //Assert profile matches
+                        expect(profileAsObj).toEqual({
+                            pseudo: 'pseudoName',
                             description: 'I am a florian',
-                            image: 'base64...'
+                            image: 'base64...',
+                            id: 1
                         });
 
-                })
+                        //Update profile after ensure that it was written to the db
+                        return p.setProfile('pseudoNameUpdated', 'I am a florian', 'base64...');
 
-                // Fetch the updated profile
-                .then(_ => {
+                    })
 
-                    return profile.getProfile()
+                    // Fetch the updated profile
+                    .then(_ => {
 
-                });
+                        return p.getProfile()
 
-            return expect(profilePromise)
-                .resvoles
+                    })
+
+                    .then(profile => {
+                        res({
+                            pseudo: profile.pseudo,
+                            description: profile.description,
+                            image: profile.image,
+                            id: profile.id
+                        })
+                    })
+
+            });
+
+            return expect(testPromie)
+                .resolves
                 .toEqual({
                     pseudo: 'pseudoNameUpdated',
                     description: 'I am a florian',
-                    image: 'base64...'
+                    image: 'base64...',
+                    id: 1
                 });
 
         })
@@ -120,12 +142,49 @@ describe('profile', () => {
          */
         test('get profile that exist', () => {
 
-            return expect(profile.getProfile())
-                .resolves.toEqual({
+            // Kill the database
+            execSync('npm run db:flush');
+
+            const db:DB = factory();
+
+            const p = profile(db);
+
+            const testPromise = new Promise((res, rej) => {
+
+                p
+                    //Make sure that no profile is present
+                    .hasProfile()
+
+                    //Set Profile
+                    .then(hasProfile => {
+                        expect(hasProfile).toBeFalsy();
+                        return p.setProfile('pedsa', 'i am a programmer', 'base64....');
+                    })
+
+                    //fetch profile
+                    .then(_ => {
+                        expect(_).toBeUndefined();
+                        return p.getProfile();
+                    })
+                    .then(profile => {
+                        res({
+                            id: profile.id,
+                            pseudo: profile.pseudo,
+                            description: profile.description,
+                            image: profile.image
+                        });
+                    })
+                    .catch(err => rej(err))
+
+            });
+
+            return expect(testPromise)
+                .resolves
+                .toEqual({
                     pseudo: 'pedsa',
                     description: 'i am a programmer',
                     image: 'base64....',
-                    version: '1.0.0'
+                    id: 1
                 });
 
         });

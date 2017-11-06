@@ -6,6 +6,7 @@ export interface Profile {
 
     hasProfile() : Promise<boolean>;
     setProfile(pseudo:string, description:string, image:string) : Promise<void>;
+    getProfile() : Promise<{...any}>;
 }
 
 /**
@@ -89,6 +90,32 @@ export function hasProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() =
 }
 
 /**
+ * Fetch profile
+ * @param db
+ * @param query
+ * @returns {function()}
+ */
+export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() => Promise<{...any}>) {
+
+    return () : Promise<{...any}> => {
+
+        return new Promise((res, rej) => {
+
+            db.query(query)
+                .then(profiles => {
+
+                    res(profiles[0]);
+
+                })
+                .catch(err => rej(err));
+
+        });
+
+    }
+
+}
+
+/**
  *
  * @param db
  */
@@ -98,7 +125,9 @@ export default function (db:DB) : Profile {
 
         hasProfile: hasProfile(db, findProfiles),
 
-        setProfile: setProfile(db)
+        setProfile: setProfile(db),
+
+        getProfile: getProfile(db, findProfiles)
 
     };
 
