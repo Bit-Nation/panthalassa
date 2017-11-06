@@ -3,7 +3,7 @@ const execSync = require('child_process').execSync;
 import {DB, factory} from "../database/db";
 import {} from './../database/queries';
 import profile, {hasProfile} from './../profile/profile';
-import {has} from "../secure_storage/nodeJsSecureStorage";
+import {NoProfilePresent} from './../errors';
 
 describe('profile', () => {
     "use strict";
@@ -194,9 +194,16 @@ describe('profile', () => {
          */
         test('get profile that do not exist', () => {
 
-            return expect(profile.getProfile())
+            // Kill the database
+            execSync('npm run db:flush');
+
+            const db:DB = factory();
+
+            const p = profile(db);
+
+            return expect(p.getProfile())
                 .rejects
-                .toEqual(new errors.NoProfilePresent())
+                .toEqual(new NoProfilePresent())
 
         });
 

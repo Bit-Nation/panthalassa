@@ -1,6 +1,7 @@
 //@flow
 import {findProfiles} from './../database/queries'
 import {DB} from "../database/db";
+import {NoProfilePresent} from "../errors";
 
 export interface Profile {
 
@@ -103,6 +104,11 @@ export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() =
 
             db.query(query)
                 .then(profiles => {
+
+                    if(profiles.length <= 0){
+                        rej(new NoProfilePresent());
+                        return;
+                    }
 
                     res(profiles[0]);
 
