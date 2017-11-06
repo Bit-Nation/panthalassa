@@ -213,6 +213,9 @@ describe('profile', () => {
 
         test('false', () => {
 
+            // Kill the database
+            execSync('npm run db:flush');
+
             return expect(profile(factory()).hasProfile())
                 .resolves
                 .toBeFalsy();
