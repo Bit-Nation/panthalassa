@@ -24,7 +24,7 @@ describe('profile', () => {
                 .then(_ => {
                     return profile.getProfile();
                 }))
-                .resvoles
+                .resolves
                 .toEqual({
                     pseudo: 'pseudoName',
                     description: 'I am a florian',
