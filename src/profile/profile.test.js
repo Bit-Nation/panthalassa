@@ -20,15 +20,35 @@ describe('profile', () => {
 
             const db:DB = factory();
 
-            return expect(profile(db).setProfile('pseudoName', 'I am a florian', 'base64...')
-                .then(_ => {
-                    return profile.getProfile();
-                }))
+            const p = profile(db);
+
+            //This is a promise used for the expect statement
+            const testPromise = new Promise((res, rej) => {
+
+                p
+                    .setProfile('pseudoName', 'I am a florian', 'base64...')
+                    .then(_ => {
+                        return p.getProfile();
+                    })
+                    .then(profile => {
+                        res({
+                            pseudo: profile.pseudo,
+                            description: profile.description,
+                            image: profile.image,
+                            id: profile.id
+                        });
+                    })
+                    .catch(err => rej(err));
+
+            });
+
+            return expect(testPromise)
                 .resolves
                 .toEqual({
                     pseudo: 'pseudoName',
                     description: 'I am a florian',
-                    image: 'base64...'
+                    image: 'base64...',
+                    id: 1
                 })
 
         });
