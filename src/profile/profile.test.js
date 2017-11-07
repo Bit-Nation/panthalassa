@@ -1,3 +1,5 @@
+//@flow
+
 import {} from './../errors';
 const execSync = require('child_process').execSync;
 import {DB, factory} from "../database/db";
@@ -5,6 +7,8 @@ import {} from './../database/queries';
 import profile, {hasProfile, getPublicProfile} from './../profile/profile';
 import {NoProfilePresent, NoPublicProfilePresent} from './../errors';
 import {InvalidPrivateKeyError} from "../errors";
+const { describe, expect, test } = global;
+import type {PublicProfile} from './../specification/publicProfile'
 
 describe('profile', () => {
     "use strict";
@@ -263,6 +267,7 @@ describe('profile', () => {
                 }
             };
 
+            //Mock the function which fetches profile
             const getProfile = () => {
                 return new Promise((res, rej) => {
                     res({
@@ -274,21 +279,21 @@ describe('profile', () => {
                 });
             };
 
+            //The expected public profile
+            const expectedPublicProfile:PublicProfile = {
+                pseudo: 'peasded',
+                description: 'I am a description',
+                image: 'base64....',
+                ethAddresses: [
+                    "0x7ed1e469fcb3ee19c0366d829e291451be638e59",
+                    "0xe0b70147149b4232a3aa58c6c1cd192c9fef385d"
+                ],
+                version: '1.0.0'
+            };
+
             return expect(getPublicProfile(ethUtils, getProfile)())
                 .resolves
-                .toEqual({
-                    pseudo: 'peasded',
-                    description: 'I am a description',
-                    image: 'base64....',
-
-                    //Public eth addresses
-                    ethAddresses: [
-                        "0x7ed1e469fcb3ee19c0366d829e291451be638e59",
-                        "0xe0b70147149b4232a3aa58c6c1cd192c9fef385d"
-                    ],
-                    //Version of the profile
-                    version: '1.0.0'
-                });
+                .toEqual(expectedPublicProfile);
 
         });
 
