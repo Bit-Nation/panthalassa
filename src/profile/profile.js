@@ -3,13 +3,15 @@ import {findProfiles} from './../database/queries'
 import {DB} from "../database/db";
 import {NoProfilePresent} from "../errors";
 import {SecureStorage} from "../specification/secureStorageInterface";
+import type {PublicProfile} from '../specification/publicProfile.js'
 
 export interface Profile {
 
     hasProfile() : Promise<boolean>;
     setProfile(pseudo:string, description:string, image:string) : Promise<void>;
     getProfile() : Promise<{...any}>;
-    getPublicProfile(): Promise<{...any}>
+    getPublicProfile(): Promise<PublicProfile>
+
 }
 
 /**
@@ -129,26 +131,34 @@ export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() =
  * @param getProfile
  * @returns {function()}
  */
-export function getPublicProfile(ethUtils:{...any}, getProfile: () => Promise<{...any}>) : () => Promise<{...any}> {
+export function getPublicProfile(ethUtils:{...any}, getProfile: () => Promise<{...any}>) : () => Promise<PublicProfile> {
 
-    return () : Promise<{...any}> => {
+    return () : Promise<PublicProfile> => {
 
         return new Promise(async function(res, rej){
 
             try{
 
-                //Fetch all profiles
-                const profile = await getProfile();
-                profile.ethAddresses = [];
+                //Fetch saved profile
+                const sp = await getProfile();
 
+                //Public profile
+                const pubProfile:PublicProfile = {
+                    pseudo: sp.pseudo,
+                    description: sp.description,
+                    image: sp.image,
+                    ethAddresses: [],
+                    version: '1.0.0'
+                };
+
+                //Fetch all keypairs
                 const keyPairs = await ethUtils.allKeyPairs();
 
-                keyPairs
-                    .map(keyPair => {
-                        profile.ethAddresses.push(keyPair.key);
-                    });
+                keyPairs.map(keyPair => {
+                    pubProfile.ethAddresses.push(keyPair.key);
+                });
 
-                res(profile);
+                res(pubProfile);
 
             }catch (e){
 
