@@ -2,8 +2,9 @@ import {} from './../errors';
 const execSync = require('child_process').execSync;
 import {DB, factory} from "../database/db";
 import {} from './../database/queries';
-import profile, {hasProfile} from './../profile/profile';
-import {NoProfilePresent} from './../errors';
+import profile, {hasProfile, getPublicProfile} from './../profile/profile';
+import {NoProfilePresent, NoPublicProfilePresent} from './../errors';
+import {InvalidPrivateKeyError} from "../errors";
 
 describe('profile', () => {
     "use strict";
@@ -221,15 +222,59 @@ describe('profile', () => {
          */
         test('try to fetch profile that does not exist', () => {
 
-            return expect(profile.getPublicProfile())
+            const utils = {};
+
+            const getProfile = () => {
+                return new Promise((res, rej) => {
+                    rej(new NoProfilePresent());
+                });
+            };
+
+            return expect(getPublicProfile(utils, getProfile)())
                 .rejects
-                .toEqual(new errors.NoPublicProfilePresent())
+                .toBeInstanceOf(NoProfilePresent)
 
         });
 
         test('fetch my existing public profile', () => {
 
-            return expect(profile.getPublicProfile())
+            //Mock allKeyPairs method since it will called.
+            //The keys will be added to the address.
+            const ethUtils = {
+                allKeyPairs: () => {
+                    return new Promise((res, rej) => {
+
+                        res([
+                            {
+                                key: '0x7ed1e469fcb3ee19c0366d829e291451be638e59',
+
+                                //Value is not important, key is
+                                value: ''
+                            },
+                            {
+                                key: '0xe0b70147149b4232a3aa58c6c1cd192c9fef385d',
+
+                                //Value is not important, key is
+                                value: ''
+                            }
+                        ]);
+
+                    });
+                }
+            };
+
+            const getProfile = () => {
+                return new Promise((res, rej) => {
+                    res({
+                        pseudo: 'peasded',
+                        description: 'I am a description',
+                        image: 'base64....',
+                        version: '1.0.0'
+                    });
+                });
+            };
+
+            return expect(getPublicProfile(ethUtils, getProfile)())
                 .resolves
                 .toEqual({
                     pseudo: 'peasded',
@@ -238,19 +283,9 @@ describe('profile', () => {
 
                     //Public eth addresses
                     ethAddresses: [
-                        "0x2a65aca4d5fc5b5c859090a6c34d164135398226"
+                        "0x7ed1e469fcb3ee19c0366d829e291451be638e59",
+                        "0xe0b70147149b4232a3aa58c6c1cd192c9fef385d"
                     ],
-
-                    //Mesh network keys (p2p lib identity)
-                    meshKeys: [
-                        "QmUKydZyhZmt2x5VpLJSojRarhRrC4k9QYpkYNf23sWy98"
-                    ],
-
-                    //Rsa key's for signing messages
-                    identKey : [
-                        "QmczUvgj46cvf4wWv8y3Z7RFiKyTUGSx3cSdL4Tqo5aevT"
-                    ],
-
                     //Version of the profile
                     version: '1.0.0'
                 });

@@ -2,12 +2,14 @@
 import {findProfiles} from './../database/queries'
 import {DB} from "../database/db";
 import {NoProfilePresent} from "../errors";
+import {SecureStorage} from "../specification/secureStorageInterface";
 
 export interface Profile {
 
     hasProfile() : Promise<boolean>;
     setProfile(pseudo:string, description:string, image:string) : Promise<void>;
     getProfile() : Promise<{...any}>;
+    getPublicProfile(): Promise<{...any}>
 }
 
 /**
@@ -123,9 +125,48 @@ export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() =
 
 /**
  *
+ * @param ethUtils
+ * @param getProfile
+ * @returns {function()}
+ */
+export function getPublicProfile(ethUtils:{...any}, getProfile: () => Promise<{...any}>) : () => Promise<{...any}> {
+
+    return () : Promise<{...any}> => {
+
+        return new Promise(async function(res, rej){
+
+            try{
+
+                //Fetch all profiles
+                const profile = await getProfile();
+                profile.ethAddresses = [];
+
+                const keyPairs = await ethUtils.allKeyPairs();
+
+                keyPairs
+                    .map(keyPair => {
+                        profile.ethAddresses.push(keyPair.key);
+                    });
+
+                res(profile);
+
+            }catch (e){
+
+                rej(e);
+
+            }
+
+        });
+
+    }
+
+}
+
+/**
+ *
  * @param db
  */
-export default function (db:DB) : Profile {
+export default function (db:DB, ethutils:{...any}) : Profile {
 
     const profileImplementation : Profile = {
 
@@ -133,7 +174,9 @@ export default function (db:DB) : Profile {
 
         setProfile: setProfile(db),
 
-        getProfile: getProfile(db, findProfiles)
+        getProfile: getProfile(db, findProfiles),
+
+        getPublicProfile: getPublicProfile(ethutils, getProfile(db, findProfiles))
 
     };
 
