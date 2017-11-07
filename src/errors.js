@@ -6,6 +6,17 @@ class PasswordMismatch extends Error{}
 
 class PasswordContainsSpecialChars extends Error{}
 
+// Is thrown when there is no private key for an address
+class NoEquivalentPrivateKey extends Error{}
+
+class InvalidEncryptionAlgorithm extends Error{}
+
+class FailedToDecryptPrivateKeyPasswordInvalid extends Error{}
+
+class CanceledAction extends Error{}
+
+class DecryptedValueIsNotAPrivateKey extends Error{}
+
 /**
  * Is thrown if a method on the secure storage implementation is missing
  */
@@ -23,5 +34,10 @@ module.exports = {
     InvalidPrivateKeyError,
     UnsatisfiedSecureStorageImplementationError,
     PasswordMismatch,
-    PasswordContainsSpecialChars
+    PasswordContainsSpecialChars,
+    NoEquivalentPrivateKey,
+    InvalidEncryptionAlgorithm,
+    FailedToDecryptPrivateKeyPasswordInvalid,
+    CanceledAction,
+    DecryptedValueIsNotAPrivateKey
 };

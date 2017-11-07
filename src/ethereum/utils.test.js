@@ -3,6 +3,8 @@ const utils = require('../../lib/ethereum/utils');
 const ethereumjsUtil = require('ethereumjs-util');
 const errors = require('../../lib/errors');
 const aes = require('crypto-js/aes');
+const crypto = require('crypto-js');
+const EE = require('eventemitter3');
 
 // Private key dummy
 const PRIVATE_KEY = "6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22";
@@ -253,4 +255,320 @@ describe('savePrivateKey', () => {
         return expect(utils(secureStorageMock).savePrivateKey(PRIVATE_KEY, "pw \n", "pw \n")).rejects.toEqual(new errors.PasswordContainsSpecialChars());
     });
     
+});
+
+describe('allKeys', () => {
+    "use strict";
+
+    test('try to fetch all', () => {
+
+        //KeyPair 1
+        const PRIVATE_KEY_ONE = 'U2FsdGVkX19kYXZNtfZ2DhfNuao89++6weoGrSdWRA7JvlteIT0fqOfz4x+cTIw7JZy2IB3HbZUEwtlJQccT2+6bJ7aCbNSptaZ3/GHr5eFBGbc3TMpTrAGQOSztIWdq';
+
+        const PRIVATE_KEY_ONE_ADDRESS = '0xb293D530769790b82c187f9CD1a4fA0acDcaAb82';
+
+        // KeyPair 2
+        const PRIVATE_KEY_TWO = 'bb11dbe3b53369ea7a731330f17943dd71a813a1e65c82f3766d5732fc85b3da';
+
+        const PRIVATE_KEY_TWO_ADDRESS = '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94';
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get: () => {},
+            set(){},
+            remove(){},
+            has(){},
+            destroyStorage(){},
+            fetchItems: jest.fn(() => {
+
+                return new Promise((res, rej) => {
+
+                    // Data mock
+                    res([
+                        {
+                            key: 'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ONE_ADDRESS,
+                            value: JSON.stringify({
+                                encryption: 'AES-256',
+                                encrypted: true,
+                                version: '1.0.0',
+                                value: PRIVATE_KEY_ONE
+                            })
+                        },
+                        {
+                            key: 'PRIVATE_ETH_KEY#'+PRIVATE_KEY_TWO_ADDRESS,
+                            value: JSON.stringify({
+                                encryption: '',
+                                encrypted: false,
+                                version: '1.0.0',
+                                value: PRIVATE_KEY_TWO
+                            })
+                        }
+                    ]);
+
+                });
+
+            })
+        };
+
+        expect(utils(secureStorageMock).allKeyPairs()).resolves.toEqual([
+            {
+                key: PRIVATE_KEY_ONE_ADDRESS,
+                value: {
+                    encryption: 'AES-256',
+                    encrypted: true,
+                    version: '1.0.0',
+                    value: PRIVATE_KEY_ONE
+                },
+            },
+            {
+                key: PRIVATE_KEY_TWO_ADDRESS,
+                value: {
+                    encryption: '',
+                    encrypted: false,
+                    version: '1.0.0',
+                    value: PRIVATE_KEY_TWO
+                }
+            }
+        ])
+
+    })
+
+});
+
+describe('getPrivateKey', () => {
+    "use strict";
+
+    test("fetch private successfully by address", () => {
+
+        // KeyPair 1
+        const PRIVATE_KEY = 'bb11dbe3b53369ea7a731330f17943dd71a813a1e65c82f3766d5732fc85b3da';
+
+        const PRIVATE_KEY_ADDRESS = '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94';
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get: (key) => {
+
+                return new Promise((res, rej) => {
+
+                    //Only resolve if key matched the expected one
+                    if(key === 'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS){
+
+                        //Since the key is saved as a json string stringify the return value
+                        res(JSON.stringify({
+                            encryption: '',
+                            encrypted: false,
+                            version: '1.0.0',
+                            value: PRIVATE_KEY
+                        }));
+
+                        return;
+                    }
+
+                    res();
+
+                });
+
+
+
+            },
+            set(){},
+            remove(){},
+            has(){ return new Promise((res, rej) => res(true)) },
+            destroyStorage(){}
+        };
+
+        return expect(utils(secureStorageMock).getPrivateKey(PRIVATE_KEY_ADDRESS))
+            .resolves
+            .toEqual({
+                encryption: '',
+                encrypted: false,
+                version: '1.0.0',
+                value: PRIVATE_KEY
+            });
+
+    });
+
+    test("try to fetch private key that doesn't exist", () => {
+
+        // KeyPair 1
+        const PRIVATE_KEY = 'bb11dbe3b53369ea7a731330f17943dd71a813a1e65c82f3766d5732fc85b3da';
+
+        const PRIVATE_KEY_ADDRESS = '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94';
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get(){},
+            set(){},
+            remove(){},
+            has(){
+                return new Promise((res, rej) => res(false))
+            },
+            destroyStorage(){}
+        };
+
+        return expect(utils(secureStorageMock).getPrivateKey(PRIVATE_KEY_ADDRESS))
+            .rejects
+            .toEqual(new errors.NoEquivalentPrivateKey())
+
+    });
+
+});
+
+describe('deletePrivateKey', () => {
+    "use strict";
+
+    test('delete key that does not exist', () => {
+
+        const PRIVATE_KEY_ADDRESS = '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94';
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get(){},
+            set(){},
+            remove(){},
+            has(){
+                return new Promise((res, rej) => res(false))
+            },
+            destroyStorage(){}
+        };
+
+        return expect(utils(secureStorageMock).deletePrivateKey(PRIVATE_KEY_ADDRESS))
+            .rejects
+            .toEqual(new errors.NoEquivalentPrivateKey())
+
+    });
+
+    test('delete private key successfully', () => {
+
+        //Mock the secure storage
+        const secureStorageMock = {
+            get(){},
+            set(){},
+            remove: jest.fn(),
+            has(){
+                return new Promise((res, rej) => res(true))
+            },
+            destroyStorage(){}
+        };
+
+        return expect(new Promise((res, rej) => {
+
+            utils(secureStorageMock)
+                .deletePrivateKey(PRIVATE_KEY_ADDRESS)
+                .then(response => {
+
+                    //When the promise resolve remove should have been called once
+                    expect(secureStorageMock.remove).toHaveBeenCalled();
+                    
+                    res(response);
+
+                })
+                .catch(err => rej(err));
+
+        }))
+            .resolves
+            .toBeUndefined();
+
+    });
+
+});
+
+describe('decryptPrivateKey', () => {
+    "use strict";
+
+    test('decrypt successfully', () => {
+
+        const pubEE = new EE();
+
+        const PRIVATE_KEY_ONE = 'U2FsdGVkX19GTRU0W5qgP9nCA0+4PVM3LmbIxQRW6d6Ky1i5fwaU9Cj4DbHoWLw/hRivOJJasxCSP6by6MxWNZjCOsqzkKl1ud99+QgU4oHUYncnni35rETjW+QHDTni';
+
+        return expect(new Promise((res, rej) => {
+
+            //Listen for decryption dialog
+            pubEE.on('eth:decrypt-private-key', (eventData) => {
+                expect(eventData.topic).toBe('ethereum');
+                expect(eventData.reason).toBe('display private key');
+                eventData.successor("mypw")
+                    .then(privateKey => {})
+                    .catch(err => reject(err));
+            });
+
+            //Boot decryption function
+            const decryptPrivatekey = utils()
+                .raw
+                .decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+
+            decryptPrivatekey({encryption: 'AES-256', value: PRIVATE_KEY_ONE}, 'display private key', 'ethereum')
+                .then(privateKey => res(privateKey))
+                .catch(err => rej(err));
+
+        }))
+            .resolves
+            .toEqual("bb11dbe3b53369ea7a731330f17943dd71a813a1e65c82f3766d5732fc85b3da");
+
+    });
+
+    test('decryption failed (wrong password)', () => {
+
+        const pubEE = new EE();
+
+        return expect(new Promise((res, rej) => {
+
+            //Listen for decryption dialog
+            pubEE.on('eth:decrypt-private-key', (eventData) => {
+                expect(eventData.topic).toBe('ethereum');
+                expect(eventData.reason).toBe('display private key');
+                eventData.successor("wrong-pw")
+                    .then(privateKey => res(privateKey))
+                    .catch(err => rej(err));
+            });
+
+            //Boot decryption function
+            const decryptPrivatekey = utils()
+                .raw
+                .decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+
+            decryptPrivatekey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum');
+
+        }))
+            .rejects
+            .toEqual(new errors.FailedToDecryptPrivateKeyPasswordInvalid());
+
+    });
+
+    test('unknown encryption algorithm', () => {
+
+        return expect(utils().decryptPrivateKey({encryption: 'NO_NAME'})).rejects.toEqual(new errors.InvalidEncryptionAlgorithm());
+
+    });
+
+    test('decrypted value is not a private key', () => {
+
+        const pubEE = new EE();
+
+        return expect(new Promise((res, rej) => {
+
+            //Listen for decryption dialog
+            pubEE.on('eth:decrypt-private-key', (eventData) => {
+                expect(eventData.topic).toBe('ethereum');
+                expect(eventData.reason).toBe('display private key');
+                eventData.successor("wrong-pw")
+                    .then(privateKey => res(privateKey))
+                    .catch(err => rej(err));
+            });
+
+            //Boot decryption function
+            const decryptPrivatekey = utils()
+                .raw
+                .decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+
+            decryptPrivatekey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum');
+
+        }))
+            .rejects
+            .toEqual(new errors.DecryptedValueIsNotAPrivateKey());
+
+    });
+
 });
