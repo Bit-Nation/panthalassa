@@ -1,4 +1,3 @@
-require('promise/lib/rejection-tracking').enable();
 const utils = require('../../lib/ethereum/utils');
 const ethereumjsUtil = require('ethereumjs-util');
 const errors = require('../../lib/errors');

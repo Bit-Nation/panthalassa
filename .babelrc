@@ -1,0 +1,4 @@
+{
+  "presets": ["flow-node"],
+  "plugins": ["es6-promise", "transform-async-to-generator"]
+}

@@ -1,7 +1,6 @@
 //@flow
 
 const crypto = require('crypto');
-const Promise = require('promise');
 const ethereumjsUtils = require('ethereumjs-util');
 const errors = require('./../errors');
 const aes = require('crypto-js/aes');
