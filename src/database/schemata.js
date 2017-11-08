@@ -6,11 +6,12 @@
 ///////////////////////////////////////////////////////////
 
 //Profile
-export interface Profile {
+export interface ProfileObject {
     id: number,
     pseudo: string,
     description: string,
-    image: string
+    image: string,
+    version: string
 }
 
 export const ProfileSchema = {
@@ -20,6 +21,7 @@ export const ProfileSchema = {
         id: 'int',
         pseudo: 'string',
         description: 'string',
-        image: 'string'
+        image: 'string',
+        version: 'string'
     },
 };
