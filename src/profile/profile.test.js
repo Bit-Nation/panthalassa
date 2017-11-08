@@ -173,26 +173,26 @@ describe('profile', () => {
                         expect(_).toBeUndefined();
                         return p.getProfile();
                     })
+
                     .then(profile => {
-                        res({
-                            id: profile.id,
-                            pseudo: profile.pseudo,
-                            description: profile.description,
-                            image: profile.image
-                        });
+                        res(JSON.stringify(profile));
                     })
+
                     .catch(err => rej(err))
 
             });
 
+            const expectedProfile:ProfileObject = {
+                id: 1,
+                pseudo: 'pedsa',
+                description: 'i am a programmer',
+                image: 'base64....',
+                version: '1.0.0'
+            };
+
             return expect(testPromise)
                 .resolves
-                .toEqual({
-                    pseudo: 'pedsa',
-                    description: 'i am a programmer',
-                    image: 'base64....',
-                    id: 1
-                });
+                .toEqual(JSON.stringify(expectedProfile));
 
         });
 

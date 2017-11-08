@@ -4,6 +4,7 @@ import {DB} from "../database/db";
 import {NoProfilePresent} from "../errors";
 import {SecureStorage} from "../specification/secureStorageInterface";
 import type {PublicProfile} from '../specification/publicProfile.js'
+import {ProfileObject} from "../database/schemata";
 
 export const PROFILE_VERSION = '1.0.0';
 
@@ -101,13 +102,15 @@ export function hasProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() =
  * @param query
  * @returns {function()}
  */
-export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() => Promise<{...any}>) {
+export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() => Promise<ProfileObject>) {
 
     return () : Promise<{...any}> => {
 
         return new Promise((res, rej) => {
 
             db.query(query)
+
+                //Fetch the first profile or reject if user has no profiles
                 .then(profiles => {
 
                     if(profiles.length <= 0){
@@ -118,6 +121,7 @@ export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() =
                     res(profiles[0]);
 
                 })
+                
                 .catch(err => rej(err));
 
         });
