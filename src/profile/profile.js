@@ -33,7 +33,7 @@ export function setProfile(db:DB) : (pseudo:string, description:string, image:st
                 //Since a user can create only one profile
                 //we will updated the existing one if it exist
 
-                const profiles = findProfiles(realm);
+                const profiles:Array<ProfileObject> = findProfiles(realm);
 
                 //Create profile if no exist
                 if(profiles.length === 0){
