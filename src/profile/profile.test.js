@@ -83,23 +83,22 @@ describe('profile', () => {
                     //fetched the profile
                     .then(profileContent => {
 
-                        const profileAsObj = {
+                        //Assert profile matches
+                        expect({
                             pseudo: profileContent.pseudo,
                             description: profileContent.description,
                             image: profileContent.image,
                             id: profileContent.id
-                        };
-
-                        //Assert profile matches
-                        expect(profileAsObj).toEqual({
-                            pseudo: 'pseudoName',
-                            description: 'I am a florian',
-                            image: 'base64...',
-                            id: 1
-                        });
+                        })
+                            .toEqual({
+                                pseudo: 'pseudoName',
+                                description: 'I am a florian',
+                                image: 'base64...',
+                                id: 1
+                            });
 
                         //Update profile after ensure that it was written to the db
-                        return p.setProfile('pseudoNameUpdated', 'I am a florian', 'base64...');
+                        return p.setProfile('pseudoNameUpdated', 'I am a florian updated', 'base64...new image');
 
                     })
 
@@ -111,24 +110,30 @@ describe('profile', () => {
                     })
 
                     .then(profile => {
-                        res({
+
+                        res(JSON.stringify({
+                            id: profile.id,
                             pseudo: profile.pseudo,
                             description: profile.description,
                             image: profile.image,
-                            id: profile.id
-                        })
+                            version: profile.version
+                        }))
+                        
                     })
 
             });
 
+            const expectedProfile:ProfileObject = {
+                id: 1,
+                pseudo: 'pseudoNameUpdated',
+                description: 'I am a florian updated',
+                image: 'base64...new image',
+                version: '1.0.0'
+            };
+
             return expect(testPromie)
                 .resolves
-                .toEqual({
-                    pseudo: 'pseudoNameUpdated',
-                    description: 'I am a florian',
-                    image: 'base64...',
-                    id: 1
-                });
+                .toEqual(JSON.stringify(expectedProfile));
 
         })
 

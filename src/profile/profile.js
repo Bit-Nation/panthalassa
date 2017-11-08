@@ -37,10 +37,8 @@ export function setProfile(db:DB) : (pseudo:string, description:string, image:st
                 //Create profile if no exist
                 if(profiles.length === 0){
 
-                    let id = profiles.length;
-
                     realm.create('Profile', {
-                        id: id +1,
+                        id: profiles.length +1,
                         pseudo: pseudo,
                         description: description,
                         image: image,
