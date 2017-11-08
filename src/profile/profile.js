@@ -5,6 +5,8 @@ import {NoProfilePresent} from "../errors";
 import {SecureStorage} from "../specification/secureStorageInterface";
 import type {PublicProfile} from '../specification/publicProfile.js'
 
+export const PROFILE_VERSION = '1.0.0';
+
 export interface Profile {
 
     hasProfile() : Promise<boolean>;
@@ -42,6 +44,7 @@ export function setProfile(db:DB) : (pseudo:string, description:string, image:st
                         pseudo: pseudo,
                         description: description,
                         image: image,
+                        version: PROFILE_VERSION
                     });
 
                     res();

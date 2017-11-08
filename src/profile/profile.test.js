@@ -9,6 +9,7 @@ import {NoProfilePresent, NoPublicProfilePresent} from './../errors';
 import {InvalidPrivateKeyError} from "../errors";
 const { describe, expect, test } = global;
 import type {PublicProfile} from './../specification/publicProfile'
+import {ProfileObject} from "../database/schemata";
 
 describe('profile', () => {
     "use strict";
@@ -28,6 +29,14 @@ describe('profile', () => {
 
             const p = profile(db);
 
+            const expectedProfile:ProfileObject = {
+                id: 1,
+                pseudo: 'pseudoName',
+                description: 'I am a florian',
+                image: 'base64...',
+                version: '1.0.0'
+            };
+
             //This is a promise used for the expect statement
             const testPromise = new Promise((res, rej) => {
 
@@ -36,26 +45,14 @@ describe('profile', () => {
                     .then(_ => {
                         return p.getProfile();
                     })
-                    .then(profile => {
-                        res({
-                            pseudo: profile.pseudo,
-                            description: profile.description,
-                            image: profile.image,
-                            id: profile.id
-                        });
-                    })
+                    .then(profile => res(JSON.stringify(profile)))
                     .catch(err => rej(err));
 
             });
 
             return expect(testPromise)
                 .resolves
-                .toEqual({
-                    pseudo: 'pseudoName',
-                    description: 'I am a florian',
-                    image: 'base64...',
-                    id: 1
-                })
+                .toBe(JSON.stringify(expectedProfile))
 
         });
 
