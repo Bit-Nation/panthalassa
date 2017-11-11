@@ -1,6 +1,7 @@
 //@flow
 
 import type {SecureStorage} from "../specification/secureStorageInterface";
+import type { PrivateKeyType } from '../specification/privateKey'
 
 const crypto = require('crypto');
 const ethereumjsUtils = require('ethereumjs-util');
@@ -85,22 +86,24 @@ export function savePrivateKey(secureStorage: SecureStorage, ethjsUtils: ethereu
                 // $FlowFixMe From a logical point of view the password can't be null / undefined here
                 if(specialCharsPattern.test(pw) || specialCharsPattern.test(pwConfirm)){
                     rej(new errors.PasswordContainsSpecialChars());
+                    return;
                 }
+
+                const pk:PrivateKeyType = {
+                    encryption: 'AES-256',
+                    value: aes.encrypt(privateKey, pw).toString(),
+                    encrypted: true,
+                    version: '1.0.0'
+                };
 
                 //Save the private key
                 secureStorage.set(
                     PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey,
-                    JSON.stringify({
-                        encryption: 'AES-256',
-                        value: aes.encrypt(privateKey, pw).toString(),
-                        encrypted: true,
-                        version: '1.0.0'
-                    })
+                    JSON.stringify(pk)
                 )
                     .then(result => res(result))
                     .catch(err => rej(err));
 
-                return;
             }
 
             //Save the private key
@@ -162,11 +165,10 @@ export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<*>){
 
 /**
  * Fetches a private key based on the
- * Todo use a type for to represent a encrypted key
  * @param secureStorage
  * @returns {function(string)}
  */
-export function getPrivateKey(secureStorage:SecureStorage) : ((address:string) => Promise<{...any}>){
+export function getPrivateKey(secureStorage:SecureStorage) : ((address:string) => Promise<PrivateKeyType>){
     "use strict";
 
     return (address:string) : Promise<{...any}> => {
@@ -243,7 +245,7 @@ export function deletePrivateKey(secureStorage:SecureStorage) : ((address:string
 export function decryptPrivateKey(pubEE:eventEmitter, crypto: any, ethjsUtils: ethereumjsUtils): ((privateKey: {value: string}, reason: string, topic: string) => Promise<string>){
     "use strict";
 
-    return (privateKey: {value: string}, reason:string, topic: string) : Promise<string> => {
+    return (privateKey: PrivateKeyType, reason:string, topic: string) : Promise<string> => {
 
         return new Promise((mRes, mRej) => {
 
