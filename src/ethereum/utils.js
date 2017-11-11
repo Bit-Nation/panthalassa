@@ -202,7 +202,7 @@ export function getPrivateKey(secureStorage:SecureStorage) : ((address:string) =
  * @param secureStorage
  * @returns {function(string)}
  */
-const deletePrivateKey = (secureStorage) => {
+export function deletePrivateKey(secureStorage:SecureStorage) : ((address:string) => Promise<void>){
     "use strict";
 
     return (address:string) : Promise<void> => {
@@ -220,9 +220,7 @@ const deletePrivateKey = (secureStorage) => {
                         return;
                     }
 
-                    return secureStorage
-                        .remove(key);
-
+                    return secureStorage.remove(key);
 
                 })
                 .then(result => res(result))
@@ -232,7 +230,7 @@ const deletePrivateKey = (secureStorage) => {
 
     }
 
-};
+}
 
 /**
  * Decrypt the private key. Will emit an event that contains method's to solve this problem
