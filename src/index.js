@@ -1,13 +1,15 @@
 // @flow
 
-const ee = require('eventemitter3');
-const ethUtils = require('./ethereum/utils');
+import type {SecureStorage} from "./specification/secureStorageInterface";
+
+const EventEmitter = require('eventemitter3');
+import ethUtils, {EthUtilsInterface} from "./ethereum/utils";
 
 /**
  *
  * @param ee
  */
-const preBoot = (ee) => {
+const preBoot = (ee:EventEmitter) => {
     "use strict";
 
     // Register event handler
@@ -21,11 +23,10 @@ const preBoot = (ee) => {
  * @returns {{on: (function(string, *)), emit: (function(string)), boot: (function())}}
  * @constructor
  */
-const Panthalassa = (secureStorage:any, ee:any) => {
+const PanthalassaApi = (secureStorage:SecureStorage, ee:EventEmitter) => {
     "use strict";
 
-    //Ethereum utils
-    const eth = ethUtils(secureStorage, ee);
+    const ethUtilsInstance:EthUtilsInterface = ethUtils(secureStorage, ee);
 
     return {
 
@@ -48,14 +49,7 @@ const Panthalassa = (secureStorage:any, ee:any) => {
                 preBoot(ee);
 
                 res({
-                    eth : {
-                        createPrivateKey: eth.createPrivateKey,
-                        savePrivateKey: eth.savePrivateKey,
-                        allKeyPairs: eth.allKeyPairs,
-                        getPrivateKey: eth.getPrivateKey,
-                        deletePrivateKey: eth.deletePrivateKey,
-                        decryptPrivateKey: eth.decryptPrivateKey
-                    },
+                    eth: ethUtilsInstance,
                     bootNetwork : () => {
                         throw new Error("This is currently not implemented");
                     }
@@ -69,20 +63,9 @@ const Panthalassa = (secureStorage:any, ee:any) => {
 
 };
 
-/**
- *
- * @param secureStorage
- * @returns {{on, boot}}
- */
-const factory = (secureStorage:any) => {
-    "use strict";
-    return Panthalassa(
-        secureStorage,
-        new ee()
+export default function(ss:SecureStorage){
+    return PanthalassaApi(
+        ss,
+        new EventEmitter()
     )
-};
-
-module.exports = {
-    Panthalassa,
-    factory
-};
+}
