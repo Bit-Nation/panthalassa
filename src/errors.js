@@ -20,3 +20,5 @@ export class DecryptedValueIsNotAPrivateKey extends Error{}
 export class NoProfilePresent extends Error{}
 
 export class NoPublicProfilePresent extends Error{}
+
+export class AbortedSigningOfTx extends Error{};
