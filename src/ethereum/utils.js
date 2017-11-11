@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const ethereumjsUtils = require('ethereumjs-util');
 const errors = require('./../errors');
 const aes = require('crypto-js/aes');
+const eventEmitter = require('eventemitter3');
 
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
@@ -239,7 +240,7 @@ export function deletePrivateKey(secureStorage:SecureStorage) : ((address:string
  * @param ethjsUtils
  * @returns {function({}, string, string)}
  */
-const decryptPrivateKey = (pubEE:any, crypto: any, ethjsUtils: ethereumjsUtils): ((privateKey: {value: string}, reason: string, topic: string) => Promise<string>) => {
+export function decryptPrivateKey(pubEE:eventEmitter, crypto: any, ethjsUtils: ethereumjsUtils): ((privateKey: {value: string}, reason: string, topic: string) => Promise<string>){
     "use strict";
 
     return (privateKey: {value: string}, reason:string, topic: string) : Promise<string> => {
@@ -249,6 +250,7 @@ const decryptPrivateKey = (pubEE:any, crypto: any, ethjsUtils: ethereumjsUtils):
             //break if the algo is unknown
             if(privateKey.encryption !== 'AES-256'){
                 mRej(new errors.InvalidEncryptionAlgorithm());
+                return;
             }
 
             //Call this to decrypt the password
@@ -296,4 +298,4 @@ const decryptPrivateKey = (pubEE:any, crypto: any, ethjsUtils: ethereumjsUtils):
 
     }
 
-};
+}
