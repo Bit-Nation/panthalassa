@@ -12,9 +12,8 @@ const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
  * @param crypto
  * @param isValidPrivateKey
  * @returns {function()}
- * Todo change the promise * to real typehint
  */
-const createPrivateKey = (crypto, isValidPrivateKey: (key: Buffer) => boolean) : (() => Promise<string>) => {
+export function createPrivateKey(crypto:{...any}, isValidPrivateKey: (key: Buffer) => boolean) : (() => Promise<string>){
     "use strict";
 
     return () : Promise<string> => {
@@ -39,7 +38,7 @@ const createPrivateKey = (crypto, isValidPrivateKey: (key: Buffer) => boolean) :
 
     }
 
-};
+}
 
 /**
  *
