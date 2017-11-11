@@ -1,9 +1,12 @@
+import {AbortedSigningOfTx} from "../errors";
+
 const ethereumjsUtil = require('ethereumjs-util');
 const errors = require('../../lib/errors');
 const aes = require('crypto-js/aes');
 const crypto = require('crypto-js');
 const EE = require('eventemitter3');
-import utils, {createPrivateKey, savePrivateKey, decryptPrivateKey} from './utils';
+const EthTx = require('ethereumjs-tx');
+import utils, {createPrivateKey, savePrivateKey, decryptPrivateKey, signTx} from './utils';
 
 // Private key dummy
 const PRIVATE_KEY = "6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22";
@@ -561,6 +564,92 @@ describe('decryptPrivateKey', () => {
         }))
             .rejects
             .toEqual(new errors.DecryptedValueIsNotAPrivateKey());
+
+    });
+
+});
+
+describe('signTx', () => {
+
+    //Sample tx data
+    const txData = {
+        nonce: '0x03',
+        gas: '0x5208',
+        from: '0xae481410716b6d087261e0d69480b4cb9305c624',
+        to: '0x814944ed940f27eb40330882a24baad21c30818e',
+        value: '0x1',
+        gasPrice: '0x4a817c800'
+    };
+
+    //sample private key
+    const privateKey:string = "affd0b4039708432bb2759fc747bf7b9b1fbdab71bf86eab6d812ae83419b708";
+
+    //signed transaction
+    const signedTx = 'f864038504a817c80082520894814944ed940f27eb40330882a24baad21c30818e01801ba063a5002e8054f7c95e4520ad4ef7739e8d66adc3a11d511b53b15388d6cd8c84a0212ccf0f79cc23a1f53aa8f90e8210633bceb2c85d6797bd0acfdec874c5b092';
+
+    /**
+     * Sign transaction
+     */
+    test('successfully', () => {
+
+        const ee = new EE();
+
+        //Eventlistener must call the confirm method
+        ee.on('eth:tx:sign', function(data){
+
+            //Confirm transaction
+            data.confirm();
+
+        });
+
+        //Test promise that signs tx data and transform it to hex string
+        const testPromise = new Promise((res, rej) => {
+
+            //Const tx
+            const tx = signTx(ethereumjsUtil.isValidPrivate, ee)(txData, privateKey);
+
+            tx
+                .then(signedTx => {
+                    res(signedTx.serialize().toString('hex'))
+                })
+                .catch(e => rej(e));
+
+        });
+
+        return expect(testPromise).resolves.toBe(signedTx)
+
+    });
+
+    /**
+     * Reject the transaction
+     */
+    test('rejected', () => {
+
+        const ee = new EE();
+
+        //Eventlistener must call the confirm method
+        ee.on('eth:tx:sign', function(data){
+
+            //Abort the transaction will reject the promise
+            data.abort();
+
+        });
+
+        //Test promise that signs tx data and transform it to hex string
+        const testPromise = new Promise((res, rej) => {
+
+            //Const tx
+            const tx = signTx(ethereumjsUtil.isValidPrivate, ee)(txData, privateKey);
+
+            tx
+                .then(signedTx => {
+                    res(signedTx.serialize().toString('hex'))
+                })
+                .catch(e => rej(e));
+
+        });
+
+        return expect(testPromise).rejects.toEqual(new AbortedSigningOfTx());
 
     });
 
