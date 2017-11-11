@@ -2,12 +2,15 @@
 
 import type {SecureStorage} from "../specification/secureStorageInterface";
 import type { PrivateKeyType } from '../specification/privateKey'
+import type {TxData} from '../specification/tx';
+import {AbortedSigningOfTx, InvalidPrivateKeyError} from "../errors";
 
 const crypto = require('crypto');
 const ethereumjsUtils = require('ethereumjs-util');
 const errors = require('./../errors');
 const aes = require('crypto-js/aes');
-const eventEmitter = require('eventemitter3');
+const EventEmitter = require('eventemitter3');
+const EthTx = require('ethereumjs-tx');
 
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
@@ -242,7 +245,7 @@ export function deletePrivateKey(secureStorage:SecureStorage) : ((address:string
  * @param ethjsUtils
  * @returns {function({}, string, string)}
  */
-export function decryptPrivateKey(pubEE:eventEmitter, crypto: any, ethjsUtils: ethereumjsUtils): ((privateKey: {value: string}, reason: string, topic: string) => Promise<string>){
+export function decryptPrivateKey(pubEE:EventEmitter, crypto: any, ethjsUtils: ethereumjsUtils): ((privateKey: {value: string}, reason: string, topic: string) => Promise<string>){
     "use strict";
 
     return (privateKey: PrivateKeyType, reason:string, topic: string) : Promise<string> => {
@@ -302,13 +305,69 @@ export function decryptPrivateKey(pubEE:eventEmitter, crypto: any, ethjsUtils: e
 
 }
 
+/**
+ * Sign a transaction
+ * @param isPrivateKey
+ * @param ee
+ * @returns {function(TxData, string)}
+ */
+export function signTx(isPrivateKey: (privKey:Buffer) => boolean, ee: EventEmitter) : (txData:TxData, privKey:string) => Promise<EthTx> {
+
+    return (txData:TxData, privKey:string) : Promise<EthTx> => {
+
+        //Private key as buffer
+        const pKB = Buffer.from(privKey, 'hex');
+
+        return new Promise((res, rej) => {
+
+            //reject if private key is invalid
+            if(!isPrivateKey(pKB)){
+                rej(new InvalidPrivateKeyError());
+                return;
+            }
+
+            //Sign transaction
+            const tx = new EthTx(txData);
+
+            /**
+             * client need's to react to this event
+             * in order to sign the transaction
+             */
+            ee.emit('eth:tx:sign', {
+
+                tx: tx,
+
+                txData: txData,
+
+                confirm: () => {
+
+                    tx.sign(pKB);
+                    res(tx);
+
+                },
+
+                abort: () => {
+
+                    rej(new AbortedSigningOfTx());
+
+                }
+
+            });
+
+        });
+
+    }
+
+}
+
 export interface EthUtilsInterface {
     createPrivateKey: () => Promise<string>,
     savePrivateKey: (privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>,
     allKeyPairs: () => Promise<*>,
     getPrivateKey: (address:string) => Promise<{...any}>,
     deletePrivateKey: (address:string) => Promise<void>,
-    decryptPrivateKey: (privateKey: {value: string}, reason: string, topic: string) => Promise<string>
+    decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => Promise<string>,
+    signTx: (txData:TxData, privkey:string) => Promise<EthTx>
 }
 
 /**
@@ -317,7 +376,7 @@ export interface EthUtilsInterface {
  * @param ee
  * @returns {ethUtils}
  */
-export default function ethUtils (ss:SecureStorage, ee:eventEmitter) : EthUtilsInterface {
+export default function ethUtils (ss:SecureStorage, ee:EventEmitter) : EthUtilsInterface {
 
     const ethUtilsImplementation:EthUtilsInterface = {
         createPrivateKey: createPrivateKey(crypto, ethereumjsUtils.isValidPrivate),
@@ -325,7 +384,8 @@ export default function ethUtils (ss:SecureStorage, ee:eventEmitter) : EthUtilsI
         allKeyPairs: allKeyPairs(ss),
         getPrivateKey: getPrivateKey(ss),
         deletePrivateKey: deletePrivateKey(ss),
-        decryptPrivateKey: decryptPrivateKey(ee, crypto, ethereumjsUtils)
+        decryptPrivateKey: decryptPrivateKey(ee, crypto, ethereumjsUtils),
+        signTx: signTx(ethereumjsUtils.isValidPrivate, ee)
     };
 
     return ethUtilsImplementation;
