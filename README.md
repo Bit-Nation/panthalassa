@@ -119,6 +119,19 @@ const panthalassaInstance = panthalassa.factory(secureStorage);
             * Return: -
         * reason: string
         * topic: string
+        
+        
+* `eth:tx:sign`
+    * Everytime this event is emitted a dialog should be displayed to the user whith a option to about or confirm the transaction
+    * Parameter: Available in the event data
+        * confirm: function
+            * Parameter: - 
+            * Return: -
+        * abort: function
+            * Parameter: - 
+            * Return: -
+        * txData: [seeHere](./src/specification/tx.js)
+        * tx: [seeHere](https://www.npmjs.com/package/ethereumjs-tx)
 ## FAQ
 
 **I heard this is supposed to be the backend of The Pangea Jurisdiction, can you please explain?**
