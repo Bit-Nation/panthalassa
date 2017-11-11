@@ -302,7 +302,7 @@ export function decryptPrivateKey(pubEE:eventEmitter, crypto: any, ethjsUtils: e
 
 }
 
-export interface EthUtils {
+export interface EthUtilsInterface {
     createPrivateKey: () => Promise<string>,
     savePrivateKey: (privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>,
     allKeyPairs: () => Promise<*>,
@@ -315,11 +315,11 @@ export interface EthUtils {
  * Returns eth utils implementation
  * @param ss
  * @param ee
- * @returns {EthUtils}
+ * @returns {ethUtils}
  */
-export default function (ss:SecureStorage, ee:eventEmitter) : EthUtils {
+export default function ethUtils (ss:SecureStorage, ee:eventEmitter) : EthUtilsInterface {
 
-    const ethUtilsImplementation:EthUtils = {
+    const ethUtilsImplementation:EthUtilsInterface = {
         createPrivateKey: createPrivateKey(crypto, ethereumjsUtils.isValidPrivate),
         savePrivateKey: savePrivateKey(ss, ethereumjsUtils, aes),
         allKeyPairs: allKeyPairs(ss),
