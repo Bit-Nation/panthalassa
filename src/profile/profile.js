@@ -3,13 +3,18 @@ import {findProfiles} from './../database/queries'
 import {DB} from "../database/db";
 import {NoProfilePresent} from "../errors";
 import {SecureStorage} from "../specification/secureStorageInterface";
+import type {PublicProfile} from '../specification/publicProfile.js'
+import {ProfileObject} from "../database/schemata";
+
+export const PROFILE_VERSION = '1.0.0';
 
 export interface Profile {
 
     hasProfile() : Promise<boolean>;
     setProfile(pseudo:string, description:string, image:string) : Promise<void>;
     getProfile() : Promise<{...any}>;
-    getPublicProfile(): Promise<{...any}>
+    getPublicProfile(): Promise<PublicProfile>
+
 }
 
 /**
@@ -28,18 +33,17 @@ export function setProfile(db:DB) : (pseudo:string, description:string, image:st
                 //Since a user can create only one profile
                 //we will updated the existing one if it exist
 
-                const profiles = findProfiles(realm);
+                const profiles:Array<ProfileObject> = findProfiles(realm);
 
                 //Create profile if no exist
                 if(profiles.length === 0){
 
-                    let id = profiles.length;
-
                     realm.create('Profile', {
-                        id: id +1,
+                        id: profiles.length +1,
                         pseudo: pseudo,
                         description: description,
                         image: image,
+                        version: PROFILE_VERSION
                     });
 
                     res();
@@ -98,13 +102,15 @@ export function hasProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() =
  * @param query
  * @returns {function()}
  */
-export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() => Promise<{...any}>) {
+export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() => Promise<ProfileObject>) {
 
     return () : Promise<{...any}> => {
 
         return new Promise((res, rej) => {
 
             db.query(query)
+
+                //Fetch the first profile or reject if user has no profiles
                 .then(profiles => {
 
                     if(profiles.length <= 0){
@@ -115,6 +121,7 @@ export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() =
                     res(profiles[0]);
 
                 })
+                
                 .catch(err => rej(err));
 
         });
@@ -129,26 +136,34 @@ export function getProfile(db:DB, query: (realm:any) => Array<{...any}>) : (() =
  * @param getProfile
  * @returns {function()}
  */
-export function getPublicProfile(ethUtils:{...any}, getProfile: () => Promise<{...any}>) : () => Promise<{...any}> {
+export function getPublicProfile(ethUtils:{...any}, getProfile: () => Promise<{...any}>) : () => Promise<PublicProfile> {
 
-    return () : Promise<{...any}> => {
+    return () : Promise<PublicProfile> => {
 
         return new Promise(async function(res, rej){
 
             try{
 
-                //Fetch all profiles
-                const profile = await getProfile();
-                profile.ethAddresses = [];
+                //Fetch saved profile
+                const sp = await getProfile();
 
+                //Public profile
+                const pubProfile:PublicProfile = {
+                    pseudo: sp.pseudo,
+                    description: sp.description,
+                    image: sp.image,
+                    ethAddresses: [],
+                    version: '1.0.0'
+                };
+
+                //Fetch all keypairs
                 const keyPairs = await ethUtils.allKeyPairs();
 
-                keyPairs
-                    .map(keyPair => {
-                        profile.ethAddresses.push(keyPair.key);
-                    });
+                keyPairs.map(keyPair => {
+                    pubProfile.ethAddresses.push(keyPair.key);
+                });
 
-                res(profile);
+                res(pubProfile);
 
             }catch (e){
 

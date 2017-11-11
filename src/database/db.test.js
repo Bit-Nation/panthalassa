@@ -1,4 +1,5 @@
 const database = require('./db');
+const execSync = require('child_process').execSync;
 
 describe('write', () => {
     "use strict";
@@ -7,6 +8,9 @@ describe('write', () => {
      * A database write should be void and will always result in a void promise
      */
     test('successfully', () => {
+
+        // Kill the database
+        execSync('npm run db:flush');
 
         const db = database.factory();
 
@@ -25,6 +29,9 @@ describe('write', () => {
     });
 
     test('error', () => {
+
+        // Kill the database
+        execSync('npm run db:flush');
 
         class CustomError extends Error{}
 
@@ -52,6 +59,9 @@ describe('query', () => {
 
     test('successfully', () => {
 
+        // Kill the database
+        execSync('npm run db:flush');
+
         const db = database.factory();
 
         function searchPets(realm){
@@ -72,6 +82,9 @@ describe('query', () => {
     });
 
     test('error', () => {
+
+        // Kill the database
+        execSync('npm run db:flush');
 
         const db = database.factory();
 
