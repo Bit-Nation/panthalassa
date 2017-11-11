@@ -165,10 +165,11 @@ export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<*>){
  * @param secureStorage
  * @returns {function(string)}
  */
-const getPrivateKey = (secureStorage) : ((address:string) => Promise<{...any}>) => {
+export function getPrivateKey(secureStorage:SecureStorage) : ((address:string) => Promise<{...any}>){
     "use strict";
 
     return (address:string) : Promise<{...any}> => {
+
         return new Promise((res, rej) => {
 
             const key = PRIVATE_ETH_KEY_PREFIX+address;
@@ -182,17 +183,19 @@ const getPrivateKey = (secureStorage) : ((address:string) => Promise<{...any}>) 
                         return;
                     }
 
-                    return secureStorage
-                        .get(key);
+                    return secureStorage.get(key);
 
                 })
-                .then(privateKey => res(JSON.parse(privateKey)))
+                .then(function(privKey:any){
+                    res(JSON.parse(privKey))
+                })
                 .catch(err => rej(err));
 
         });
+
     }
 
-};
+}
 
 /**
  *
@@ -293,25 +296,6 @@ const decryptPrivateKey = (pubEE:any, crypto: any, ethjsUtils: ethereumjsUtils):
 
         });
 
-    }
-
-};
-
-module.exports = (secureStorage:any, pubEE:any) : any => {
-    "use strict";
-
-    return {
-        createPrivateKey: createPrivateKey(crypto, ethereumjsUtils.isValidPrivate),
-        savePrivateKey: savePrivateKey(secureStorage, ethereumjsUtils, aes),
-        allKeyPairs: allKeyPairs(secureStorage),
-        getPrivateKey: getPrivateKey(secureStorage),
-        deletePrivateKey: deletePrivateKey(secureStorage),
-        decryptPrivateKey: decryptPrivateKey(pubEE, aes, ethereumjsUtils),
-        raw: {
-            createPrivateKey: createPrivateKey,
-            savePrivateKey: savePrivateKey,
-            decryptPrivateKey: decryptPrivateKey
-        }
     }
 
 };
