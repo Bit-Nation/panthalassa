@@ -131,7 +131,7 @@ export function savePrivateKey(secureStorage: SecureStorage, ethjsUtils: ethereu
 export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<*>){
     "use strict";
 
-    return () => {
+    return () : Promise<*> => {
 
         return new Promise((res, rej) => {
             secureStorage
@@ -297,5 +297,35 @@ export function decryptPrivateKey(pubEE:eventEmitter, crypto: any, ethjsUtils: e
         });
 
     }
+
+}
+
+export interface EthUtils {
+    createPrivateKey: () => Promise<string>,
+    savePrivateKey: (privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>,
+    allKeyPairs: () => Promise<*>,
+    getPrivateKey: (address:string) => Promise<{...any}>,
+    deletePrivateKey: (address:string) => Promise<void>,
+    decryptPrivateKey: (privateKey: {value: string}, reason: string, topic: string) => Promise<string>
+}
+
+/**
+ * Returns eth utils implementation
+ * @param ss
+ * @param ee
+ * @returns {EthUtils}
+ */
+export default function (ss:SecureStorage, ee:eventEmitter) : EthUtils {
+
+    const ethUtilsImplementation:EthUtils = {
+        createPrivateKey: createPrivateKey(crypto, ethereumjsUtils.isValidPrivate),
+        savePrivateKey: savePrivateKey(ss, ethereumjsUtils, aes),
+        allKeyPairs: allKeyPairs(ss),
+        getPrivateKey: getPrivateKey(ss),
+        deletePrivateKey: deletePrivateKey(ss),
+        decryptPrivateKey: decryptPrivateKey(ee, crypto, ethereumjsUtils)
+    };
+
+    return ethUtilsImplementation;
 
 }
