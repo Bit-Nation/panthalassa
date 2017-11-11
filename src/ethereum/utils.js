@@ -1,5 +1,7 @@
 //@flow
 
+import type {SecureStorage} from "../specification/secureStorageInterface";
+
 const crypto = require('crypto');
 const ethereumjsUtils = require('ethereumjs-util');
 const errors = require('./../errors');
@@ -47,7 +49,7 @@ export function createPrivateKey(crypto:{...any}, isValidPrivateKey: (key: Buffe
  * @param aes
  * @returns {function(string, string, string)}
  */
-const savePrivateKey = (secureStorage: any, ethjsUtils: ethereumjsUtils, aes: any) : ((privateKey:string, pw:?string, pwConfirm:?string) => Promise<*>)  => {
+export function savePrivateKey(secureStorage: SecureStorage, ethjsUtils: ethereumjsUtils, aes: aes) : ((privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>){
     "use strict";
 
     return (privateKey: string, pw: ?string, pwConfirm: ?string) : Promise<void> => {
@@ -118,7 +120,7 @@ const savePrivateKey = (secureStorage: any, ethjsUtils: ethereumjsUtils, aes: an
 
     };
 
-};
+}
 
 /**
  *
