@@ -2,7 +2,9 @@
  * Profile search query
  * @param realm
  */
-export function findProfiles(realm) {
+import type {ProfileObject} from "./schemata";
+
+export function findProfiles(realm) : Array<ProfileObject> {
 
     return realm.objects('Profile')
 
