@@ -123,14 +123,15 @@ export function savePrivateKey(secureStorage: SecureStorage, ethjsUtils: ethereu
 }
 
 /**
- *
+ * Fetch all keyPairs
  * @param secureStorage
  * @returns {function()}
  */
-const allKeyPairs = (secureStorage:any) : (() => Promise<*>) => {
+export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<*>){
     "use strict";
 
     return () => {
+
         return new Promise((res, rej) => {
             secureStorage
 
@@ -153,8 +154,10 @@ const allKeyPairs = (secureStorage:any) : (() => Promise<*>) => {
                 })
                 .catch(err => rej(err));
         })
+
     }
-};
+
+}
 
 /**
  * Fetches a private key based on the
