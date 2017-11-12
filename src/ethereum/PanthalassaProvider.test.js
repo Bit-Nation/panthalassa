@@ -133,10 +133,6 @@ describe('signTx', () => {
 
                 });
 
-            },
-
-            decryptPrivateKey: (privateKeyType, reason, topic) => {
-
             }
 
         };
@@ -156,5 +152,111 @@ describe('signTx', () => {
         signTx(ethUtils)(txDataMock, cb);
 
     });
+
+    /**
+     * Test error handling
+     */
+    describe('error', () => {
+
+        /**
+         * Test error handling when smth goes wrong in the ethUtils getPrivateKey method
+         */
+        test('EthUtils - getPrivateKey', done => {
+
+            class TestErrorGetPrivateKey extends Error{}
+
+            //Mock eth utils
+            const ethUtils = {
+
+                getPrivateKey: (address) => {
+
+                    expect(address).toBe(txDataMock.from);
+
+                    return new Promise((res, rej) => {
+
+                        rej(new TestErrorGetPrivateKey());
+
+                    });
+
+                }
+
+            };
+
+            //Mock callback
+            const cb = (error, signedTx) => {
+
+                //No error since this is a success test
+                expect(error).toEqual(new TestErrorGetPrivateKey());
+
+                //Expect hex string
+                expect(signedTx).toBeNull();
+
+                done();
+            };
+
+            signTx(ethUtils)(txDataMock, cb);
+
+        });
+
+        /**
+         * Test error handling when smth goes wrong in the ethUtils signTx method
+         */
+        test('EthUtils - signTx', done => {
+
+            class FailedToSignError extends Error{}
+
+            //Mock eth utils
+            const ethUtils = {
+
+                getPrivateKey: (address) => {
+
+                    expect(address).toBe(txDataMock.from);
+
+                    return new Promise((res, rej) => {
+
+                        //Return PrivateKeyType json object
+                        res({
+                            encryption: '',
+                            value: privateKey,
+                            encrypted: false,
+                            version: '1.0.0'
+                        })
+
+                    });
+
+                },
+
+                signTx: (txData, privateKey) => {
+
+                    expect(txData).toBe(txDataMock);
+                    expect(privateKey).toBe(privateKey);
+
+                    return new Promise((res, rej) => {
+
+                        rej(new FailedToSignError());
+
+                    });
+
+                }
+
+            };
+
+            //Mock callback
+            const cb = (error, signedTx) => {
+
+                //No error since this is a success test
+                expect(error).toBeInstanceOf(FailedToSignError);
+
+                //Expect hex string
+                expect(signedTx).toBeNull();
+
+                done();
+            };
+
+            signTx(ethUtils)(txDataMock, cb);
+
+        })
+
+    })
 
 });
