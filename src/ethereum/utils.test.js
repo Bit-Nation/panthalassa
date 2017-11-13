@@ -159,7 +159,7 @@ describe('savePrivateKey', () => {
                         'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS,
                         JSON.stringify({
                             encryption: '',
-                            value: '0x'+PRIVATE_KEY,
+                            value: PRIVATE_KEY,
                             encrypted: false,
                             version: '1.0.0'
                         })
@@ -199,7 +199,7 @@ describe('savePrivateKey', () => {
             const aes = {
                 encrypt: jest.fn((value, password) => {
 
-                    expect(value).toBe('0x'+PRIVATE_KEY);
+                    expect(value).toBe(PRIVATE_KEY);
                     expect(password).toBe('mypw');
 
                     //Mock encrypted private key

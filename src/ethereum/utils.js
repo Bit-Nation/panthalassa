@@ -92,19 +92,19 @@ export function savePrivateKey(secureStorage: SecureStorage, ethjsUtils: ethereu
 
         return new Promise((res, rej) => {
 
+            privateKey = normalizePrivateKey(privateKey);
+
+            const privateKeyBuffer = Buffer.from(privateKey, 'hex');
+
             //Reject promise if private key is not a valid hey private key
-            if(!ethjsUtils.isValidPrivate(Buffer.from(privateKey, 'hex'))){
+            if(!ethjsUtils.isValidPrivate(privateKeyBuffer)){
 
                 rej(new errors.InvalidPrivateKeyError);
                 return;
 
             }
 
-            privateKey = ethjsUtils.addHexPrefix(privateKey);
-
-            const addressOfPrivateKey = ethjsUtils
-                    .toChecksumAddress(ethjsUtils.privateToAddress(privateKey)
-                    .toString('hex'));
+            const addressOfPrivateKey = normalizeAddress(ethjsUtils.privateToAddress(privateKeyBuffer).toString('hex'));
 
             //Reject promise if one of the passwords is entered AND if they don't match
             if('undefined' !== typeof pw || 'undefined' !== typeof pwConfirm){
@@ -184,10 +184,11 @@ export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<*>){
                     //transform key value pairs. remove key eth prefix and transform json string to json
                     keyValuePairs
                         .map((keyValuePair) => {
-                            //Transform keypair
-                            keyValuePair.key.split(PRIVATE_ETH_KEY_PREFIX).pop();
+                            keyValuePair.key = keyValuePair.key.split(PRIVATE_ETH_KEY_PREFIX).pop();
                             keyValuePair.value = JSON.parse(keyValuePair.value)
                         });
+
+                    res(keyValuePairs);
 
                 })
                 .catch(err => rej(err));
@@ -209,7 +210,7 @@ export function getPrivateKey(secureStorage:SecureStorage) : ((address:string) =
 
         return new Promise((res, rej) => {
 
-            const key = PRIVATE_ETH_KEY_PREFIX+address;
+            const key = PRIVATE_ETH_KEY_PREFIX+normalizeAddress(address);
 
             secureStorage
                 .has(key)
@@ -246,7 +247,7 @@ export function deletePrivateKey(secureStorage:SecureStorage) : ((address:string
 
         return new Promise((res, rej) => {
 
-            const key = PRIVATE_ETH_KEY_PREFIX+address;
+            const key = PRIVATE_ETH_KEY_PREFIX+normalizeAddress(address);
 
             secureStorage
                 .has(key)
