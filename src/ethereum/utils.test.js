@@ -1,4 +1,4 @@
-import {AbortedSigningOfTx} from "../errors";
+import {AbortedSigningOfTx, InvalidChecksumAddress, InvalidPrivateKeyError} from "../errors";
 
 const ethereumjsUtil = require('ethereumjs-util');
 const errors = require('../../lib/errors');
@@ -6,7 +6,7 @@ const aes = require('crypto-js/aes');
 const crypto = require('crypto-js');
 const EE = require('eventemitter3');
 const EthTx = require('ethereumjs-tx');
-import utils, {createPrivateKey, savePrivateKey, decryptPrivateKey, signTx} from './utils';
+import utils, {createPrivateKey, savePrivateKey, decryptPrivateKey, signTx, normalizeAddress, normalizePrivateKey} from './utils';
 
 // Private key dummy
 const PRIVATE_KEY = "6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22";
@@ -652,5 +652,47 @@ describe('signTx', () => {
         return expect(testPromise).rejects.toEqual(new AbortedSigningOfTx());
 
     });
+
+});
+
+describe('normalizeAddress', () => {
+
+    test('success', () => {
+
+        const expectedAddress = '0x9493b5595FBbe6f8ca94c6CccA90420bbd5a4C8c';
+
+        expect(normalizeAddress(expectedAddress)).toBe(expectedAddress);
+
+    });
+
+    test('error', () => {
+
+        expect(function(){
+            normalizeAddress('I_AM_AN_ADDRESS')
+        }).toThrowError('Address: 0xi_aM_an_aDdress is invalid');
+
+    })
+
+});
+
+describe('normalizePrivateKey', () => {
+
+    test('success', () => {
+
+        const expectedPrivateKey = '6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22';
+
+        expect(normalizePrivateKey(expectedPrivateKey)).toBe(expectedPrivateKey);
+
+    });
+
+    test('error', () => {
+
+        const invalidPrivateKey = '0x6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22';
+
+        expect(function(){
+            normalizePrivateKey(invalidPrivateKey)
+        }).toThrowError(InvalidPrivateKeyError);
+
+    })
 
 });

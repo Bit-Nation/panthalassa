@@ -3,7 +3,7 @@
 import type {SecureStorage} from "../specification/secureStorageInterface";
 import type { PrivateKeyType } from '../specification/privateKey'
 import type {TxData} from '../specification/tx';
-import {AbortedSigningOfTx, InvalidPrivateKeyError} from "../errors";
+import {AbortedSigningOfTx, InvalidPrivateKeyError, InvalidChecksumAddress} from "../errors";
 
 const crypto = require('crypto');
 const ethereumjsUtils = require('ethereumjs-util');
@@ -13,6 +13,37 @@ const EventEmitter = require('eventemitter3');
 const EthTx = require('ethereumjs-tx');
 
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
+
+/**
+ *
+ * @param address
+ * @returns {string}
+ */
+export function normalizeAddress(address:string) : string {
+
+    const checksumAddress:string = ethereumjsUtils.toChecksumAddress(address);
+
+    if(!ethereumjsUtils.isValidChecksumAddress(checksumAddress)){
+        throw new InvalidChecksumAddress(checksumAddress);
+    }
+
+    return checksumAddress;
+
+}
+
+/**
+ *
+ * @param privateKey
+ * @returns {string}
+ */
+export function normalizePrivateKey(privateKey:string) : string {
+
+    if(!ethereumjsUtils.isValidPrivate(Buffer.from(privateKey, 'hex'))){
+        throw new InvalidPrivateKeyError();
+    }
+
+    return privateKey;
+}
 
 /**
  * Creates a new private key
