@@ -11,7 +11,7 @@ import utils, {createPrivateKey, savePrivateKey, decryptPrivateKey, signTx, norm
 // Private key dummy
 const PRIVATE_KEY = "6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22";
 
-const PRIVATE_KEY_ADDRESS = "0xb293D530769790b82c187f9CD1a4fA0acDcaAb82";
+const PRIVATE_KEY_ADDRESS = "b293D530769790b82c187f9CD1a4fA0acDcaAb82";
 
 describe('createPrivateKey', () => {
     "use strict";
@@ -156,7 +156,7 @@ describe('savePrivateKey', () => {
                     //the related address of the private key as a "key" and with the private
                     //RAW key
                     expect(secureStorageMock.set).toBeCalledWith(
-                        'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS,
+                        'PRIVATE_ETH_KEY#'+normalizeAddress(PRIVATE_KEY_ADDRESS),
                         JSON.stringify({
                             encryption: '',
                             value: PRIVATE_KEY,
@@ -216,7 +216,7 @@ describe('savePrivateKey', () => {
                     //Expect that secure storage set is called with the prefix priv_eth_key and
                     //the related address of the private key as a "key" and with the encrypted private key
                     expect(secureStorageMock.set).toBeCalledWith(
-                        'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ADDRESS,
+                        'PRIVATE_ETH_KEY#'+normalizeAddress(PRIVATE_KEY_ADDRESS),
                         JSON.stringify({
                             encryption: 'AES-256',
                             value: ENCRYPTED_PRIVATE_KEY,
