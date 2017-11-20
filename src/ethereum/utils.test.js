@@ -1,9 +1,9 @@
-const utils = require('../../lib/ethereum/utils');
 const ethereumjsUtil = require('ethereumjs-util');
 const errors = require('../../lib/errors');
 const aes = require('crypto-js/aes');
 const crypto = require('crypto-js');
 const EE = require('eventemitter3');
+import utils, {createPrivateKey, savePrivateKey, decryptPrivateKey} from './utils';
 
 // Private key dummy
 const PRIVATE_KEY = "6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22";
@@ -36,7 +36,7 @@ describe('createPrivateKey', () => {
         };
 
         // promise that resolves with the private key as a string or an error
-        const privateKeyPromise = utils().raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
+        const privateKeyPromise = createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
         
         // expect to reject since we pass a error in the randomBytes mock
         return expect(privateKeyPromise).rejects.toBe(error);
@@ -58,7 +58,7 @@ describe('createPrivateKey', () => {
         };
 
         // promise that resolves with the private key as a string or an error
-        const privateKeyPromise = utils().raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
+        const privateKeyPromise = createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
 
         // the promise should be rejected with an InvalidPrivateKeyError instance
         return expect(privateKeyPromise).rejects.toEqual(new errors.InvalidPrivateKeyError());
@@ -83,7 +83,7 @@ describe('createPrivateKey', () => {
         };
 
         // promise that resolves with the private key as a string or an error
-        const privateKeyPromise = utils().raw.createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
+        const privateKeyPromise = createPrivateKey(crypto, ethereumjsUtil.isValidPrivate)();
 
         // Expect the private key promise to resolve with the private key we used to have node's crypto.randomBytes method
         return expect(privateKeyPromise).resolves.toBe(PRIVATE_KEY);
@@ -143,7 +143,7 @@ describe('savePrivateKey', () => {
 
         const testPromise = new Promise((res, rej) => {
 
-            utils().raw.savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY)
+            savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY)
                 .then(result => {
 
                     //The secure storage should have been called once
@@ -204,7 +204,7 @@ describe('savePrivateKey', () => {
                 })
             };
 
-            utils().raw.savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY, 'mypw', 'mypw')
+            savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY, 'mypw', 'mypw')
                 .then(result => {
 
                     //The secure storage should have been called once
@@ -494,9 +494,7 @@ describe('decryptPrivateKey', () => {
             });
 
             //Boot decryption function
-            const decryptPrivatekey = utils()
-                .raw
-                .decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+            const decryptPrivatekey = decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
 
             decryptPrivatekey({encryption: 'AES-256', value: PRIVATE_KEY_ONE}, 'display private key', 'ethereum')
                 .then(privateKey => res(privateKey))
@@ -524,9 +522,7 @@ describe('decryptPrivateKey', () => {
             });
 
             //Boot decryption function
-            const decryptPrivatekey = utils()
-                .raw
-                .decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+            const decryptPrivatekey = decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
 
             decryptPrivatekey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum');
 
@@ -558,9 +554,7 @@ describe('decryptPrivateKey', () => {
             });
 
             //Boot decryption function
-            const decryptPrivatekey = utils()
-                .raw
-                .decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+            const decryptPrivatekey = decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
 
             decryptPrivatekey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum');
 
