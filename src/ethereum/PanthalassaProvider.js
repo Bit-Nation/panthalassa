@@ -78,11 +78,12 @@ export function signTx(ethUtils:EthUtilsInterface) : (txData:TxData, cb:(error:a
 
 export default class PanthalassaProvider extends ZeroProvider {
 
-    constructor(ethUtils:EthUtilsInterface){
+    constructor(ethUtils:EthUtilsInterface, rpcUrl: string){
 
         super({
             getAccounts: getAccounts(ethUtils),
-            signTransaction: signTx(ethUtils)
+            signTransaction: signTx(ethUtils),
+            rpcUrl: rpcUrl
         })
 
     }
