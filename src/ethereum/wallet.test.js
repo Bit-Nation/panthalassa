@@ -23,7 +23,7 @@ const fakeWallet = {
     patSync: (address) => {
         "use strict";
     },
-    syncCurrenies: (address) => {
+    syncCurrencies: (address) => {
 
     }
 };
@@ -205,9 +205,9 @@ describe('wallet', () => {
 
         const address = '';
 
-        //syncCurrenies sync's eth and pat. Expect to get back the
+        //syncCurrencies sync's eth and pat. Expect to get back the
         //result of ethSync and patSync
-        expect(fakeWallet.syncCurrenies(address))
+        expect(fakeWallet.syncCurrencies(address))
             .resolves
             .toEqual([
                 undefined,
