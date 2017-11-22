@@ -1,5 +1,4 @@
-import ethUtils from "./utils";
-
+//@Todo Replace this with the real wallet. This is just a dummy
 const fakeWallet = {
     ethSend : (from, to) => {
         "use strict";
