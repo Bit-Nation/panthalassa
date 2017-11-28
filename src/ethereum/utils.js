@@ -24,7 +24,7 @@ export function normalizeAddress(address:string) : string {
     const checksumAddress:string = ethereumjsUtils.toChecksumAddress(address);
 
     if(!ethereumjsUtils.isValidChecksumAddress(checksumAddress)){
-        throw new InvalidChecksumAddress(checksumAddress);
+        throw new InvalidChecksumAddress(address);
     }
 
     return checksumAddress;
