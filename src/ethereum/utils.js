@@ -400,8 +400,8 @@ export interface EthUtilsInterface {
     deletePrivateKey: (address:string) => Promise<void>,
     decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => Promise<string>,
     signTx: (txData:TxData, privkey:string) => Promise<EthTx>,
-    normalizeAddress: normalizeAddress,
-    normalizePrivateKey: normalizePrivateKey
+    normalizeAddress: (address:string) => string,
+    normalizePrivateKey: (address:string) => string
 }
 
 /**
