@@ -103,20 +103,59 @@ describe('wallet', () => {
 
         });
 
-        test('failed to send eth', () => {
+        test('failed to send eth', done => {
 
             class TestError extends Error{}
 
-            const fromAddress = '';
+            const fromAddress = '0x9901c66f2d4b95f7074b553da78084d708beca70';
 
-            const toAddress = '';
+            const toAddress = '0x71d271f8b14adef568f8f28f1587ce7271ac4ca5';
 
-            //The error will be from web3
-            return expect(fakeWallet.sendEth(fromAddress, toAddress, '1'))
-                .resolves
-                .toBe(new TestError());
+            const web3Mock = {
+                eth: {
+                    sendTransaction: jest.fn((txData, cb) => {
 
-        })
+                        expect(txData.from).toBe(fromAddress);
+                        expect(txData.to).toBe(toAddress);
+                        expect(txData.value).toBe('1000000000000000000');
+                        expect(txData.gasLimit).toBe(21000);
+                        expect(txData.gasPrice).toBe(20000000000);
+
+                        cb(new TestError(), null);
+
+                    })
+                },
+                utils: {
+                    toWei: jest.fn((eth) => {
+
+                        return web3.utils.toWei(eth, 'ether');
+
+                    })
+                }
+            };
+
+            const ethUtilsMock = {
+                normalizeAddress: (address) => address
+            };
+
+            const sendPromise = ethSend(ethUtilsMock, web3Mock)(fromAddress, toAddress, '1');
+
+            sendPromise
+                .catch(error => {
+
+                    //sendTransaction should have been called since it's used to transfer eth
+                    expect(web3Mock.eth.sendTransaction).toHaveBeenCalledTimes(1);
+
+                    //toWei should have been called to transform eth to wei
+                    expect(web3Mock.utils.toWei).toHaveBeenCalledTimes(1);
+
+                    expect(error).toBeInstanceOf(TestError);
+
+                    done();
+
+                })
+
+        });
 
     });
 
