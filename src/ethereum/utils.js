@@ -399,7 +399,9 @@ export interface EthUtilsInterface {
     getPrivateKey: (address:string) => Promise<{...any}>,
     deletePrivateKey: (address:string) => Promise<void>,
     decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => Promise<string>,
-    signTx: (txData:TxData, privkey:string) => Promise<EthTx>
+    signTx: (txData:TxData, privkey:string) => Promise<EthTx>,
+    normalizeAddress: normalizeAddress,
+    normalizePrivateKey: normalizePrivateKey
 }
 
 /**
@@ -417,7 +419,9 @@ export default function ethUtils (ss:SecureStorage, ee:EventEmitter) : EthUtilsI
         getPrivateKey: getPrivateKey(ss),
         deletePrivateKey: deletePrivateKey(ss),
         decryptPrivateKey: decryptPrivateKey(ee, crypto, ethereumjsUtils),
-        signTx: signTx(ethereumjsUtils.isValidPrivate, ee)
+        signTx: signTx(ethereumjsUtils.isValidPrivate, ee),
+        normalizeAddress: normalizeAddress,
+        normalizePrivateKey: normalizePrivateKey
     };
 
     return ethUtilsImplementation;
