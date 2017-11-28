@@ -12,16 +12,6 @@ const fakeWallet = {
         "use strict";
 
     },
-    patSend: (from, to, amount) => {
-        "use strict";
-
-    },
-    patBalance: (address) => {
-        "use strict";
-    },
-    patSync: (address) => {
-        "use strict";
-    },
     syncCurrencies: (address) => {
 
     }
@@ -107,92 +97,6 @@ describe('wallet', () => {
 
             //Will be resolved with error that was thrown by other code
             return expect(fakeWallet.ethSync(address))
-                .resolves
-                .toEqual(new TestError());
-
-        });
-
-    });
-
-    describe('patSend', () => {
-
-        test('success', () => {
-
-            const fromAddress = '';
-
-            const toAddress = '';
-
-            return expect(fakeWallet.patSend(fromAddress, toAddress, '1'))
-                .resolves
-                .toBeUndefined();
-
-        });
-
-        test('fail', () => {
-
-            const fromAddress = '';
-
-            const toAddress = '';
-
-            class TestError extends Error{}
-
-            //The error will be from web3
-            return expect(fakeWallet.patSend(fromAddress, toAddress))
-                .resolves
-                .toEqual(new TestError());
-
-        });
-
-    });
-
-    describe('patBalance', () => {
-
-        test('success', () => {
-
-            const address = '';
-
-            return expect(fakeWallet.patBalance(address))
-                .resolves
-                .toEqual({
-                    address: address,
-                    balance: 'todo figure this out, i guess we have 18 decimals',
-                    synced_at: 1511185212
-                })
-
-        });
-
-        test('never synced before', () => {
-
-            const address = '';
-
-            //When the wallet was not synced before, we just will return an empty object
-            return expect(fakeWallet.patBalance(address))
-                .resolves
-                .toEqual({})
-
-        })
-
-    });
-
-    describe('patSync', () => {
-
-        test('success', () => {
-
-            const address = '';
-
-            return expect(fakeWallet.patSync(address))
-                .resolves
-                .toBeUndefined();
-
-        });
-
-        test('fail', () => {
-
-            const address = '';
-
-            class TestError extends Error{}
-
-            return expect(fakeWallet.patSync(address))
                 .resolves
                 .toEqual(new TestError());
 

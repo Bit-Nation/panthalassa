@@ -8,17 +8,12 @@ export type Balance = {
 
 export interface WalletInterface {
 
-    ethSend: (from:string, to:string, amount:string) => Promise<void>,
+    //Resolves with success value from web.eth.sendTransaction()
+    ethSend: (from:string, to:string, amount:string, gasLimit:number, gasPrice:number) => Promise<{...mixed}>,
 
     ethBalance: (address:string) => Promise<Balance>,
 
     ethSync: (address:string) => Promise<void>,
-
-    patSend: (from:string, to:string, amount:string) => Promise<void>,
-
-    patBalance: (address:string) => Promise<Balance>,
-
-    patSync: (address:string) => Promise<void>,
 
     syncCurrencies: (address:string) => Promise<[typeof undefined]>
 
