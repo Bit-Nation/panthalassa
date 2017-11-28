@@ -1,3 +1,6 @@
+import {normalizeAddress} from "./utils";
+import {InvalidChecksumAddress} from './../errors'
+
 const web3 = require('web3');
 import {ethSend} from './wallet'
 //@Todo Replace this with the real wallet. This is just a dummy
@@ -154,6 +157,31 @@ describe('wallet', () => {
                     done();
 
                 })
+
+        });
+
+        //Test if an invalid from address is reported.
+        test('invalid from address', () => {
+
+            const ethUtils = {
+                normalizeAddress: normalizeAddress
+            };
+
+            const sendPromise = ethSend(ethUtils, {})('I_AM_AN_INVALID_ADDRESS', null, '1');
+
+            return expect(sendPromise).rejects.toEqual(new InvalidChecksumAddress('I_AM_AN_INVALID_ADDRESS'));
+
+        });
+
+        test('invalid to address', () => {
+
+            const ethUtils = {
+                normalizeAddress: normalizeAddress
+            };
+
+            const sendPromise = ethSend(ethUtils, {})('I_AM_AN_INVALID_TO_ADDRESS', null, '1');
+
+            return expect(sendPromise).rejects.toEqual(new InvalidChecksumAddress('I_AM_AN_INVALID_TO_ADDRESS'));
 
         });
 
