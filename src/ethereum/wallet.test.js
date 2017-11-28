@@ -1,3 +1,5 @@
+const web3 = require('web3');
+import {ethSend} from './wallet'
 //@Todo Replace this with the real wallet. This is just a dummy
 const fakeWallet = {
     ethSend : (from, to, amount) => {
@@ -47,15 +49,57 @@ describe('wallet', () => {
 
     describe('ethSend', () => {
 
-        test('send eth successfully', () => {
+        test('send eth successfully', done => {
 
-            const fromAddress = '';
+            const fromAddress = '0x9901c66f2d4b95f7074b553da78084d708beca70';
 
-            const toAddress = '';
+            const toAddress = '0x71d271f8b14adef568f8f28f1587ce7271ac4ca5';
 
-            return expect(fakeWallet.sendEth(fromAddress, toAddress, '1'))
-                .resolves
-                .toBeUndefined();
+            const txReceipt = {};
+
+            const web3Mock = {
+                eth: {
+                    sendTransaction: jest.fn((txData, cb) => {
+
+                        expect(txData.from).toBe(fromAddress);
+                        expect(txData.to).toBe(toAddress);
+                        expect(txData.value).toBe('1000000000000000000');
+                        expect(txData.gasLimit).toBe(21000);
+                        expect(txData.gasPrice).toBe(20000000000);
+
+                        cb(null, txReceipt);
+
+                    })
+                },
+                utils: {
+                    toWei: jest.fn((eth) => {
+
+                        return web3.utils.toWei(eth, 'ether');
+
+                    })
+                }
+            };
+
+            const ethUtilsMock = {
+                normalizeAddress: (address) => address
+            };
+
+            const sendPromise = ethSend(ethUtilsMock, web3Mock)(fromAddress, toAddress, '1');
+
+            sendPromise
+                .then(txR => {
+
+                    expect(txR).toBe(txReceipt);
+
+                    //sendTransaction should have been called since it's used to transfer eth
+                    expect(web3Mock.eth.sendTransaction).toHaveBeenCalledTimes(1);
+
+                    //toWei should have been called to transform eth to wei
+                    expect(web3Mock.utils.toWei).toHaveBeenCalledTimes(1);
+
+                    done();
+
+                })
 
         });
 
