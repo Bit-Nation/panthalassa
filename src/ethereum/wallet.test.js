@@ -1,6 +1,6 @@
 //@Todo Replace this with the real wallet. This is just a dummy
 const fakeWallet = {
-    ethSend : (from, to) => {
+    ethSend : (from, to, amount) => {
         "use strict";
 
     },
@@ -12,7 +12,7 @@ const fakeWallet = {
         "use strict";
 
     },
-    patSend: (from, to) => {
+    patSend: (from, to, amount) => {
         "use strict";
 
     },
@@ -37,7 +37,7 @@ describe('wallet', () => {
             const address = '';
 
             //Will be empty object it was not synchronised before
-            expect(fakeWallet.ethBalance(address)).toEqual({});
+            return expect(fakeWallet.ethBalance(address)).toEqual({});
 
         });
 
@@ -45,7 +45,7 @@ describe('wallet', () => {
 
             const address = '0x687422eEA2cB73B5d3e242bA5456b782919AFc85';
 
-            expect(fakeWallet.ethBalance(address)).toEqual({
+            return expect(fakeWallet.ethBalance(address)).toEqual({
                 synced_at : 1511185212,
                 wei: '168179030063160961914893',
                 address: '0x687422eEA2cB73B5d3e242bA5456b782919AFc85'
@@ -63,7 +63,7 @@ describe('wallet', () => {
 
             const toAddress = '';
 
-            expect(fakeWallet.sendEth(fromAddress, toAddress))
+            return expect(fakeWallet.sendEth(fromAddress, toAddress, '1'))
                 .resolves
                 .toBeUndefined();
 
@@ -78,7 +78,7 @@ describe('wallet', () => {
             const toAddress = '';
 
             //The error will be from web3
-            expect(fakeWallet.sendEth(fromAddress, toAddress))
+            return expect(fakeWallet.sendEth(fromAddress, toAddress, '1'))
                 .resolves
                 .toBe(new TestError());
 
@@ -93,7 +93,7 @@ describe('wallet', () => {
             const address = '';
 
             //Will be resolved as "void" if successfull synced
-            expect(fakeWallet.ethSync(address))
+            return expect(fakeWallet.ethSync(address))
                 .resolves
                 .toBeUndefined();
 
@@ -106,7 +106,7 @@ describe('wallet', () => {
             class TestError extends Error{}
 
             //Will be resolved with error that was thrown by other code
-            expect(fakeWallet.ethSync(address))
+            return expect(fakeWallet.ethSync(address))
                 .resolves
                 .toEqual(new TestError());
 
@@ -122,7 +122,7 @@ describe('wallet', () => {
 
             const toAddress = '';
 
-            expect(fakeWallet.patSend(fromAddress, toAddress))
+            return expect(fakeWallet.patSend(fromAddress, toAddress, '1'))
                 .resolves
                 .toBeUndefined();
 
@@ -137,7 +137,7 @@ describe('wallet', () => {
             class TestError extends Error{}
 
             //The error will be from web3
-            expect(fakeWallet.patSend(fromAddress, toAddress))
+            return expect(fakeWallet.patSend(fromAddress, toAddress))
                 .resolves
                 .toEqual(new TestError());
 
@@ -151,7 +151,7 @@ describe('wallet', () => {
 
             const address = '';
 
-            expect(fakeWallet.patBalance(address))
+            return expect(fakeWallet.patBalance(address))
                 .resolves
                 .toEqual({
                     address: address,
@@ -166,7 +166,7 @@ describe('wallet', () => {
             const address = '';
 
             //When the wallet was not synced before, we just will return an empty object
-            expect(fakeWallet.patBalance(address))
+            return expect(fakeWallet.patBalance(address))
                 .resolves
                 .toEqual({})
 
@@ -180,7 +180,7 @@ describe('wallet', () => {
 
             const address = '';
 
-            expect(fakeWallet.patSync(address))
+            return expect(fakeWallet.patSync(address))
                 .resolves
                 .toBeUndefined();
 
@@ -192,7 +192,7 @@ describe('wallet', () => {
 
             class TestError extends Error{}
 
-            expect(fakeWallet.patSync(address))
+            return expect(fakeWallet.patSync(address))
                 .resolves
                 .toEqual(new TestError());
 
@@ -206,7 +206,7 @@ describe('wallet', () => {
 
         //syncCurrencies sync's eth and pat. Expect to get back the
         //result of ethSync and patSync
-        expect(fakeWallet.syncCurrencies(address))
+        return expect(fakeWallet.syncCurrencies(address))
             .resolves
             .toEqual([
                 undefined,
