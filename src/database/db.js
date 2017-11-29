@@ -73,7 +73,7 @@ const realmFactory = () : {...any} => {
     return Realm
         .open({
             path: './database/panthalassa',
-            schema: [schemata.ProfileSchema]
+            schema: [schemata.ProfileSchema, schemata.AccountBalanceSchema]
         })
 
 };

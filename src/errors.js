@@ -20,3 +20,15 @@ export class DecryptedValueIsNotAPrivateKey extends Error{}
 export class NoProfilePresent extends Error{}
 
 export class NoPublicProfilePresent extends Error{}
+
+export class AbortedSigningOfTx extends Error{}
+
+export class InvalidChecksumAddress extends Error{
+
+    constructor(address:string){
+
+        super('Address: '+address+' is invalid');
+
+    }
+
+}

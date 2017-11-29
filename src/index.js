@@ -1,13 +1,17 @@
 // @flow
 
-const ee = require('eventemitter3');
-const ethUtils = require('./ethereum/utils');
+import type {SecureStorage} from "./specification/secureStorageInterface";
+import ethUtils, {EthUtilsInterface} from "./ethereum/utils";
+import web3 from './ethereum/web3';
+import type {JsonRpcNodeInterface} from "./specification/jsonRpcNode";
+
+const EventEmitter = require('eventemitter3');
 
 /**
  *
  * @param ee
  */
-const preBoot = (ee) => {
+const preBoot = (ee:EventEmitter) => {
     "use strict";
 
     // Register event handler
@@ -15,17 +19,17 @@ const preBoot = (ee) => {
 };
 
 /**
- * Panthalassa
+ *
+ * @param ethNode
  * @param secureStorage
  * @param ee
  * @returns {{on: (function(string, *)), emit: (function(string)), boot: (function())}}
  * @constructor
  */
-const Panthalassa = (secureStorage:any, ee:any) => {
+const PanthalassaApi = (ethNode:JsonRpcNodeInterface, secureStorage:SecureStorage, ee:EventEmitter) => {
     "use strict";
 
-    //Ethereum utils
-    const eth = ethUtils(secureStorage, ee);
+    const ethUtilsInstance:EthUtilsInterface = ethUtils(secureStorage, ee);
 
     return {
 
@@ -48,14 +52,8 @@ const Panthalassa = (secureStorage:any, ee:any) => {
                 preBoot(ee);
 
                 res({
-                    eth : {
-                        createPrivateKey: eth.createPrivateKey,
-                        savePrivateKey: eth.savePrivateKey,
-                        allKeyPairs: eth.allKeyPairs,
-                        getPrivateKey: eth.getPrivateKey,
-                        deletePrivateKey: eth.deletePrivateKey,
-                        decryptPrivateKey: eth.decryptPrivateKey
-                    },
+                    eth: ethUtilsInstance,
+                    web3: web3(ethNode, ee, ethUtilsInstance)(),
                     bootNetwork : () => {
                         throw new Error("This is currently not implemented");
                     }
@@ -71,18 +69,16 @@ const Panthalassa = (secureStorage:any, ee:any) => {
 
 /**
  *
- * @param secureStorage
- * @returns {{on, boot}}
+ * @param ethNode
+ * @param ss
+ * @returns {{on: (function(string, *)), emit: (function(string)), boot: (function())}}
  */
-const factory = (secureStorage:any) => {
-    "use strict";
-    return Panthalassa(
-        secureStorage,
-        new ee()
-    )
-};
+export default function(ethNode: JsonRpcNodeInterface, ss:SecureStorage) : PanthalassaApi {
 
-module.exports = {
-    Panthalassa,
-    factory
-};
+    return PanthalassaApi(
+        ethNode,
+        ss,
+        new EventEmitter()
+    )
+
+}
