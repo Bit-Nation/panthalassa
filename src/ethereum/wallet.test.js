@@ -1,33 +1,15 @@
 import {normalizeAddress} from "./utils";
 import {InvalidChecksumAddress} from './../errors'
+import {ethSend, ethBalance} from './wallet'
 
 const web3 = require('web3');
-import {ethSend} from './wallet'
-//@Todo Replace this with the real wallet. This is just a dummy
-const fakeWallet = {
-    ethSend : (from, to, amount) => {
-        "use strict";
-
-    },
-    ethBalance: (address) => {
-        "use strict";
-
-    },
-    ethSync: (address) => {
-        "use strict";
-
-    },
-    syncCurrencies: (address) => {
-
-    }
-};
 
 describe('wallet', () => {
     "use strict";
 
     describe('ethBalance', () => {
 
-        test('never synced', () => {
+        test('never synced', done => {
 
             const address = '0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98';
 
@@ -68,19 +50,59 @@ describe('wallet', () => {
                     expect(realmMock.objects).toHaveBeenCalledTimes(1);
                     expect(filtered).toHaveBeenCalledTimes(1);
 
+                    done();
+
                 })
 
         });
 
-        test('synced some time ago', () => {
+        test('synced some time ago', done => {
 
             const address = '0x687422eEA2cB73B5d3e242bA5456b782919AFc85';
 
-            return expect(fakeWallet.ethBalance(address)).toEqual({
-                synced_at : 1511185212,
-                wei: '168179030063160961914893',
-                address: '0x687422eEA2cB73B5d3e242bA5456b782919AFc85'
-            })
+            const realmMock = {
+                objects: jest.fn((collection) => {
+
+                    expect(collection).toBe('AccountBalance');
+
+                    return {
+                        filtered: jest.fn(() => {
+                            return [
+                                {
+                                    address: address,
+                                    amount: '1000000000000000',
+                                    synced_at: 1246624643444,
+                                    currency: 'ETH'
+                                }
+                            ]
+                        })
+                    }
+                })
+            };
+
+            const dbMock = {
+                query: (cb) => {
+                    cb(realmMock);
+                }
+            };
+
+            const ethUtils = {
+                normalizeAddress: normalizeAddress
+            };
+
+            ethBalance(dbMock, ethUtils)(address)
+                .then(balance => {
+
+                    expect(balance).toEqual({
+                        address: address,
+                        amount: '1000000000000000',
+                        synced_at: 1246624643444,
+                        currency: 'ETH'
+                    });
+
+                    done();
+
+                })
 
         });
 
