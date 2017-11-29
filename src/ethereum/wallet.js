@@ -58,7 +58,7 @@ export function ethBalance(db:DB, ethUtils:EthUtilsInterface) {
 
             db.query((realm) => {
 
-                const balances = realm.objects('AccountBalance').filtered(`address == "${address}" AND currency == "ETH"`);
+                const balances = realm.objects('AccountBalance').filtered(`id == "${address}_ETH"`);
 
                 if (balances.length <= 0){
                     return res(null);

@@ -45,6 +45,7 @@ export const ProfileSchema = {
  * AccountBalance
  */
 export type AccountBalanceType = {
+    id: string,
     address:string,
     //Amount is in wei
     amount:string,
@@ -54,7 +55,9 @@ export type AccountBalanceType = {
 
 export const AccountBalanceSchema = {
     name: 'AccountBalance',
+    primaryKey: 'id',
     properties: {
+        id: 'string',
         address: 'string',
         amount: 'string',
         synced_at: 'date',

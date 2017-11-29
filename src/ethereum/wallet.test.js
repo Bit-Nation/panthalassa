@@ -19,7 +19,7 @@ describe('wallet', () => {
 
             const filtered = jest.fn((filterString) => {
 
-                expect(filterString).toBe(`address == "${address}" AND currency == "ETH"`);
+                expect(filterString).toBe(`id == "${address}_ETH"`);
 
                 return [];
 
@@ -72,7 +72,8 @@ describe('wallet', () => {
                                     address: address,
                                     amount: '1000000000000000',
                                     synced_at: 1246624643444,
-                                    currency: 'ETH'
+                                    currency: 'ETH',
+                                    id: address+'_ETH'
                                 }
                             ]
                         })
@@ -97,7 +98,8 @@ describe('wallet', () => {
                         address: address,
                         amount: '1000000000000000',
                         synced_at: 1246624643444,
-                        currency: 'ETH'
+                        currency: 'ETH',
+                        id: address+'_ETH'
                     });
 
                     done();
