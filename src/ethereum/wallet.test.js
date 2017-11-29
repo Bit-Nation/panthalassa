@@ -1,6 +1,6 @@
 import {normalizeAddress} from "./utils";
 import {InvalidChecksumAddress} from './../errors'
-import {ethSend, ethBalance} from './wallet'
+import {ethSend, ethBalance, ethSync} from './wallet'
 
 const web3 = require('web3');
 
@@ -268,45 +268,104 @@ describe('wallet', () => {
 
     describe('ethSync', () => {
 
-        test('success', () => {
+        test('success', done => {
 
-            const address = '';
+            const address = '0x9901c66f2d4b95f7074b553da78084d708beca70';
 
-            //Will be resolved as "void" if successfull synced
-            return expect(fakeWallet.ethSync(address))
-                .resolves
-                .toBeUndefined();
+            const realm = {
+                create: jest.fn((schemaName, data, update) => {
+
+                    expect(update).toBe(true);
+                    expect(schemaName).toBe('AccountBalance');
+
+                    expect(data.id).toBe(address+'_ETH');
+                    expect(data.address).toBe(address);
+                    expect(data.currency).toBe('ETH');
+                    expect('number' === typeof data.synced_at).toBeTruthy();
+                    expect(data.amount).toBe('1000000000000');
+
+                })
+            };
+
+            const dbMock = {
+                write: jest.fn((cb) => {
+
+                    cb(realm)
+
+                })
+            };
+
+            const web3Mock = {
+                eth: {
+                    getBalance: jest.fn((addr, cb) => {
+
+                        expect(addr).toBe(address);
+
+                        cb(null, '1000000000000')
+
+                    })
+                }
+            };
+
+            const ethUtils = {
+                normalizeAddress: normalizeAddress
+            };
+
+            ethSync(dbMock, web3Mock, ethUtils)(address)
+                .then(_ => {
+
+                    expect(web3Mock.eth.getBalance).toHaveBeenCalledTimes(1);
+                    expect(realm.create).toHaveBeenCalledTimes(1);
+                    expect(dbMock.write).toHaveBeenCalledTimes(1);
+
+                    done();
+
+                })
+                .catch(error => { throw error })
 
         });
 
-        test('error', () => {
+        test('invalid address', done => {
 
-            const address = '';
+            ethSync({}, {}, {normalizeAddress: normalizeAddress})('i_am_an_invalid_address')
+                .catch(error => {
+
+                    expect(error).toBeInstanceOf(InvalidChecksumAddress);
+                    done();
+
+                })
+
+        });
+
+        test('error', done => {
+
+            const address = '0x9901c66f2d4b95f7074b553da78084d708beca70';
 
             class TestError extends Error{}
 
-            //Will be resolved with error that was thrown by other code
-            return expect(fakeWallet.ethSync(address))
-                .resolves
-                .toEqual(new TestError());
+            const ehtUtils = {
+                normalizeAddress: normalizeAddress
+            };
+
+            const web3Mock = {
+                eth: {
+                    getBalance: jest.fn((address, cb) => {
+                        cb(new TestError(), null);
+                    })
+                }
+            };
+
+            ethSync(null, web3Mock, ehtUtils)(address)
+                .catch(error => {
+
+                    expect(error).toBeInstanceOf(TestError);
+
+                    done();
+
+                })
 
         });
 
     });
-
-    test('syncCurrencies', () => {
-
-        const address = '';
-
-        //syncCurrencies sync's eth and pat. Expect to get back the
-        //result of ethSync and patSync
-        return expect(fakeWallet.syncCurrencies(address))
-            .resolves
-            .toEqual([
-                undefined,
-                undefined
-            ])
-
-    })
-
+    
 });

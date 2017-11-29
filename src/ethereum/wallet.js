@@ -77,3 +77,43 @@ export function ethBalance(db:DB, ethUtils:EthUtilsInterface) {
     }
 
 }
+
+export function ethSync(db:DB, web3:Web3, ethUtils:EthUtilsInterface){
+
+    return (address:string) : Promise<void> => new Promise((res, rej) => {
+
+        try{
+            ethUtils.normalizeAddress(address);
+        }catch (e){
+            return rej(e);
+        }
+
+        web3.eth.getBalance(address, (error, balance) => {
+
+            if(error){
+                return rej(error);
+            }
+
+            if('string' !== typeof balance){
+                return rej(new Error('Fetched balance is not a string'));
+            }
+
+            db.write((realm) => {
+
+                realm.create('AccountBalance', {
+                    id: address+'_ETH',
+                    address: address,
+                    currency: 'ETH',
+                    synced_at: Date.now(),
+                    amount: balance
+                }, true);
+
+                res();
+
+            });
+
+        })
+
+    })
+
+}
