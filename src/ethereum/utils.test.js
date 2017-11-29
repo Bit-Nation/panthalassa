@@ -669,7 +669,7 @@ describe('normalizeAddress', () => {
 
         expect(function(){
             normalizeAddress('I_AM_AN_ADDRESS')
-        }).toThrowError('Address: 0xi_aM_an_aDdress is invalid');
+        }).toThrowError('Address: I_AM_AN_ADDRESS is invalid');
 
     })
 
