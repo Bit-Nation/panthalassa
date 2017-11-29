@@ -40,3 +40,23 @@ export const ProfileSchema = {
         version: 'string'
     },
 };
+
+/**
+ * AccountBalance
+ */
+export type AccountBalanceType = {
+    address:string,
+    amount:string,
+    synced_at:number,
+    currency:string
+}
+
+export const AccountBalanceSchema = {
+    name: 'AccountBalance',
+    properties: {
+        address: 'string',
+        amount: 'string',
+        synced_at: 'date',
+        currency: 'string'
+    }
+};
