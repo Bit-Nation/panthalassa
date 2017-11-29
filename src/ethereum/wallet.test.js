@@ -29,10 +29,46 @@ describe('wallet', () => {
 
         test('never synced', () => {
 
-            const address = '';
+            const address = '0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98';
 
-            //Will be empty object it was not synchronised before
-            return expect(fakeWallet.ethBalance(address)).toEqual({});
+            const ethUtilsMock = {
+                normalizeAddress: normalizeAddress
+            };
+
+            const filtered = jest.fn((filterString) => {
+
+                expect(filterString).toBe(`address == "${address}" AND currency == "ETH"`);
+
+                return [];
+
+            });
+
+            const realmMock = {
+                objects: jest.fn((collection) => {
+
+                    expect(collection).toBe('AccountBalance');
+
+                    return {
+                        filtered: filtered
+                    }
+                })
+            };
+
+            const dbMock = {
+                query: (cb) => {
+                    cb(realmMock);
+                }
+            };
+
+            ethBalance(dbMock, ethUtilsMock)(address)
+                .then(_ => {
+
+                    expect(_).toBeNull();
+
+                    expect(realmMock.objects).toHaveBeenCalledTimes(1);
+                    expect(filtered).toHaveBeenCalledTimes(1);
+
+                })
 
         });
 
