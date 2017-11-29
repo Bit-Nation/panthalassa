@@ -106,6 +106,25 @@ describe('wallet', () => {
 
         });
 
+        test('invlid address', done => {
+
+            const ethUtils = {
+                normalizeAddress: normalizeAddress
+            };
+
+            const db = {};
+
+            ethBalance(db, ethUtils)('invalid_address')
+                .catch(error => {
+
+                    expect(error).toBeInstanceOf(InvalidChecksumAddress);
+
+                    done();
+
+                })
+
+        });
+
     });
 
     describe('ethSend', () => {

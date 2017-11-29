@@ -1,9 +1,9 @@
 //@flow
 
 import {WalletInterface} from "../specification/wallet";
-import type {Balance} from "../specification/wallet";
-import type {DB} from "../database/db";
-import type {EthUtilsInterface} from "./utils";
+import {DB} from "../database/db";
+import {EthUtilsInterface} from "./utils";
+import type {AccountBalanceType} from '../database/schemata';
 const Web3 = require('web3');
 const ethereumJsUtils = require('ethereumjs-util');
 
@@ -37,6 +37,40 @@ export function ethSend(ethUtils:EthUtilsInterface, web3:Web3) {
                 res(txReceipt);
 
             });
+
+        });
+
+    }
+
+}
+
+export function ethBalance(db:DB, ethUtils:EthUtilsInterface) {
+
+    return (address:string) : Promise<AccountBalanceType | null> => {
+
+        return new Promise((res, rej) => {
+
+            try {
+                ethUtils.normalizeAddress(address);
+            }catch (e){
+                rej(e);
+            }
+
+            db.query((realm) => {
+
+                const balances = realm.objects('AccountBalance').filtered(`address == "${address}" AND currency == "ETH"`);
+
+                if (balances.length <= 0){
+                    return res(null);
+                }
+
+                if (balances.length === 1) {
+                    return res(balances[0]);
+                }
+
+                rej(`Expected balances.length to be '<=1'. Got: ${balances.length}`);
+
+            })
 
         });
 
