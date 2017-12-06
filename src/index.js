@@ -1,9 +1,9 @@
 // @flow
 
 import type {SecureStorage} from "./specification/secureStorageInterface";
-import ethUtils, {EthUtilsInterface} from "./ethereum/utils";
-import web3 from './ethereum/web3';
 import type {JsonRpcNodeInterface} from "./specification/jsonRpcNode";
+import iocc from './iocc';
+import {asFunction, asValue} from 'awilix';
 
 const EventEmitter = require('eventemitter3');
 
@@ -18,18 +18,10 @@ const preBoot = (ee:EventEmitter) => {
 
 };
 
-/**
- *
- * @param ethNode
- * @param secureStorage
- * @param ee
- * @returns {{on: (function(string, *)), emit: (function(string)), boot: (function())}}
- * @constructor
- */
-const PanthalassaApi = (ethNode:JsonRpcNodeInterface, secureStorage:SecureStorage, ee:EventEmitter) => {
+const PanthalassaApi = (iocc:iocc) => {
     "use strict";
 
-    const ethUtilsInstance:EthUtilsInterface = ethUtils(secureStorage, ee);
+    const ee = iocc.resolve('_eventEmitter');
 
     return {
 
@@ -52,8 +44,8 @@ const PanthalassaApi = (ethNode:JsonRpcNodeInterface, secureStorage:SecureStorag
                 preBoot(ee);
 
                 res({
-                    eth: ethUtilsInstance,
-                    web3: web3(ethNode, ee, ethUtilsInstance)(),
+                    eth: iocc.resolve('ethereum:ethUtils'),
+                    web3: iocc.resolve('ethereum:web3'),
                     bootNetwork : () => {
                         throw new Error("This is currently not implemented");
                     }
@@ -75,10 +67,12 @@ const PanthalassaApi = (ethNode:JsonRpcNodeInterface, secureStorage:SecureStorag
  */
 export default function(ethNode: JsonRpcNodeInterface, ss:SecureStorage) : PanthalassaApi {
 
-    return PanthalassaApi(
-        ethNode,
-        ss,
-        new EventEmitter()
-    )
+    iocc.register({
+        '_ethNode' : asValue(ethNode),
+        '_secureStorage' : asValue(ss),
+        '_eventEmitter': asFunction(() => { new EventEmitter() })
+    });
+
+    return PanthalassaApi(iocc)
 
 }
