@@ -1,11 +1,15 @@
 //@flow
 
-import {WalletInterface} from "../specification/wallet";
 import {DB} from "../database/db";
 import {EthUtilsInterface} from "./utils";
 import type {AccountBalanceType} from '../database/schemata';
 const Web3 = require('web3');
-const ethereumJsUtils = require('ethereumjs-util');
+
+export interface WalletInterface {
+    ethSend: (from:string, to:string, amount:number, gasLimit:number, gasPrice:number) => Promise<{...mixed}>,
+    ethBalance: (address:string) => Promise<AccountBalanceType | null>,
+    ethSync: (address:string) => Promise<void>,
+}
 
 export function ethSend(ethUtils:EthUtilsInterface, web3:Web3) {
 
@@ -115,5 +119,17 @@ export function ethSync(db:DB, web3:Web3, ethUtils:EthUtilsInterface){
         })
 
     })
+
+}
+
+export default function(ethUtils:EthUtilsInterface, web3:Web3, db:DB) : WalletInterface {
+
+    const walletImplementation:WalletInterface = {
+        ethSend: ethSend(ethUtils, web3),
+        ethBalance: ethBalance(db, ethUtils),
+        ethSync: ethSync(db, web3, ethUtils)
+    };
+
+    return walletImplementation;
 
 }

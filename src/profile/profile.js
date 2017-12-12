@@ -5,6 +5,7 @@ import {NoProfilePresent} from "../errors";
 import {SecureStorage} from "../specification/secureStorageInterface";
 import type {PublicProfile} from '../specification/publicProfile.js'
 import {ProfileObject} from "../database/schemata";
+import type {EthUtilsInterface} from "../ethereum/utils";
 
 export const PROFILE_VERSION = '1.0.0';
 
@@ -180,8 +181,10 @@ export function getPublicProfile(ethUtils:{...any}, getProfile: () => Promise<{.
 /**
  *
  * @param db
+ * @param ethUtils
+ * @returns {Profile}
  */
-export default function (db:DB, ethutils:{...any}) : Profile {
+export default function (db:DB, ethUtils:EthUtilsInterface) : Profile {
 
     const profileImplementation : Profile = {
 
@@ -191,7 +194,7 @@ export default function (db:DB, ethutils:{...any}) : Profile {
 
         getProfile: getProfile(db, findProfiles),
 
-        getPublicProfile: getPublicProfile(ethutils, getProfile(db, findProfiles))
+        getPublicProfile: getPublicProfile(ethUtils, getProfile(db, findProfiles))
 
     };
 

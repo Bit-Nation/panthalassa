@@ -1,5 +1,3 @@
-//@flow
-
 import {} from './../errors';
 const execSync = require('child_process').execSync;
 import {DB, factory} from "../database/db";
