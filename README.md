@@ -1,6 +1,9 @@
 # Panthalassa
 > A Javascript + Flow implementation of panthalassa
 
+[![Build Status](https://semaphoreci.com/api/v1/florianlenz/panthalassa/branches/feature-test_coverage/badge.svg)](https://semaphoreci.com/florianlenz/panthalassa)
+[![Coverage Status](https://coveralls.io/repos/github/Bit-Nation/Panthalassa/badge.svg)](https://coveralls.io/github/Bit-Nation/Panthalassa)
+
 ## Api
 > Panthalassa is under heavy development. Things will change fast.
 
