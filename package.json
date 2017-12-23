@@ -4,7 +4,8 @@
   "description": "",
   "main": "./lib/index.js",
   "scripts": {
-    "test": "npm run build && jest ./lib",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
     "flow:lint": "flow",
     "build": "npm run flow:lint && rm -rf ./lib && node_modules/.bin/babel src/ -d lib",
     "db:flush": "rm -rf ./database && mkdir database && echo \"*\" > database/.gitignore"
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "awilix": "^3.0.0-rc.3",
+    "babel-jest": "^22.0.4",
     "babel-plugin-es6-promise": "^1.1.1",
     "crypto-js": "^3.1.9-1",
     "es6-promise": "^4.1.1",
@@ -36,5 +38,10 @@
     "realm": "^2.0.2",
     "web3": "^1.0.0-beta.24",
     "web3-provider-engine": "^13.3.3"
+  },
+  "jest": {
+    "transform": {
+      ".js": "babel-jest"
+    }
   }
 }
