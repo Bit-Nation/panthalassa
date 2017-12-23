@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:coveralls" : "npm run test:coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "flow:lint": "flow",
     "build": "npm run flow:lint && rm -rf ./lib && node_modules/.bin/babel src/ -d lib",
     "db:flush": "rm -rf ./database && mkdir database && echo \"*\" > database/.gitignore"
