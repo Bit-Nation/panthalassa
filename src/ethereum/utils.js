@@ -392,50 +392,31 @@ export function decryptPrivateKey(pubEE:EventEmitter, crypto: any, ethjsUtils: e
  */
 export function signTx(isPrivateKey: (privKey:Buffer) => boolean, ee: EventEmitter) : (txData:TxData, privKey:string) => Promise<EthTx> {
 
-    return (txData:TxData, privKey:string) : Promise<EthTx> => {
+    return (txData:TxData, privKey:string) : Promise<EthTx> => new Promise((res, rej) => {
 
         //Private key as buffer
         const pKB = Buffer.from(privKey, 'hex');
 
-        return new Promise((res, rej) => {
+        //reject if private key is invalid
+        if(!isPrivateKey(pKB)){
+            return rej(new InvalidPrivateKeyError());
+        }
 
-            //reject if private key is invalid
-            if(!isPrivateKey(pKB)){
-                rej(new InvalidPrivateKeyError());
-                return;
-            }
+        //Sign transaction
+        const tx = new EthTx(txData);
 
-            //Sign transaction
-            const tx = new EthTx(txData);
-
-            /**
-             * client need's to react to this event
-             * in order to sign the transaction
-             */
-            ee.emit('eth:tx:sign', {
-
-                tx: tx,
-
-                txData: txData,
-
-                confirm: () => {
-
-                    tx.sign(pKB);
-                    res(tx);
-
-                },
-
-                abort: () => {
-
-                    rej(new AbortedSigningOfTx());
-
-                }
-
-            });
-
+        /**
+         * client need's to react to this event
+         * in order to sign the transaction
+         */
+        ee.emit('eth:tx:sign', {
+            tx: tx,
+            txData: txData,
+            confirm: () => res(tx.sign(pKB)),
+            abort: () => rej(new AbortedSigningOfTx())
         });
 
-    }
+    })
 
 }
 
