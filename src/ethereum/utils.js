@@ -15,6 +15,21 @@ const EthTx = require('ethereumjs-tx');
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
 /**
+ * Ethereum Utils Interface
+ */
+export interface EthUtilsInterface {
+    createPrivateKey: () => Promise<string>,
+    savePrivateKey: (privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>,
+    allKeyPairs: () => Promise<*>,
+    getPrivateKey: (address:string) => Promise<{...any}>,
+    deletePrivateKey: (address:string) => Promise<void>,
+    decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => Promise<string>,
+    signTx: (txData:TxData, privkey:string) => Promise<EthTx>,
+    normalizeAddress: (address:string) => string,
+    normalizePrivateKey: (address:string) => string
+}
+
+/**
  *
  * @param address
  * @returns {string}
@@ -392,25 +407,13 @@ export function signTx(isPrivateKey: (privKey:Buffer) => boolean, ee: EventEmitt
 
 }
 
-export interface EthUtilsInterface {
-    createPrivateKey: () => Promise<string>,
-    savePrivateKey: (privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>,
-    allKeyPairs: () => Promise<*>,
-    getPrivateKey: (address:string) => Promise<{...any}>,
-    deletePrivateKey: (address:string) => Promise<void>,
-    decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => Promise<string>,
-    signTx: (txData:TxData, privkey:string) => Promise<EthTx>,
-    normalizeAddress: (address:string) => string,
-    normalizePrivateKey: (address:string) => string
-}
-
 /**
- * Returns eth utils implementation
- * @param ss
- * @param ee
- * @returns {ethUtils}
+ *
+ * @param ss SecureStorage
+ * @param ee EventEmitter
+ * @returns {EthUtilsInterface}
  */
-export default function ethUtils (ss:SecureStorage, ee:EventEmitter) : EthUtilsInterface {
+export default function (ss:SecureStorage, ee:EventEmitter) : EthUtilsInterface {
 
     const ethUtilsImplementation:EthUtilsInterface = {
         createPrivateKey: createPrivateKey(crypto, ethereumjsUtils.isValidPrivate),
