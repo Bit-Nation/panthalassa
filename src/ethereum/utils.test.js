@@ -1,7 +1,7 @@
 import {AbortedSigningOfTx, InvalidChecksumAddress, InvalidPrivateKeyError} from "../errors";
 
 const ethereumjsUtil = require('ethereumjs-util');
-const errors = require('../../lib/errors');
+const errors = require('../errors');
 const aes = require('crypto-js/aes');
 const crypto = require('crypto-js');
 const EE = require('eventemitter3');

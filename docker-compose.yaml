@@ -4,6 +4,8 @@ services:
   node:
     image: node:6.11.5
     working_dir: "/app"
+    environment:
+      - COVERALLS_REPO_TOKEN
     volumes:
       - ./:/app
       - ./node_modules:/app/node_modules:cached
