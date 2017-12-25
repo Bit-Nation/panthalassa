@@ -412,7 +412,10 @@ export function signTx(isPrivateKey: (privKey:Buffer) => boolean, ee: EventEmitt
         ee.emit('eth:tx:sign', {
             tx: tx,
             txData: txData,
-            confirm: () => res(tx.sign(pKB)),
+            confirm: () => {
+                tx.sign(pKB);
+                res(tx);
+            },
             abort: () => rej(new AbortedSigningOfTx())
         });
 
