@@ -6,8 +6,8 @@ const schemata = require('./schemata');
  * Interface for database
  */
 export interface DB {
-    query(queryAction: (realm:any) => any) : Promise<any>;
-    write(writeAction: (realm:any) => void) : Promise<void>;
+    query(queryAction: (realm:Realm) => Realm.Results) : Promise<any>;
+    write(writeAction: (realm:Realm) => void) : Promise<void>;
 }
 
 /**
@@ -63,34 +63,18 @@ export function write(realm: {...any}) : ((writeAction: (realm:any) => void) => 
 
 }
 
-/**
- * Creates a realm instance
- * @returns {ProgressPromise}
- */
-const realmFactory = () : {...any} => {
-    "use strict";
+export default function () : DB {
 
-    return Realm
+    const realm = Realm
         .open({
             path: './database/panthalassa',
             schema: [schemata.ProfileSchema, schemata.AccountBalanceSchema]
-        })
-
-};
-
-/**
- * Creates a DB
- * @returns {DB}
- */
-export function factory() : DB {
-
-    const r = realmFactory();
+        });
 
     const dbImplementation : DB = {
-        query: query(r),
-        write: write(r)
+        query: query(realm),
+        write: write(realm)
     };
 
     return dbImplementation;
 }
-
