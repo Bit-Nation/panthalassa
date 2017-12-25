@@ -18,15 +18,52 @@ const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
  * Ethereum Utils Interface
  */
 export interface EthUtilsInterface {
+
+    /**
+     * Creates private key and return as hex string
+     */
     createPrivateKey: () => Promise<string>,
+
+    /**
+     * Save private key with an optional password
+     */
     savePrivateKey: (privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>,
+
+    //@todo change this method and the doc's
     allKeyPairs: () => Promise<*>,
-    getPrivateKey: (address:string) => Promise<{...any}>,
+
+    /**
+     * Fetch private key by address. Make sure to normalize the address.
+     * Will be rejected if private key was not found.
+     */
+    getPrivateKey: (address:string) => Promise<PrivateKeyType>,
+
+    /**
+     * Delete private key by address. Make sure to normalize the address.
+     */
     deletePrivateKey: (address:string) => Promise<void>,
+
+    /**
+     * This method decrypt's an private key. Have a look at the readme in this folder
+     * to see how to use this method.
+     */
     decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => Promise<string>,
+
+    /**
+     * Sign eth transaction data. have a look at the readme in this folder to see
+     * how to use this method.
+     */
     signTx: (txData:TxData, privkey:string) => Promise<EthTx>,
+
+    /**
+     * Normalize an ethereum address
+     */
     normalizeAddress: (address:string) => string,
-    normalizePrivateKey: (address:string) => string
+
+    /**
+     * Normalize an ethereum private key
+     */
+    normalizePrivateKey: (privateKey:string) => string
 }
 
 /**
@@ -188,12 +225,7 @@ export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<*>){
         return new Promise((res, rej) => {
             secureStorage
 
-                .fetchItems((key:string, value:string) => {
-
-                    // Filter eth keys
-                    return key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1;
-
-                })
+                .fetchItems((key:string) => key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1)
                 .then(keyValuePairs => {
 
                     //transform key value pairs. remove key eth prefix and transform json string to json
