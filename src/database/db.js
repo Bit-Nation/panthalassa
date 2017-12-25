@@ -6,8 +6,19 @@ const schemata = require('./schemata');
  * Interface for database
  */
 export interface DB {
-    query(queryAction: (realm:Realm) => Realm.Results) : Promise<any>;
+
+    /**
+     * Expect an query callback that will receive an instance of realm.
+     * Should return the realm query result
+     */
+    query(queryAction: (realm:Realm) => Realm.Results) : Promise<Realm.Results>;
+
+    /**
+     * Expect an callback that that will receive an instance of realm.
+     * The callback should return nothing.
+     */
     write(writeAction: (realm:Realm) => void) : Promise<void>;
+
 }
 
 /**
@@ -15,7 +26,7 @@ export interface DB {
  * @param realm
  * @returns {function(*)}
  */
-export function query(realm:any) : ((queryAction: (realm:any) => any) => Promise<any>){
+export function query(realm:Realm) : ((queryAction: (realm:any) => any) => Promise<any>){
     "use strict";
 
     return (queryAction: (realm) => any) : Promise<*> => {
@@ -39,7 +50,7 @@ export function query(realm:any) : ((queryAction: (realm:any) => any) => Promise
  * @param realm
  * @returns {function(*)}
  */
-export function write(realm: {...any}) : ((writeAction: (realm:any) => void) => Promise<void>){
+export function write(realm: Realm) : ((writeAction: (realm:any) => void) => Promise<void>){
 
     "use strict";
     return (writeAction: (realm:any) => void) : Promise<void> => {
