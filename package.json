@@ -2,7 +2,7 @@
   "name": "BITNATION-Panthalassa",
   "version": "1.0.0",
   "description": "",
-  "main": "./lib/index.js",
+  "main": "src",
   "scripts": {
     "test": "jest",
     "test:coverage": "jest --coverage",
