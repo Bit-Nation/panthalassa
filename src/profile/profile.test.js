@@ -1,6 +1,6 @@
 import {} from './../errors';
 const execSync = require('child_process').execSync;
-import {DB, factory} from "../database/db";
+import database, {DB} from "../database/db";
 import {} from './../database/queries';
 import profile, {hasProfile, getPublicProfile} from './../profile/profile';
 import {NoProfilePresent, NoPublicProfilePresent} from './../errors';
@@ -23,7 +23,7 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            const db:DB = factory();
+            const db:DB = database();
 
             const p = profile(db);
 
@@ -59,7 +59,7 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            const db = factory();
+            const db = database();
 
             const p = profile(db);
 
@@ -150,7 +150,7 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            const db:DB = factory();
+            const db:DB = database();
 
             const p = profile(db);
 
@@ -202,7 +202,7 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            const db:DB = factory();
+            const db:DB = database();
 
             const p = profile(db);
 
@@ -311,7 +311,7 @@ describe('profile', () => {
                 ]
             };
 
-            return expect(hasProfile(factory(), fakeQuery)())
+            return expect(hasProfile(database(), fakeQuery)())
                 .resolves
                 .toBeTruthy();
 
@@ -322,7 +322,7 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            return expect(profile(factory()).hasProfile())
+            return expect(profile(database()).hasProfile())
                 .resolves
                 .toBeFalsy();
 
@@ -332,7 +332,7 @@ describe('profile', () => {
 
             class TestError extends Error{}
 
-            return expect(hasProfile(factory(), () => { throw new TestError()})())
+            return expect(hasProfile(database(), () => { throw new TestError()})())
                 .rejects
                 .toEqual(new TestError());
 

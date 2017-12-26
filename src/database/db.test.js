@@ -1,4 +1,4 @@
-const database = require('./db');
+import database from './db';
 const execSync = require('child_process').execSync;
 
 describe('write', () => {
@@ -12,7 +12,7 @@ describe('write', () => {
         // Kill the database
         execSync('npm run db:flush');
 
-        const db = database.factory();
+        const db = database();
 
         function writeAction(realm){
 
@@ -35,7 +35,7 @@ describe('write', () => {
 
         class CustomError extends Error{}
 
-        const db = database.factory();
+        const db = database();
 
         function writeAction(realm){
 
@@ -62,7 +62,7 @@ describe('query', () => {
         // Kill the database
         execSync('npm run db:flush');
 
-        const db = database.factory();
+        const db = database();
 
         function searchPets(realm){
 
@@ -86,7 +86,7 @@ describe('query', () => {
         // Kill the database
         execSync('npm run db:flush');
 
-        const db = database.factory();
+        const db = database();
 
         class CustomError extends Error{}
 

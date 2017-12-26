@@ -15,6 +15,58 @@ const EthTx = require('ethereumjs-tx');
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
 /**
+ * Ethereum Utils Interface
+ */
+export interface EthUtilsInterface {
+
+    /**
+     * Creates private key and return as hex string
+     */
+    createPrivateKey: () => Promise<string>,
+
+    /**
+     * Save private key with an optional password
+     */
+    savePrivateKey: (privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>,
+
+    //@todo change this method and the doc's
+    allKeyPairs: () => Promise<*>,
+
+    /**
+     * Fetch private key by address. Make sure to normalize the address.
+     * Will be rejected if private key was not found.
+     */
+    getPrivateKey: (address:string) => Promise<PrivateKeyType>,
+
+    /**
+     * Delete private key by address. Make sure to normalize the address.
+     */
+    deletePrivateKey: (address:string) => Promise<void>,
+
+    /**
+     * This method decrypt's an private key. Have a look at the readme in this folder
+     * to see how to use this method.
+     */
+    decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => Promise<string>,
+
+    /**
+     * Sign eth transaction data. have a look at the readme in this folder to see
+     * how to use this method.
+     */
+    signTx: (txData:TxData, privkey:string) => Promise<EthTx>,
+
+    /**
+     * Normalize an ethereum address
+     */
+    normalizeAddress: (address:string) => string,
+
+    /**
+     * Normalize an ethereum private key
+     */
+    normalizePrivateKey: (privateKey:string) => string
+}
+
+/**
  *
  * @param address
  * @returns {string}
@@ -173,12 +225,7 @@ export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<*>){
         return new Promise((res, rej) => {
             secureStorage
 
-                .fetchItems((key:string, value:string) => {
-
-                    // Filter eth keys
-                    return key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1;
-
-                })
+                .fetchItems((key:string) => key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1)
                 .then(keyValuePairs => {
 
                     //transform key value pairs. remove key eth prefix and transform json string to json
@@ -345,72 +392,44 @@ export function decryptPrivateKey(pubEE:EventEmitter, crypto: any, ethjsUtils: e
  */
 export function signTx(isPrivateKey: (privKey:Buffer) => boolean, ee: EventEmitter) : (txData:TxData, privKey:string) => Promise<EthTx> {
 
-    return (txData:TxData, privKey:string) : Promise<EthTx> => {
+    return (txData:TxData, privKey:string) : Promise<EthTx> => new Promise((res, rej) => {
 
         //Private key as buffer
         const pKB = Buffer.from(privKey, 'hex');
 
-        return new Promise((res, rej) => {
+        //reject if private key is invalid
+        if(!isPrivateKey(pKB)){
+            return rej(new InvalidPrivateKeyError());
+        }
 
-            //reject if private key is invalid
-            if(!isPrivateKey(pKB)){
-                rej(new InvalidPrivateKeyError());
-                return;
-            }
+        //Sign transaction
+        const tx = new EthTx(txData);
 
-            //Sign transaction
-            const tx = new EthTx(txData);
-
-            /**
-             * client need's to react to this event
-             * in order to sign the transaction
-             */
-            ee.emit('eth:tx:sign', {
-
-                tx: tx,
-
-                txData: txData,
-
-                confirm: () => {
-
-                    tx.sign(pKB);
-                    res(tx);
-
-                },
-
-                abort: () => {
-
-                    rej(new AbortedSigningOfTx());
-
-                }
-
-            });
-
+        /**
+         * client need's to react to this event
+         * in order to sign the transaction
+         */
+        ee.emit('eth:tx:sign', {
+            tx: tx,
+            txData: txData,
+            confirm: () => {
+                tx.sign(pKB);
+                res(tx);
+            },
+            abort: () => rej(new AbortedSigningOfTx())
         });
 
-    }
+    })
 
-}
-
-export interface EthUtilsInterface {
-    createPrivateKey: () => Promise<string>,
-    savePrivateKey: (privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>,
-    allKeyPairs: () => Promise<*>,
-    getPrivateKey: (address:string) => Promise<{...any}>,
-    deletePrivateKey: (address:string) => Promise<void>,
-    decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => Promise<string>,
-    signTx: (txData:TxData, privkey:string) => Promise<EthTx>,
-    normalizeAddress: (address:string) => string,
-    normalizePrivateKey: (address:string) => string
 }
 
 /**
- * Returns eth utils implementation
- * @param ss
- * @param ee
- * @returns {ethUtils}
+ *
+ * @param ss SecureStorage
+ * @param ee EventEmitter
+ * @returns {EthUtilsInterface}
  */
-export default function ethUtils (ss:SecureStorage, ee:EventEmitter) : EthUtilsInterface {
+export default function (ss:SecureStorage, ee:EventEmitter) : EthUtilsInterface {
 
     const ethUtilsImplementation:EthUtilsInterface = {
         createPrivateKey: createPrivateKey(crypto, ethereumjsUtils.isValidPrivate),

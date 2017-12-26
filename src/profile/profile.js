@@ -2,7 +2,6 @@
 import {findProfiles} from './../database/queries'
 import {DB} from "../database/db";
 import {NoProfilePresent} from "../errors";
-import {SecureStorage} from "../specification/secureStorageInterface";
 import type {PublicProfile} from '../specification/publicProfile.js'
 import {ProfileObject} from "../database/schemata";
 import type {EthUtilsInterface} from "../ethereum/utils";
@@ -13,7 +12,7 @@ export interface Profile {
 
     hasProfile() : Promise<boolean>;
     setProfile(pseudo:string, description:string, image:string) : Promise<void>;
-    getProfile() : Promise<{...any}>;
+    getProfile() : Promise<ProfileObject>;
     getPublicProfile(): Promise<PublicProfile>
 
 }
