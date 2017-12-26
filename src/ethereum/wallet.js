@@ -6,8 +6,23 @@ import type {AccountBalanceType} from '../database/schemata';
 const Web3 = require('web3');
 
 export interface WalletInterface {
+
+    /**
+     * from is the senders ethereum address
+     * to is the receiver ethereum address
+     * amount in ether NOT in wei
+     */
     ethSend: (from:string, to:string, amount:number, gasLimit:number, gasPrice:number) => Promise<{...mixed}>,
+
+    /**
+     * Get balance of account.
+     * Will resolve in object or null
+     */
     ethBalance: (address:string) => Promise<AccountBalanceType | null>,
+
+    /**
+     * Sync balance of specific ethereum address
+     */
     ethSync: (address:string) => Promise<void>,
 }
 

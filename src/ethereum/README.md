@@ -61,3 +61,11 @@ The `signTx` method work's like the `decryptPrivateKey` method expect for that t
 - `abort` abort signing. Call it to abort the signing. 
 
 Keep in mind to listen to the `eth:tx:sign` event. If you don't call `confirm` or `abort` the returned promise will never be resolved.
+
+## Wallet
+
+### How to use?
+Import the exported default function from `src/ethereum/wallet.js` and call it with an object that satisfies the EthUtilsInterface, an [Web3 object](web3.js) and an [DB object](../database/db.js)
+
+### API
+Have a look at the [WalletInterface](wallet.js).
