@@ -7,6 +7,15 @@
 ## Api
 > Panthalassa is under heavy development. Things will change fast.
 
+Pantalassa follows a modular approache to provide more flexibilty since it will be used on our mobile & desktop client. The context in which panthalassa run's on mobile and on desktop is pretty different (on mobile it's the browser engine and on desktop it's node js), so you might see us abstracting some thing's like the random bytes function because the context is different (`crypto.randomBytes()` can't be used in the browser)
+
+Modules:
+- [Database](src/database) contain database related functionality
+- [Ethereum](src/ethereum) contain all ethereum releated code
+- [Profile](src/profile) profile related functionality
+- [SecureStorage](src/secure_storage) contains a node js secure storage
+- [Specification](src/specification) contain all the specifications. E.g. for the secure storage.
+
 ## FAQ
 
 **I heard this is supposed to be the backend of The Pangea Jurisdiction, can you please explain?**
