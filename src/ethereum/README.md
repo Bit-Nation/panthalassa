@@ -69,3 +69,11 @@ Import the exported default function from `src/ethereum/wallet.js` and call it w
 
 ### API
 Have a look at the [WalletInterface](wallet.js).
+
+## Web3
+
+### How to use?
+Import the exported default function from `src/ethereum/web3` and call it with object that satisfies the [JsonRpcNodeInterface](../specification/jsonRpcNode.js), an instance of [EventEmitter](https://www.npmjs.com/package/eventemitter3) and an object that satisfies the [EthUtilsInterface](utils.js) interface. 
+
+### Api
+- 
