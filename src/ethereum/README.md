@@ -77,3 +77,12 @@ Import the exported default function from `src/ethereum/web3` and call it with o
 
 ### Api
 - 
+
+## PanthalassaProvider
+> The PanthalassaProvider is an web3 provider that contain's custom logic, e.g. for signing an transaction.
+
+### How to use?
+Import the exported default class and instantiate it with an object that satisfies the [EthUtilsInterface](utils.js) and with an url (string) to the json rpc.
+
+### Api
+- 
