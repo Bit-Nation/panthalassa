@@ -2,7 +2,6 @@ import {JsonRpcNodeInterface} from "../specification/jsonRpcNode";
 import type {EthUtilsInterface} from "./utils";
 import PanthalassaProvider from './PanthalassaProvider';
 const EventEmitter = require('eventemitter3');
-const Web3 = require('web3');
 
 /**
  *
