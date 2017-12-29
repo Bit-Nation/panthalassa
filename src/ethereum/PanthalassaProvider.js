@@ -21,16 +21,12 @@ export function getAccounts(ethUtils:EthUtilsInterface) : (cb: (error:any, addre
 
                 const addresses:Array<string> = [];
 
-                keyPairs.map((keyPair) => addresses.push(keyPair.key));
+                Object.keys(keyPairs).map(key => addresses.push(key));
 
                 cb(null, addresses);
 
             })
-            .catch(error => {
-
-                cb(error, null)
-
-            })
+            .catch(error => cb(error, null))
 
     }
 

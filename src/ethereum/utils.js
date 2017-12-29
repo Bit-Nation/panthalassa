@@ -30,7 +30,7 @@ export interface EthUtilsInterface {
     savePrivateKey: (privateKey:string, pw:?string, pwConfirm:?string) => Promise<void>,
 
     //@todo change this method and the doc's
-    allKeyPairs: () => Promise<*>,
+    allKeyPairs: () => Promise<{}>,
 
     /**
      * Fetch private key by address. Make sure to normalize the address.
@@ -217,31 +217,30 @@ export function savePrivateKey(secureStorage: SecureStorage, ethjsUtils: ethereu
  * @param secureStorage
  * @returns {function()}
  */
-export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<*>){
+export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<{}>){
     "use strict";
 
-    return () : Promise<*> => {
+    return () : Promise<{}> => new Promise((res, rej) => secureStorage
+        .fetchItems((key:string) => key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1)
+        .then(keys => {
 
-        return new Promise((res, rej) => {
-            secureStorage
+            const transformedKeys = {};
 
-                .fetchItems((key:string) => key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1)
-                .then(keyValuePairs => {
+            Object.keys(keys).map(key => {
 
-                    //transform key value pairs. remove key eth prefix and transform json string to json
-                    keyValuePairs
-                        .map((keyValuePair) => {
-                            keyValuePair.key = keyValuePair.key.split(PRIVATE_ETH_KEY_PREFIX).pop();
-                            keyValuePair.value = JSON.parse(keyValuePair.value)
-                        });
+                //We only accept string's since. the private key is an stringified object
+                if(typeof keys[key] !== 'string'){
+                    return rej(new Error(`Value of key: '${key}' is not an string`));
+                }
 
-                    res(keyValuePairs);
+                transformedKeys[key.split(PRIVATE_ETH_KEY_PREFIX).pop()] = JSON.parse(keys[key])
 
-                })
-                .catch(err => rej(err));
+            });
+
+            res(transformedKeys);
+
         })
-
-    }
+        .catch(err => rej(err)))
 
 }
 
