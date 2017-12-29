@@ -33,9 +33,9 @@ export interface SecureStorage {
     /**
      * Loops over all elements in the secure store and filter based on the given callback.
      * the callback need's to return true / false. When true is returned the dataset will be
-     * added to the return list
+     * added to the return object
      */
-    fetchItems(filter: (key:string, value:any) => boolean) : Promise<Array<{key:string, value:any}>>;
+    fetchItems(filter: (key:string, value:mixed) => boolean) : Promise<{}>;
 
     /**
      * Destroys the whole storage
