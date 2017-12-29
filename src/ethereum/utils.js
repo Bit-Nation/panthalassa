@@ -4,6 +4,7 @@ import type {SecureStorage} from "../specification/secureStorageInterface";
 import type { PrivateKeyType } from '../specification/privateKey'
 import type {TxData} from '../specification/tx';
 import {AbortedSigningOfTx, InvalidPrivateKeyError, InvalidChecksumAddress} from "../errors";
+import type {OsDependenciesInterface} from "../specification/osDependencies";
 
 const crypto = require('crypto');
 const ethereumjsUtils = require('ethereumjs-util');
@@ -98,31 +99,30 @@ export function normalizePrivateKey(privateKey:string) : string {
 }
 
 /**
- * Creates a new private key
- * @param crypto
+ * @description Generate's a new secure private key
+ * @param osDeps
  * @param isValidPrivateKey
- * @returns {function()}
+ * @return {function()}
  */
-export function createPrivateKey(crypto:{...any}, isValidPrivateKey: (key: Buffer) => boolean) : (() => Promise<string>){
+export function createPrivateKey(osDeps:OsDependenciesInterface, isValidPrivateKey: (key: Buffer) => boolean) : (() => Promise<string>){
     "use strict";
 
     return () : Promise<string> => {
 
         return new Promise((res, rej) => {
 
-            crypto.randomBytes(32, function(err, privKey){
+            osDeps.crypto.randomBytes(32)
+                .then(privateKey => {
 
-                if(err){
-                    rej(err);
-                }
+                    if(!isValidPrivateKey(Buffer.from(privateKey, 'hex'))){
+                        return rej(new errors.InvalidPrivateKeyError());
+                    }
 
-                if(!isValidPrivateKey(privKey)){
-                    rej(new errors.InvalidPrivateKeyError());
-                }
+                    return res(privateKey);
 
-                res(privKey.toString('hex'));
+                })
+                .catch(rej);
 
-            });
 
         })
 
@@ -424,14 +424,15 @@ export function signTx(isPrivateKey: (privKey:Buffer) => boolean, ee: EventEmitt
 
 /**
  *
- * @param ss SecureStorage
- * @param ee EventEmitter
- * @returns {EthUtilsInterface}
+ * @param ss
+ * @param ee
+ * @param osDeps
+ * @return {EthUtilsInterface}
  */
-export default function (ss:SecureStorage, ee:EventEmitter) : EthUtilsInterface {
+export default function (ss:SecureStorage, ee:EventEmitter, osDeps:OsDependenciesInterface) : EthUtilsInterface {
 
     const ethUtilsImplementation:EthUtilsInterface = {
-        createPrivateKey: createPrivateKey(crypto, ethereumjsUtils.isValidPrivate),
+        createPrivateKey: createPrivateKey(osDeps, ethereumjsUtils.isValidPrivate),
         savePrivateKey: savePrivateKey(ss, ethereumjsUtils, aes),
         allKeyPairs: allKeyPairs(ss),
         getPrivateKey: getPrivateKey(ss),
