@@ -1,6 +1,6 @@
 //@flow
 
-interface Crypto {
+export interface Crypto {
 
     randomBytes: (length:number) => Promise<string>
 
