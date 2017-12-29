@@ -87,32 +87,14 @@ describe('nodeJsSecureStorage', () => {
 
         const filteredResults = ss
             .set('eth#1', 'eth_key_1')
-            .then(() => {
-                return ss.set('mesh#1', 'mesh_key_1');
-            })
-            .then(() => {
-                return ss.set('eth#3', 'eth_key_3');
-            })
-            .then(() => {
+            .then(() => ss.set('mesh#1', 'mesh_key_1'))
+            .then(() => ss.set('eth#3', 'eth_key_3'))
+            .then(() => ss.fetchItems((key, value) => key.indexOf('eth') !== -1));
 
-                return ss.fetchItems((key, value) => {
-
-                    return key.indexOf('eth') !== -1;
-
-                });
-
-            });
-
-        return expect(filteredResults).resolves.toEqual([
-            {
-                key: 'eth#1',
-                value: 'eth_key_1'
-            },
-            {
-                key: 'eth#3',
-                value: 'eth_key_3'
-            }
-        ]);
+        return expect(filteredResults).resolves.toEqual({
+            'eth#1' : 'eth_key_1',
+            'eth#3' : 'eth_key_3'
+        });
 
     })
 
