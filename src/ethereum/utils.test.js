@@ -286,52 +286,40 @@ describe('allKeys', () => {
                 return new Promise((res, rej) => {
 
                     // Data mock
-                    res([
-                        {
-                            key: 'PRIVATE_ETH_KEY#'+PRIVATE_KEY_ONE_ADDRESS,
-                            value: JSON.stringify({
-                                encryption: 'AES-256',
-                                encrypted: true,
-                                version: '1.0.0',
-                                value: PRIVATE_KEY_ONE
-                            })
-                        },
-                        {
-                            key: 'PRIVATE_ETH_KEY#'+PRIVATE_KEY_TWO_ADDRESS,
-                            value: JSON.stringify({
-                                encryption: '',
-                                encrypted: false,
-                                version: '1.0.0',
-                                value: PRIVATE_KEY_TWO
-                            })
-                        }
-                    ]);
+                    res({
+                        'PRIVATE_ETH_KEY#0xb293D530769790b82c187f9CD1a4fA0acDcaAb82': JSON.stringify({
+                            encryption: 'AES-256',
+                            encrypted: true,
+                            version: '1.0.0',
+                            value: PRIVATE_KEY_ONE
+                        }),
+                        'PRIVATE_ETH_KEY#0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94': JSON.stringify({
+                            encryption: '',
+                            encrypted: false,
+                            version: '1.0.0',
+                            value: PRIVATE_KEY_TWO
+                        })
+                    });
 
                 });
 
             })
         };
 
-        expect(utils(secureStorageMock).allKeyPairs()).resolves.toEqual([
-            {
-                key: PRIVATE_KEY_ONE_ADDRESS,
-                value: {
-                    encryption: 'AES-256',
-                    encrypted: true,
-                    version: '1.0.0',
-                    value: PRIVATE_KEY_ONE
-                },
+        expect(utils(secureStorageMock).allKeyPairs()).resolves.toEqual({
+            '0xb293D530769790b82c187f9CD1a4fA0acDcaAb82': {
+                encryption: 'AES-256',
+                encrypted: true,
+                version: '1.0.0',
+                value: PRIVATE_KEY_ONE
             },
-            {
-                key: PRIVATE_KEY_TWO_ADDRESS,
-                value: {
-                    encryption: '',
-                    encrypted: false,
-                    version: '1.0.0',
-                    value: PRIVATE_KEY_TWO
-                }
+            '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94': {
+                encryption: '',
+                encrypted: false,
+                version: '1.0.0',
+                value: PRIVATE_KEY_TWO
             }
-        ])
+        })
 
     })
 

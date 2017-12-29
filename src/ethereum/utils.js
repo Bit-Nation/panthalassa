@@ -226,7 +226,16 @@ export function allKeyPairs(secureStorage:SecureStorage) : (() => Promise<{}>){
 
             const transformedKeys = {};
 
-            Object.keys(keys).map(key => transformedKeys[key.split(PRIVATE_ETH_KEY_PREFIX).pop()] = JSON.parse(keys[key]));
+            Object.keys(keys).map(key => {
+
+                //We only accept string's since. the private key is an stringified object
+                if(typeof keys[key] !== 'string'){
+                    return rej(new Error(`Value of key: '${key}' is not an string`));
+                }
+
+                transformedKeys[key.split(PRIVATE_ETH_KEY_PREFIX).pop()] = JSON.parse(keys[key])
+
+            });
 
             res(transformedKeys);
 
