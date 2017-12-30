@@ -44,7 +44,7 @@ export function ethSend(ethUtils:EthUtilsInterface, web3:Web3) {
             web3.eth.sendTransaction({
                 from: from,
                 to: to,
-                value: web3.utils.toWei(amount, 'ether'),
+                value: web3.toWei(amount, 'ether'),
                 gasLimit: gasLimit,
                 gasPrice: gasPrice
             }, (error, txReceipt) => {

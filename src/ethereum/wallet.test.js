@@ -2,7 +2,7 @@ import {normalizeAddress} from "./utils";
 import {InvalidChecksumAddress} from './../errors'
 import {ethSend, ethBalance, ethSync} from './wallet'
 
-const web3 = require('web3');
+const Web3 = require('web3');
 
 describe('wallet', () => {
     "use strict";
@@ -153,13 +153,13 @@ describe('wallet', () => {
 
                     })
                 },
-                utils: {
-                    toWei: jest.fn((eth) => {
+                toWei: jest.fn((eth) => {
 
-                        return web3.utils.toWei(eth, 'ether');
+                    const w3 = new Web3();
 
-                    })
-                }
+                    return w3.toWei(eth);
+
+                })
             };
 
             const ethUtilsMock = {
@@ -177,7 +177,7 @@ describe('wallet', () => {
                     expect(web3Mock.eth.sendTransaction).toHaveBeenCalledTimes(1);
 
                     //toWei should have been called to transform eth to wei
-                    expect(web3Mock.utils.toWei).toHaveBeenCalledTimes(1);
+                    expect(web3Mock.toWei).toHaveBeenCalledTimes(1);
 
                     done();
 
@@ -207,13 +207,13 @@ describe('wallet', () => {
 
                     })
                 },
-                utils: {
-                    toWei: jest.fn((eth) => {
+                toWei: jest.fn((eth) => {
 
-                        return web3.utils.toWei(eth, 'ether');
+                    const w3 = new Web3();
 
-                    })
-                }
+                    return w3.toWei(eth, 'ether');
+
+                })
             };
 
             const ethUtilsMock = {
@@ -229,7 +229,7 @@ describe('wallet', () => {
                     expect(web3Mock.eth.sendTransaction).toHaveBeenCalledTimes(1);
 
                     //toWei should have been called to transform eth to wei
-                    expect(web3Mock.utils.toWei).toHaveBeenCalledTimes(1);
+                    expect(web3Mock.toWei).toHaveBeenCalledTimes(1);
 
                     expect(error).toBeInstanceOf(TestError);
 
