@@ -6,7 +6,7 @@ import type {TxData} from '../specification/tx';
 import {AbortedSigningOfTx, InvalidPrivateKeyError, InvalidChecksumAddress} from "../errors";
 import type {OsDependenciesInterface} from "../specification/osDependencies";
 
-const crypto = require('crypto');
+const crypto = require('crypto-js');
 const ethereumjsUtils = require('ethereumjs-util');
 const errors = require('./../errors');
 const aes = require('crypto-js/aes');
