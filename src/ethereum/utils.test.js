@@ -685,3 +685,53 @@ describe('normalizePrivateKey', () => {
     })
 
 });
+
+describe('privateKeyToMnemonic', () => {
+
+    test('invalid private key', () => {
+
+        expect(function () {
+            utils().privateKeyToMnemonic('i am invalid')
+        }).toThrow();
+
+    });
+
+    test('success', () => {
+
+        const privateKey = 'a21e66de112c10617852adaeb67241309fbdc5f21de796d16544829239d71ade';
+
+        const expectedMnemonic = 'pear veteran resource car scissors cost throw fiber push receive motion gentle wink title silent rude nothing menu eye ahead castle twist hidden service';
+
+        expect(utils().privateKeyToMnemonic(privateKey))
+            .toEqual(expectedMnemonic.split(' '));
+
+    });
+
+});
+
+test('mnemonicToPrivateKey', () => {
+
+    const privateKey = 'a21e66de112c10617852adaeb67241309fbdc5f21de796d16544829239d71ade';
+
+    const mnemonic = 'pear veteran resource car scissors cost throw fiber push receive motion gentle wink title silent rude nothing menu eye ahead castle twist hidden service';
+
+    expect(utils().mnemonicToPrivateKey(mnemonic))
+        .toEqual(privateKey)
+
+});
+
+describe('mnemonicValid', () => {
+
+    test('false', () => {
+
+        expect(utils().mnemonicValid('invalid bla bla bla')).toBe(false);
+
+    });
+
+    test('true', () => {
+
+        expect(utils().mnemonicValid('pear veteran resource car scissors cost throw fiber push receive motion gentle wink title silent rude nothing menu eye ahead castle twist hidden service')).toBe(true);
+
+    })
+
+});

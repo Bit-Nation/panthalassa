@@ -12,6 +12,9 @@ const errors = require('./../errors');
 const aes = require('crypto-js/aes');
 const EventEmitter = require('eventemitter3');
 const EthTx = require('ethereumjs-tx');
+const bip39 = require('bip39');
+const ethJsUtils = require('ethereumjs-util');
+const assert = require('assert');
 
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
@@ -64,7 +67,23 @@ export interface EthUtilsInterface {
     /**
      * Normalize an ethereum private key
      */
-    normalizePrivateKey: (privateKey:string) => string
+    normalizePrivateKey: (privateKey:string) => string,
+
+    /**
+     * Transform private key to list of words
+     */
+    privateKeyToMnemonic: (pk:string) => Array<string>,
+
+    /**
+     * Mnemonic to private key
+     */
+    mnemonicToPrivateKey: (mnemonic:string) => string,
+
+    /**
+     * Validates a mnemonic
+     */
+    mnemonicValid: (mnemonic:string) => boolean
+
 }
 
 /**
@@ -440,7 +459,16 @@ export default function (ss:SecureStorage, ee:EventEmitter, osDeps:OsDependencie
         decryptPrivateKey: decryptPrivateKey(ee, crypto, ethereumjsUtils),
         signTx: signTx(ethereumjsUtils.isValidPrivate, ee),
         normalizeAddress: normalizeAddress,
-        normalizePrivateKey: normalizePrivateKey
+        normalizePrivateKey: normalizePrivateKey,
+        privateKeyToMnemonic: (privateKey:string) : Array<string> => {
+
+            assert.equal(true, ethJsUtils.isValidPrivate(Buffer.from(privateKey, 'hex')), 'Expected valid private key');
+
+            return bip39.entropyToMnemonic(privateKey).split(' ');
+
+        },
+        mnemonicToPrivateKey: (mnemonic:string) : string => bip39.mnemonicToEntropy(mnemonic),
+        mnemonicValid: bip39.validateMnemonic
     };
 
     return ethUtilsImplementation;
