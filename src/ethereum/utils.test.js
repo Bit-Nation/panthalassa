@@ -719,3 +719,19 @@ test('mnemonicToPrivateKey', () => {
         .toEqual(privateKey)
 
 });
+
+describe('mnemonicValid', () => {
+
+    test('false', () => {
+
+        expect(utils().mnemonicValid('invalid bla bla bla')).toBe(false);
+
+    });
+
+    test('true', () => {
+
+        expect(utils().mnemonicValid('pear veteran resource car scissors cost throw fiber push receive motion gentle wink title silent rude nothing menu eye ahead castle twist hidden service')).toBe(true);
+
+    })
+
+});

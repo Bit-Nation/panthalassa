@@ -77,7 +77,12 @@ export interface EthUtilsInterface {
     /**
      * Mnemonic to private key
      */
-    mnemonicToPrivateKey: (mnemonic:string) => string
+    mnemonicToPrivateKey: (mnemonic:string) => string,
+
+    /**
+     * Validates a mnemonic
+     */
+    mnemonicValid: (mnemonic:string) => boolean
 
 }
 
@@ -462,7 +467,8 @@ export default function (ss:SecureStorage, ee:EventEmitter, osDeps:OsDependencie
             return bip39.entropyToMnemonic(privateKey).split(' ');
 
         },
-        mnemonicToPrivateKey: (mnemonic:string) : string => bip39.mnemonicToEntropy(mnemonic)
+        mnemonicToPrivateKey: (mnemonic:string) : string => bip39.mnemonicToEntropy(mnemonic),
+        mnemonicValid: bip39.validateMnemonic
     };
 
     return ethUtilsImplementation;
