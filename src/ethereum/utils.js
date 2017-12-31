@@ -13,6 +13,8 @@ const aes = require('crypto-js/aes');
 const EventEmitter = require('eventemitter3');
 const EthTx = require('ethereumjs-tx');
 const bip39 = require('bip39');
+const ethJsUtils = require('ethereumjs-util');
+const assert = require('assert');
 
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
@@ -453,7 +455,13 @@ export default function (ss:SecureStorage, ee:EventEmitter, osDeps:OsDependencie
         signTx: signTx(ethereumjsUtils.isValidPrivate, ee),
         normalizeAddress: normalizeAddress,
         normalizePrivateKey: normalizePrivateKey,
-        privateKeyToMnemonic: (privateKey:string) : string => bip39.entropyToMnemonic(privateKey).split(' '),
+        privateKeyToMnemonic: (privateKey:string) : Array<string> => {
+
+            assert.equal(true, ethJsUtils.isValidPrivate(Buffer.from(privateKey, 'hex')), 'Expected valid private key');
+
+            return bip39.entropyToMnemonic(privateKey).split(' ');
+
+        },
         mnemonicToPrivateKey: (mnemonic:string) : string => bip39.mnemonicToEntropy(mnemonic)
     };
 
