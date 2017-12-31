@@ -12,6 +12,7 @@ const errors = require('./../errors');
 const aes = require('crypto-js/aes');
 const EventEmitter = require('eventemitter3');
 const EthTx = require('ethereumjs-tx');
+const bip39 = require('bip39');
 
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
@@ -64,7 +65,18 @@ export interface EthUtilsInterface {
     /**
      * Normalize an ethereum private key
      */
-    normalizePrivateKey: (privateKey:string) => string
+    normalizePrivateKey: (privateKey:string) => string,
+
+    /**
+     * Transform private key to list of words
+     */
+    privateKeyToMnemonic: (pk:string) => Array<string>,
+
+    /**
+     * Mnemonic to private key
+     */
+    mnemonicToPrivateKey: (mnemonic:string) => string
+
 }
 
 /**
@@ -440,7 +452,9 @@ export default function (ss:SecureStorage, ee:EventEmitter, osDeps:OsDependencie
         decryptPrivateKey: decryptPrivateKey(ee, crypto, ethereumjsUtils),
         signTx: signTx(ethereumjsUtils.isValidPrivate, ee),
         normalizeAddress: normalizeAddress,
-        normalizePrivateKey: normalizePrivateKey
+        normalizePrivateKey: normalizePrivateKey,
+        privateKeyToMnemonic: (privateKey:string) : string => bip39.entropyToMnemonic(privateKey).split(' '),
+        mnemonicToPrivateKey: (mnemonic:string) : string => bip39.mnemonicToEntropy(mnemonic)
     };
 
     return ethUtilsImplementation;

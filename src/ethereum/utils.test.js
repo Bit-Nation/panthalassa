@@ -685,3 +685,25 @@ describe('normalizePrivateKey', () => {
     })
 
 });
+
+test('privateKeyToMnemonic', () => {
+
+    const privateKey = 'a21e66de112c10617852adaeb67241309fbdc5f21de796d16544829239d71ade';
+
+    const expectedMnemonic = 'pear veteran resource car scissors cost throw fiber push receive motion gentle wink title silent rude nothing menu eye ahead castle twist hidden service';
+
+    expect(utils().privateKeyToMnemonic(privateKey))
+        .toEqual(expectedMnemonic.split(' '));
+
+});
+
+test('mnemonicToPrivateKey', () => {
+
+    const privateKey = 'a21e66de112c10617852adaeb67241309fbdc5f21de796d16544829239d71ade';
+
+    const mnemonic = 'pear veteran resource car scissors cost throw fiber push receive motion gentle wink title silent rude nothing menu eye ahead castle twist hidden service';
+
+    expect(utils().mnemonicToPrivateKey(mnemonic))
+        .toEqual(privateKey)
+
+});
