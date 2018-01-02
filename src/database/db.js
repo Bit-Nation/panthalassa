@@ -78,7 +78,7 @@ export default function () : DB {
 
     const realm = Realm
         .open({
-            path: './database/panthalassa',
+            path: 'database/panthalassa',
             schema: [schemata.ProfileSchema, schemata.AccountBalanceSchema]
         });
 
