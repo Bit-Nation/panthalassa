@@ -8,7 +8,8 @@
     "test:coverage": "jest --coverage",
     "test:coveralls": "npm run test:coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "flow:lint": "flow",
-    "db:flush": "rm -rf ./database && mkdir database && echo \"*\" > database/.gitignore"
+    "db:flush": "rm -rf ./database && mkdir database && echo \"*\" > database/.gitignore",
+    "docs": "bash docs.sh"
   },
   "keywords": [],
   "author": "",
