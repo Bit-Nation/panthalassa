@@ -1,22 +1,23 @@
-import {findProfiles} from './queries'
+/* eslint-disable */
+
+import {findProfiles} from './queries';
 
 describe('queries', () => {
-    "use strict";
+    'use strict';
 
     test('findProfiles', () => {
-
         // Profiles mock data
         const profiles = [
             {
-                //Profile one
+                // Profile one
             },
             {
-                //Profile two
-            }
+                // Profile two
+            },
         ];
 
         const realmMock = {
-            objects: jest.fn()
+            objects: jest.fn(),
         };
 
         realmMock
@@ -25,8 +26,6 @@ describe('queries', () => {
 
         expect(findProfiles(realmMock)).toBe(profiles);
 
-        expect(realmMock.objects).toBeCalledWith('Profile')
-
-    })
-
+        expect(realmMock.objects).toBeCalledWith('Profile');
+    });
 });

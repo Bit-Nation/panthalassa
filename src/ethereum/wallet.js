@@ -1,7 +1,7 @@
-//@flow
+// @flow
 
-import {DB} from "../database/db";
-import {EthUtilsInterface} from "./utils";
+import {DB} from '../database/db';
+import {EthUtilsInterface} from './utils';
 import type {AccountBalanceType} from '../database/schemata';
 const Web3 = require('web3');
 
@@ -12,32 +12,35 @@ export interface WalletInterface {
      * to is the receiver ethereum address
      * amount in ether NOT in wei
      */
-    ethSend: (from:string, to:string, amount:number, gasLimit:number, gasPrice:number) => Promise<{...mixed}>,
+    ethSend: (from: string, to: string, amount: number, gasLimit: number, gasPrice: number) => Promise<{...mixed}>,
 
     /**
      * Get balance of account.
      * Will resolve in object or null
      */
-    ethBalance: (address:string) => Promise<AccountBalanceType | null>,
+    ethBalance: (address: string) => Promise<AccountBalanceType | null>,
 
     /**
      * Sync balance of specific ethereum address
      */
-    ethSync: (address:string) => Promise<void>,
+    ethSync: (address: string) => Promise<void>,
 }
 
-export function ethSend(ethUtils:EthUtilsInterface, web3:Web3) {
-
-    return (from:string, to:string, amount:number, gasLimit:number = 21000, gasPrice:number = 20000000000) : Promise<{...mixed}> => {
-
+/**
+ *
+ * @param {object} ethUtils
+ * @param {object} web3
+ * @return {function(string, string, number, number=, number=)}
+ */
+export function ethSend(ethUtils: EthUtilsInterface, web3: Web3) {
+    return (from: string, to: string, amount: number, gasLimit: number = 21000, gasPrice: number = 20000000000): Promise<{...mixed}> => {
         return new Promise((res, rej) => {
-
-            //Will throw error if invalid address so we need to catch it
-            try{
+            // Will throw error if invalid address so we need to catch it
+            try {
                 from = ethUtils.normalizeAddress(from);
 
                 to = ethUtils.normalizeAddress(to);
-            }catch (e){
+            } catch (e) {
                 return rej(e);
             }
 
@@ -46,40 +49,37 @@ export function ethSend(ethUtils:EthUtilsInterface, web3:Web3) {
                 to: to,
                 value: web3.toWei(amount, 'ether'),
                 gasLimit: gasLimit,
-                gasPrice: gasPrice
+                gasPrice: gasPrice,
             }, (error, txReceipt) => {
-
-                if(error){
+                if (error) {
                     return rej(error);
                 }
 
                 res(txReceipt);
-
             });
-
         });
-
-    }
-
+    };
 }
 
-export function ethBalance(db:DB, ethUtils:EthUtilsInterface) {
-
-    return (address:string) : Promise<AccountBalanceType | null> => {
-
+/**
+ *
+ * @param {object} db
+ * @param {object} ethUtils
+ * @return {function(string)}
+ */
+export function ethBalance(db: DB, ethUtils: EthUtilsInterface) {
+    return (address: string): Promise<AccountBalanceType | null> => {
         return new Promise((res, rej) => {
-
             try {
                 ethUtils.normalizeAddress(address);
-            }catch (e){
+            } catch (e) {
                 rej(e);
             }
 
             db.query((realm) => {
-
                 const balances = realm.objects('AccountBalance').filtered(`id == "${address}_ETH"`);
 
-                if (balances.length <= 0){
+                if (balances.length <= 0) {
                     return res(null);
                 }
 
@@ -88,63 +88,63 @@ export function ethBalance(db:DB, ethUtils:EthUtilsInterface) {
                 }
 
                 rej(`Expected balances.length to be '<=1'. Got: ${balances.length}`);
-
-            })
-
+            });
         });
-
-    }
-
+    };
 }
 
-export function ethSync(db:DB, web3:Web3, ethUtils:EthUtilsInterface){
-
-    return (address:string) : Promise<void> => new Promise((res, rej) => {
-
-        try{
+/**
+ *
+ * @param {object} db
+ * @param {object} web3
+ * @param {object} ethUtils
+ * @return {function(string): Promise<any>}
+ */
+export function ethSync(db: DB, web3: Web3, ethUtils: EthUtilsInterface) {
+    return (address: string): Promise<void> => new Promise((res, rej) => {
+        try {
             ethUtils.normalizeAddress(address);
-        }catch (e){
+        } catch (e) {
             return rej(e);
         }
 
         web3.eth.getBalance(address, (error, balance) => {
-
-            if(error){
+            if (error) {
                 return rej(error);
             }
 
-            if('string' !== typeof balance){
+            if ('string' !== typeof balance) {
                 return rej(new Error('Fetched balance is not a string'));
             }
 
             db.write((realm) => {
-
                 realm.create('AccountBalance', {
                     id: address+'_ETH',
                     address: address,
                     currency: 'ETH',
                     synced_at: Date.now(),
-                    amount: balance
+                    amount: balance,
                 }, true);
 
                 res();
-
             });
-
-        })
-
-    })
-
+        });
+    });
 }
 
-export default function(ethUtils:EthUtilsInterface, web3:Web3, db:DB) : WalletInterface {
-
+/**
+ *
+ * @param {object} ethUtils
+ * @param {object} web3
+ * @param {object} db
+ * @return {WalletInterface}
+ */
+export default function(ethUtils: EthUtilsInterface, web3: Web3, db: DB): WalletInterface {
     const walletImplementation:WalletInterface = {
         ethSend: ethSend(ethUtils, web3),
         ethBalance: ethBalance(db, ethUtils),
-        ethSync: ethSync(db, web3, ethUtils)
+        ethSync: ethSync(db, web3, ethUtils),
     };
 
     return walletImplementation;
-
 }

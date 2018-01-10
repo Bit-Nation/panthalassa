@@ -1,11 +1,12 @@
+// @flow
+
+import type {ProfileObject} from './schemata';
+
 /**
- * Profile search query
- * @param realm
+ *
+ * @param {object} realm
+ * @return {Realm.Results<any> | * | {$ref}}
  */
-import type {ProfileObject} from "./schemata";
-
-export function findProfiles(realm) : Array<ProfileObject> {
-
-    return realm.objects('Profile')
-
+export function findProfiles(realm): Array<ProfileObject> {
+    return realm.objects('Profile');
 }
