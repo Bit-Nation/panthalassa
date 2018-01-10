@@ -2,7 +2,7 @@
 
 //@todo maybe move this in a node implementations folder
 
-import {Crypto, OsDependenciesInterface} from "./specification/osDependencies";
+import {Crypto, OsDependenciesInterface} from "../specification/osDependencies";
 
 const crypto = require('crypto');
 

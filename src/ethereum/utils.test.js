@@ -7,7 +7,7 @@ const crypto = require('crypto-js');
 const EE = require('eventemitter3');
 
 import utils, {createPrivateKey, savePrivateKey, decryptPrivateKey, signTx, normalizeAddress, normalizePrivateKey} from './utils';
-import osDeps from '../nodeJsOsDependencies';
+import osDeps from '../test_implementations/nodeJsOsDependencies';
 
 // Private key dummy
 const PRIVATE_KEY = "6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22";
