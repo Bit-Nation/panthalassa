@@ -348,7 +348,7 @@ export function decryptPrivateKey(ee: EventEmitter, crypto: any, ethjsUtils: eth
                 mRej(new errors.CanceledAction());
             };
 
-            pubEE.emit('eth:decrypt-private-key', {
+            ee.emit('eth:decrypt-private-key', {
                 successor: successor,
                 killer: killer,
                 reason: reason,
