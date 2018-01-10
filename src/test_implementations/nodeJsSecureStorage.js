@@ -1,5 +1,4 @@
 // @flow
-const dirty = require('dirty');
 const fs = require('fs');
 import {SecureStorage} from "../specification/secureStorageInterface";
 
@@ -9,27 +8,33 @@ import {SecureStorage} from "../specification/secureStorageInterface";
 
 /**
  *
- * @param path
+ * @return {SecureStorage}
  */
-export default function(path:string) : SecureStorage {
+export default function() : SecureStorage {
 
-    const db = dirty(path);
+    let storeage = {};
 
     const secureStorageImplementation : SecureStorage = {
 
         set: (key:string, value:any) : Promise<void> => new Promise((res, rej) => {
-            db.set(key, value, () => res())
+            storeage[key] = value;
+            res();
         }),
 
-        get: (key:string) : Promise<mixed> => new Promise((res, rej) => res(db.get(key))),
+        get: (key:string) : Promise<mixed> => new Promise((res, rej) => res(storeage[key])),
 
-        remove: (key:string) : Promise<void> => new Promise((res, rej) : void => db.rm(key, () => res())),
+        remove: (key:string) : Promise<void> => new Promise((res, rej) : void => {
+
+            delete storeage[key];
+
+            res();
+
+        }),
 
         has: (key:string) : Promise<boolean> => new Promise((res, rej) => {
 
-            if('undefined' === typeof db.get(key)){
-                res(false);
-                return;
+            if('undefined' === typeof storeage[key]){
+                return res(false);
             }
 
             res(true);
@@ -40,14 +45,10 @@ export default function(path:string) : SecureStorage {
 
             const filterdItems:{} = {};
 
-            db.forEach(function(key, val) {
-
-                if(true === filter(key, val)){
-
-                    filterdItems[key] = val;
-
-                }
-
+            Object.keys(storeage).filter(function (key) {
+               if(filter(key, storeage[key]) === true){
+                   filterdItems[key] = storeage[key];
+               }
             });
 
             res(filterdItems);
@@ -56,16 +57,9 @@ export default function(path:string) : SecureStorage {
 
         destroyStorage: () => new Promise((res, rej) => {
 
-            fs.unlink(path, (err) => {
+            storeage = {};
 
-                if(err){
-                    rej(err);
-                    return;
-                }
-
-                res();
-
-            })
+            res();
 
         })
 

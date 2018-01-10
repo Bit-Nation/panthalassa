@@ -1,6 +1,5 @@
 import nodeJsSecureStorage from "./nodeJsSecureStorage";
 
-const fs = require('fs');
 import './nodeJsSecureStorage';
 import {set} from './nodeJsSecureStorage'
 
@@ -9,7 +8,7 @@ describe('nodeJsSecureStorage', () => {
 
     test('set', () => {
 
-        const ss = nodeJsSecureStorage('./testdata/'+Math.random());
+        const ss = nodeJsSecureStorage();
 
         //Expecting to resolve in undefined since the set returns a void promise
         return expect(ss.set('name', 'Florian')).resolves.toBeUndefined();
@@ -18,7 +17,7 @@ describe('nodeJsSecureStorage', () => {
 
     test('get', () => {
 
-        const ss = nodeJsSecureStorage('./testdata/'+Math.random());
+        const ss = nodeJsSecureStorage();
 
         const name = ss
             .set('name', 'Florian')
@@ -32,7 +31,7 @@ describe('nodeJsSecureStorage', () => {
 
     test('remove', () => {
 
-        const ss = nodeJsSecureStorage('./testdata/'+Math.random());
+        const ss = nodeJsSecureStorage();
 
         const remove = ss
             .set('key', 'value')
@@ -50,21 +49,18 @@ describe('nodeJsSecureStorage', () => {
 
     test('has - true', () => {
 
-        const ss = nodeJsSecureStorage('./testdata/'+Math.random());
+        const ss = nodeJsSecureStorage();
 
         //Expect a promise that resolves with true if the key is present
         return expect(ss
             .set('key', 'value')
-            .then(res => {
-                return ss
-                    .has('key');
-            })
+            .then(_ => ss.has('key'))
         ).resolves.toBeTruthy();
 
     });
 
     test('has - false', () => {
-        const ss = nodeJsSecureStorage('./testdata/'+Math.random());
+        const ss = nodeJsSecureStorage();
 
         //Expext the promise to resolve in false if key is not present
         return expect(ss.has('h')).resolves.toBeFalsy();
@@ -73,7 +69,7 @@ describe('nodeJsSecureStorage', () => {
     //Test successfully creation and deletion of secure storage
     test('destroyStorage', () => {
 
-        const ss = nodeJsSecureStorage('./testdata/'+Math.random());
+        const ss = nodeJsSecureStorage();
 
         //Expect promise to resolve in undefined if the storage get's destroyed
         return expect(ss.destroyStorage()).resolves.toBeUndefined();
@@ -83,7 +79,7 @@ describe('nodeJsSecureStorage', () => {
     //Fetch items and filter for eth key's
     test('fetchItems', () => {
 
-        const ss = nodeJsSecureStorage('./testdata/'+Math.random());
+        const ss = nodeJsSecureStorage();
 
         const filteredResults = ss
             .set('eth#1', 'eth_key_1')
