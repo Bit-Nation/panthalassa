@@ -222,20 +222,10 @@ describe('profile', () => {
             const ethUtils = {
                 allKeyPairs: () => {
                     return new Promise((res, rej) => {
-                        res([
-                            {
-                                key: '0x7ed1e469fcb3ee19c0366d829e291451be638e59',
-
-                                // Value is not important, key is
-                                value: '',
-                            },
-                            {
-                                key: '0xe0b70147149b4232a3aa58c6c1cd192c9fef385d',
-
-                                // Value is not important, key is
-                                value: '',
-                            },
-                        ]);
+                        res({
+                            '0x7ed1e469fcb3ee19c0366d829e291451be638e59' : '',
+                            '0xe0b70147149b4232a3aa58c6c1cd192c9fef385d' : ''
+                        })
                     });
                 },
             };
