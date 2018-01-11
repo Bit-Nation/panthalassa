@@ -1,11 +1,8 @@
-/**
- * Profile search query
- * @param realm
- */
-import type {ProfileObject} from "./schemata";
+// @flow
 
-export function findProfiles(realm) : Array<ProfileObject> {
+import type {ProfileObject} from './schemata';
+const Realm = require('realm');
 
-    return realm.objects('Profile')
-
-}
+export default {
+    findProfiles: (realm: Realm): Array<ProfileObject> => realm.objects('Profile'),
+};

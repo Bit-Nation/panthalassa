@@ -1,8 +1,8 @@
-//@flow
+// @flow
 
 export interface Crypto {
 
-    randomBytes: (length:number) => Promise<string>
+    randomBytes: (length: number) => Promise<string>
 
 }
 
@@ -11,6 +11,6 @@ export interface Crypto {
  */
 export interface OsDependenciesInterface {
 
-    crypto:Crypto
+    crypto: Crypto
 
 }
