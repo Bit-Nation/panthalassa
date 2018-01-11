@@ -102,19 +102,6 @@ export function normalizeAddress(address: string): string {
 }
 
 /**
- *
- * @param {string} privateKey
- * @return {string}
- */
-export function normalizePrivateKey(privateKey: string): string {
-    if (!ethereumjsUtils.isValidPrivate(Buffer.from(privateKey, 'hex'))) {
-        throw new InvalidPrivateKeyError();
-    }
-
-    return privateKey;
-}
-
-/**
  * @desc Fetch all keyPairs
  * @param {object} secureStorage
  * @return {function()}
@@ -304,7 +291,7 @@ export function signTx(isPrivateKey: (privKey: Buffer) => boolean, ee: EventEmit
  * @return {EthUtilsInterface}
  */
 export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenciesInterface): EthUtilsInterface {
-    const ethUtilsImplementation:EthUtilsInterface = {
+    const ethUtilsImpl:EthUtilsInterface = {
         createPrivateKey: () => new Promise((res, rej) => {
             osDeps.crypto.randomBytes(32)
                 .then((privateKey) => {
@@ -317,7 +304,7 @@ export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenc
                 .catch(rej);
         }),
         savePrivateKey: (privateKey: string, pw: ?string, pwConfirm: ?string): Promise<void> => new Promise((res, rej) => {
-            privateKey = normalizePrivateKey(privateKey);
+            privateKey = ethUtilsImpl.normalizePrivateKey(privateKey);
 
             const privateKeyBuffer = Buffer.from(privateKey, 'hex');
 
@@ -366,7 +353,13 @@ export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenc
         decryptPrivateKey: decryptPrivateKey(ee, crypto, ethereumjsUtils),
         signTx: signTx(ethereumjsUtils.isValidPrivate, ee),
         normalizeAddress: normalizeAddress,
-        normalizePrivateKey: normalizePrivateKey,
+        normalizePrivateKey(privateKey: string): string {
+            if (!ethereumjsUtils.isValidPrivate(Buffer.from(privateKey, 'hex'))) {
+                throw new InvalidPrivateKeyError();
+            }
+
+            return privateKey;
+        },
         privateKeyToMnemonic: (privateKey: string): Array<string> => {
             assert.equal(true, ethJsUtils.isValidPrivate(Buffer.from(privateKey, 'hex')), 'Expected valid private key');
 
@@ -376,5 +369,5 @@ export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenc
         mnemonicValid: bip39.validateMnemonic,
     };
 
-    return ethUtilsImplementation;
+    return ethUtilsImpl;
 }

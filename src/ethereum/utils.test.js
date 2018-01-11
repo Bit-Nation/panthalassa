@@ -562,14 +562,18 @@ describe('normalizePrivateKey', () => {
     test('success', () => {
         const expectedPrivateKey = '6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22';
 
-        expect(normalizePrivateKey(expectedPrivateKey)).toBe(expectedPrivateKey);
+        const u = utils();
+
+        expect(u.normalizePrivateKey(expectedPrivateKey)).toBe(expectedPrivateKey);
     });
 
     test('error', () => {
         const invalidPrivateKey = '0x6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22';
 
+        const u = utils();
+
         expect(function() {
-            normalizePrivateKey(invalidPrivateKey);
+            u.normalizePrivateKey(invalidPrivateKey);
         }).toThrowError(InvalidPrivateKeyError);
     });
 });
