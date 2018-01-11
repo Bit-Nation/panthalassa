@@ -88,203 +88,6 @@ export interface EthUtilsInterface {
 
 /**
  *
- * @param {string} address
- * @return {string}
- */
-export function normalizeAddress(address: string): string {
-    const checksumAddress:string = ethereumjsUtils.toChecksumAddress(address);
-
-    if (!ethereumjsUtils.isValidChecksumAddress(checksumAddress)) {
-        throw new InvalidChecksumAddress(address);
-    }
-
-    return checksumAddress;
-}
-
-/**
- * @desc Fetch all keyPairs
- * @param {object} secureStorage
- * @return {function()}
- */
-export function allKeyPairs(secureStorage: SecureStorage): (() => Promise<{}>) {
-    'use strict';
-
-    return (): Promise<{}> => new Promise((res, rej) => secureStorage
-        .fetchItems((key: string) => key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1)
-        .then((keys) => {
-            const transformedKeys = {};
-
-            Object.keys(keys).map((key) => {
-                // We only accept string's since. the private key is an stringified object
-                if (typeof keys[key] !== 'string') {
-                    return rej(new Error(`Value of key: '${key}' is not an string`));
-                }
-
-                transformedKeys[key.split(PRIVATE_ETH_KEY_PREFIX).pop()] = JSON.parse(keys[key]);
-            });
-
-            res(transformedKeys);
-        })
-        .catch((err) => rej(err)));
-}
-
-/**
- * @desc Fetches a private key based on the
- * @param {object} secureStorage
- * @return {function(string)}
- */
-export function getPrivateKey(secureStorage: SecureStorage): ((address: string) => Promise<PrivateKeyType>) {
-    'use strict';
-
-    return (address: string): Promise<{...any}> => {
-        return new Promise((res, rej) => {
-            const key = PRIVATE_ETH_KEY_PREFIX+normalizeAddress(address);
-
-            secureStorage
-                .has(key)
-                .then((hasPrivateKey) => {
-                    if (false === hasPrivateKey) {
-                        rej(new errors.NoEquivalentPrivateKey());
-                        return;
-                    }
-
-                    return secureStorage.get(key);
-                })
-                .then(function(privKey: any) {
-                    res(JSON.parse(privKey));
-                })
-                .catch((err) => rej(err));
-        });
-    };
-}
-
-/**
- *
- * @param {object} secureStorage
- * @return {function(string)}
- */
-export function deletePrivateKey(secureStorage: SecureStorage): ((address: string) => Promise<void>) {
-    'use strict';
-
-    return (address: string): Promise<void> => {
-        return new Promise((res, rej) => {
-            const key = PRIVATE_ETH_KEY_PREFIX+normalizeAddress(address);
-
-            secureStorage
-                .has(key)
-                .then((hasPrivateKey) => {
-                    if (false === hasPrivateKey) {
-                        rej(new errors.NoEquivalentPrivateKey());
-                        return;
-                    }
-
-                    return secureStorage.remove(key);
-                })
-                .then((result) => res(result))
-                .catch((err) => rej(err));
-        });
-    };
-}
-
-/**
- * Decrypt the private key. Will emit an event that contains method's to solve this problem
- * @param {object} ee event emitter
- * @param {object} crypto
- * @param {object} ethjsUtils
- * @return {function({}, string, string)}
- */
-export function decryptPrivateKey(ee: EventEmitter, crypto: any, ethjsUtils: ethereumjsUtils): ((privateKey: {value: string}, reason: string, topic: string) => Promise<string>) {
-    'use strict';
-
-    return (privateKey: PrivateKeyType, reason: string, topic: string): Promise<string> => {
-        return new Promise((mRes, mRej) => {
-            // break if the algo is unknown
-            if (privateKey.encryption !== 'AES-256') {
-                mRej(new errors.InvalidEncryptionAlgorithm());
-                return;
-            }
-
-            /**
-             * @desc Call this to decrypt the password
-             * @param {string} pw password
-             * @return {Promise<any>}
-             */
-            function successor(pw: string): Promise<void> {
-                return new Promise((res, rej) => {
-                    const decryptedPrivateKey = crypto
-                        .AES
-                        .decrypt(privateKey.value.toString(), pw)
-                        .toString(crypto.enc.Utf8);
-
-                    // When aes decryption failes a empty string is returned
-                    if ('' === decryptedPrivateKey) {
-                        rej(new errors.FailedToDecryptPrivateKeyPasswordInvalid);
-                        return;
-                    }
-
-                    // Check if decrypted key is valid
-                    if (!ethjsUtils.isValidPrivate(Buffer.from(decryptedPrivateKey, 'hex'))) {
-                        rej(new errors.DecryptedValueIsNotAPrivateKey());
-                        return;
-                    }
-
-                    res();
-                    mRes(decryptedPrivateKey);
-                });
-            }
-
-            // Call this to kill the decryption proccess
-            const killer = () => {
-                mRej(new errors.CanceledAction());
-            };
-
-            ee.emit('eth:decrypt-private-key', {
-                successor: successor,
-                killer: killer,
-                reason: reason,
-                topic: topic,
-            });
-        });
-    };
-}
-
-/**
- * @desc Sign a transaction
- * @param {function} isPrivateKey
- * @param {object} ee event emitter
- * @return {function(TxData, string)}
- */
-export function signTx(isPrivateKey: (privKey: Buffer) => boolean, ee: EventEmitter): (txData: TxData, privKey: string) => Promise<EthTx> {
-    return (txData: TxData, privKey: string): Promise<EthTx> => new Promise((res, rej) => {
-        // Private key as buffer
-        const pKB = Buffer.from(privKey, 'hex');
-
-        // reject if private key is invalid
-        if (!isPrivateKey(pKB)) {
-            return rej(new InvalidPrivateKeyError());
-        }
-
-        // Sign transaction
-        const tx = new EthTx(txData);
-
-        /**
-         * client need's to react to this event
-         * in order to sign the transaction
-         */
-        ee.emit('eth:tx:sign', {
-            tx: tx,
-            txData: txData,
-            confirm: () => {
-                tx.sign(pKB);
-                res(tx);
-            },
-            abort: () => rej(new AbortedSigningOfTx()),
-        });
-    });
-}
-
-/**
- *
  * @param {object} ss secure storage
  * @param {object} ee event emitter
  * @param {object} osDeps operating system dependencies
@@ -313,7 +116,7 @@ export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenc
                 return rej(new errors.InvalidPrivateKeyError);
             }
 
-            const addressOfPrivateKey = normalizeAddress(ethJsUtils.privateToAddress(privateKeyBuffer).toString('hex'));
+            const addressOfPrivateKey = ethUtilsImpl.normalizeAddress(ethJsUtils.privateToAddress(privateKeyBuffer).toString('hex'));
 
             const pk:PrivateKeyType = {
                 encryption: '',
@@ -347,12 +150,141 @@ export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenc
                 .then(res)
                 .catch(rej);
         }),
-        allKeyPairs: allKeyPairs(ss),
-        getPrivateKey: getPrivateKey(ss),
-        deletePrivateKey: deletePrivateKey(ss),
-        decryptPrivateKey: decryptPrivateKey(ee, crypto, ethereumjsUtils),
-        signTx: signTx(ethereumjsUtils.isValidPrivate, ee),
-        normalizeAddress: normalizeAddress,
+        allKeyPairs: () => new Promise((res, rej) => {
+            ss
+                .fetchItems((key: string) => key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1)
+                .then((keys) => {
+                    const transformedKeys = {};
+
+                    Object.keys(keys).map((key) => {
+                        // We only accept string's since. the private key is an stringified object
+                        if (typeof keys[key] !== 'string') {
+                            return rej(new Error(`Value of key: '${key}' is not an string`));
+                        }
+
+                        transformedKeys[key.split(PRIVATE_ETH_KEY_PREFIX).pop()] = JSON.parse(keys[key]);
+                    });
+
+                    res(transformedKeys);
+                })
+                .catch((err) => rej(err))
+        }),
+        getPrivateKey: (address:string) => new Promise((res, rej) => {
+            const key = PRIVATE_ETH_KEY_PREFIX+ethUtilsImpl.normalizeAddress(address);
+
+            ss
+                .has(key)
+                .then((hasPrivateKey) => {
+                    if (false === hasPrivateKey) {
+                        rej(new errors.NoEquivalentPrivateKey());
+                        return;
+                    }
+
+                    return ss.get(key);
+                })
+                .then(function(privKey: any) {
+                    res(JSON.parse(privKey));
+                })
+                .catch((err) => rej(err));
+        }),
+        deletePrivateKey: (address:string) => new Promise((res, rej) => {
+            const key = PRIVATE_ETH_KEY_PREFIX+ethUtilsImpl.normalizeAddress(address);
+
+            ss
+                .has(key)
+                .then((hasPrivateKey) => {
+                    if (false === hasPrivateKey) {
+                        rej(new errors.NoEquivalentPrivateKey());
+                        return;
+                    }
+
+                    return ss.remove(key);
+                })
+                .then((result) => res(result))
+                .catch((err) => rej(err));
+        }),
+        decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => new Promise((mRes, mRej) => {
+            // break if the algo is unknown
+            if (privateKey.encryption !== 'AES-256') {
+                return mRej(new errors.InvalidEncryptionAlgorithm());
+            }
+
+            /**
+             * @desc Call this to decrypt the password
+             * @param {string} pw password
+             * @return {Promise<any>}
+             */
+            function successor(pw: string): Promise<void> {
+                return new Promise((res, rej) => {
+                    const decryptedPrivateKey = crypto
+                        .AES
+                        .decrypt(privateKey.value.toString(), pw)
+                        .toString(crypto.enc.Utf8);
+
+                    // When aes decryption failes a empty string is returned
+                    if ('' === decryptedPrivateKey) {
+                        rej(new errors.FailedToDecryptPrivateKeyPasswordInvalid);
+                        return;
+                    }
+
+                    // Check if decrypted key is valid
+                    if (!ethJsUtils.isValidPrivate(Buffer.from(decryptedPrivateKey, 'hex'))) {
+                        rej(new errors.DecryptedValueIsNotAPrivateKey());
+                        return;
+                    }
+
+                    res();
+                    mRes(decryptedPrivateKey);
+                });
+            }
+
+            // Call this to kill the decryption proccess
+            const killer = () => {
+                mRej(new errors.CanceledAction());
+            };
+
+            ee.emit('eth:decrypt-private-key', {
+                successor: successor,
+                killer: killer,
+                reason: reason,
+                topic: topic,
+            });
+        }),
+        signTx: (txData: TxData, privKey: string): Promise<EthTx> => new Promise((res, rej) => {
+            // Private key as buffer
+            const pKB = Buffer.from(privKey, 'hex');
+
+            // reject if private key is invalid
+            if (!ethJsUtils.isValidPrivate(pKB)) {
+                return rej(new InvalidPrivateKeyError());
+            }
+
+            // Sign transaction
+            const tx = new EthTx(txData);
+
+            /**
+             * client need's to react to this event
+             * in order to sign the transaction
+             */
+            ee.emit('eth:tx:sign', {
+                tx: tx,
+                txData: txData,
+                confirm: () => {
+                    tx.sign(pKB);
+                    res(tx);
+                },
+                abort: () => rej(new AbortedSigningOfTx()),
+            });
+        }),
+        normalizeAddress(address: string): string {
+            const checksumAddress:string = ethereumjsUtils.toChecksumAddress(address);
+
+            if (!ethereumjsUtils.isValidChecksumAddress(checksumAddress)) {
+                throw new InvalidChecksumAddress(address);
+            }
+
+            return checksumAddress;
+        },
         normalizePrivateKey(privateKey: string): string {
             if (!ethereumjsUtils.isValidPrivate(Buffer.from(privateKey, 'hex'))) {
                 throw new InvalidPrivateKeyError();

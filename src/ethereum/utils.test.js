@@ -1,6 +1,6 @@
 /* eslint-disable */
 
-import {AbortedSigningOfTx, InvalidChecksumAddress, InvalidPrivateKeyError} from '../errors';
+import {AbortedSigningOfTx, InvalidPrivateKeyError} from '../errors';
 
 const ethereumjsUtil = require('ethereumjs-util');
 const errors = require('../errors');
@@ -83,31 +83,6 @@ describe('createPrivateKey', () => {
         return expect(u.createPrivateKey()).resolves.toBe(PRIVATE_KEY);
     });
 
-    /**
-     * Here we test the "booted" createPrivateKey method.
-     * As you can see this "createPrivateKey" don't take any argument's since they were already injected.
-     */
-    test('test create valid key with automatic dependency injection', () => {
-        const promiseOfKey = utils({}, {}, osDeps).createPrivateKey();
-
-        // This promise is only used to help with the assertion.
-        // Since the privateKey can't be mocked in this test case
-        // There is need for checking if he is at least valid.
-        const assertionPromise = new Promise((res, rej) => {
-            promiseOfKey
-                .then((privateKey) => {
-                    if (ethereumjsUtil.isValidPrivate(Buffer.from(privateKey, 'hex'))) {
-                        res(true);
-                        return;
-                    }
-
-                    res(new Error('Private key is invalid'));
-                })
-                .catch((err) => rej(err));
-        });
-
-        return expect(assertionPromise).resolves.toBeTruthy();
-    });
 });
 
 describe('savePrivateKey', () => {
@@ -137,7 +112,7 @@ describe('savePrivateKey', () => {
                     // the related address of the private key as a "key" and with the private
                     // RAW key
                     expect(secureStorageMock.set).toBeCalledWith(
-                        'PRIVATE_ETH_KEY#'+normalizeAddress(PRIVATE_KEY_ADDRESS),
+                        'PRIVATE_ETH_KEY#'+u.normalizeAddress(PRIVATE_KEY_ADDRESS),
                         JSON.stringify({
                             encryption: '',
                             value: PRIVATE_KEY,
@@ -163,7 +138,7 @@ describe('savePrivateKey', () => {
 
                 value = JSON.parse(value);
 
-                expect(key).toBe('PRIVATE_ETH_KEY#'+normalizeAddress(PRIVATE_KEY_ADDRESS));
+                expect(key).toBe('PRIVATE_ETH_KEY#'+utils().normalizeAddress(PRIVATE_KEY_ADDRESS));
                 expect(value.encryption).toBe('AES-256');
                 expect(value.encrypted).toBe(true);
                 expect(value.version).toBe('1.0.0');
@@ -257,7 +232,7 @@ describe('allKeys', () => {
             }),
         };
 
-        expect(utils(secureStorageMock).allKeyPairs()).resolves.toEqual({
+        return expect(utils(secureStorageMock).allKeyPairs()).resolves.toEqual({
             '0xb293D530769790b82c187f9CD1a4fA0acDcaAb82': {
                 encryption: 'AES-256',
                 encrypted: true,
@@ -306,8 +281,8 @@ describe('getPrivateKey', () => {
             set() {},
             remove() {},
             has() {
- return new Promise((res, rej) => res(true));
-},
+                return new Promise((res, rej) => res(true));
+            },
             destroyStorage() {},
         };
 
@@ -398,49 +373,53 @@ describe('decryptPrivateKey', () => {
     'use strict';
 
     test('decrypt successfully', () => {
-        const pubEE = new EE();
+        const ee = new EE();
 
         const PRIVATE_KEY_ONE = 'U2FsdGVkX19GTRU0W5qgP9nCA0+4PVM3LmbIxQRW6d6Ky1i5fwaU9Cj4DbHoWLw/hRivOJJasxCSP6by6MxWNZjCOsqzkKl1ud99+QgU4oHUYncnni35rETjW+QHDTni';
 
-        return expect(new Promise((res, rej) => {
+        const testPromise = new Promise((res, rej) => {
             // Listen for decryption dialog
-            pubEE.on('eth:decrypt-private-key', (eventData) => {
+            ee.on('eth:decrypt-private-key', (eventData) => {
                 expect(eventData.topic).toBe('ethereum');
                 expect(eventData.reason).toBe('display private key');
                 eventData.successor('mypw')
                     .then((privateKey) => {})
-                    .catch((err) => reject(err));
+                    .catch((err) => rej(err));
             });
 
-            // Boot decryption function
-            const decryptPrivatekey = decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+            const u = utils({}, ee);
 
-            decryptPrivatekey({encryption: 'AES-256', value: PRIVATE_KEY_ONE}, 'display private key', 'ethereum')
-                .then((privateKey) => res(privateKey))
-                .catch((err) => rej(err));
-        }))
+            u.decryptPrivateKey({encryption: 'AES-256', value: PRIVATE_KEY_ONE}, 'display private key', 'ethereum')
+                .then(res)
+                .catch(rej);
+        });
+
+        return expect(testPromise)
             .resolves
             .toEqual('bb11dbe3b53369ea7a731330f17943dd71a813a1e65c82f3766d5732fc85b3da');
     });
 
     test('decryption failed (wrong password)', () => {
-        const pubEE = new EE();
+        const ee = new EE();
 
-        return expect(new Promise((res, rej) => {
+        const testPromise = new Promise((res, rej) => {
             // Listen for decryption dialog
-            pubEE.on('eth:decrypt-private-key', (eventData) => {
+            ee.on('eth:decrypt-private-key', (eventData) => {
                 expect(eventData.topic).toBe('ethereum');
                 expect(eventData.reason).toBe('display private key');
                 eventData.successor('wrong-pw')
-                    .then((privateKey) => res(privateKey))
                     .catch((err) => rej(err));
             });
 
             // Boot decryption function
-            const decryptPrivatekey = decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+            const u = utils({}, ee);
 
-            decryptPrivatekey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum');
-        }))
+            u.decryptPrivateKey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum')
+                .then(res)
+                .catch(rej);
+        });
+
+        return expect(testPromise)
             .rejects
             .toEqual(new errors.FailedToDecryptPrivateKeyPasswordInvalid());
     });
@@ -450,23 +429,26 @@ describe('decryptPrivateKey', () => {
     });
 
     test('decrypted value is not a private key', () => {
-        const pubEE = new EE();
+        const ee = new EE();
 
-        return expect(new Promise((res, rej) => {
+        const testPromise = new Promise((res, rej) => {
             // Listen for decryption dialog
-            pubEE.on('eth:decrypt-private-key', (eventData) => {
+            ee.on('eth:decrypt-private-key', (eventData) => {
                 expect(eventData.topic).toBe('ethereum');
                 expect(eventData.reason).toBe('display private key');
                 eventData.successor('wrong-pw')
-                    .then((privateKey) => res(privateKey))
                     .catch((err) => rej(err));
             });
 
             // Boot decryption function
-            const decryptPrivatekey = decryptPrivateKey(pubEE, crypto, ethereumjsUtil);
+            const u = utils({}, ee);
 
-            decryptPrivatekey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum');
-        }))
+            u.decryptPrivateKey({encryption: 'AES-256', value: 'private_key'}, 'display private key', 'ethereum')
+                .then(res)
+                .catch(rej);
+        });
+
+        return expect(testPromise)
             .rejects
             .toEqual(new errors.DecryptedValueIsNotAPrivateKey());
     });
@@ -501,10 +483,12 @@ describe('signTx', () => {
             data.confirm();
         });
 
+        const u = utils({}, ee);
+
         // Test promise that signs tx data and transform it to hex string
         const testPromise = new Promise((res, rej) => {
             // Const tx
-            const tx = signTx(ethereumjsUtil.isValidPrivate, ee)(txData, privateKey);
+            const tx = u.signTx(txData, privateKey);
 
             tx
                 .then((signedTx) => {
@@ -528,10 +512,12 @@ describe('signTx', () => {
             data.abort();
         });
 
+        const u = utils({}, ee);
+
         // Test promise that signs tx data and transform it to hex string
         const testPromise = new Promise((res, rej) => {
             // Const tx
-            const tx = signTx(ethereumjsUtil.isValidPrivate, ee)(txData, privateKey);
+            const tx = u.signTx(txData, privateKey);
 
             tx
                 .then((signedTx) => {
@@ -548,12 +534,14 @@ describe('normalizeAddress', () => {
     test('success', () => {
         const expectedAddress = '0x9493b5595FBbe6f8ca94c6CccA90420bbd5a4C8c';
 
-        expect(normalizeAddress(expectedAddress)).toBe(expectedAddress);
+        const u = utils();
+
+        expect(u.normalizeAddress(expectedAddress)).toBe(expectedAddress);
     });
 
     test('error', () => {
         expect(function() {
-            normalizeAddress('I_AM_AN_ADDRESS');
+            utils().normalizeAddress('I_AM_AN_ADDRESS');
         }).toThrowError('Address: I_AM_AN_ADDRESS is invalid');
     });
 });
