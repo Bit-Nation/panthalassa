@@ -115,30 +115,6 @@ export function normalizePrivateKey(privateKey: string): string {
 }
 
 /**
- * @description Generate's a new secure private key
- * @param {object} osDeps
- * @param {function} isValidPrivateKey
- * @return {function()}
- */
-export function createPrivateKey(osDeps: OsDependenciesInterface, isValidPrivateKey: (key: Buffer) => boolean): (() => Promise<string>) {
-    'use strict';
-
-    return (): Promise<string> => {
-        return new Promise((res, rej) => {
-            osDeps.crypto.randomBytes(32)
-                .then((privateKey) => {
-                    if (!isValidPrivateKey(Buffer.from(privateKey, 'hex'))) {
-                        return rej(new errors.InvalidPrivateKeyError());
-                    }
-
-                    return res(privateKey);
-                })
-                .catch(rej);
-        });
-    };
-}
-
-/**
  *
  * @param {object} secureStorage
  * @param {object} ethjsUtils
@@ -402,7 +378,17 @@ export function signTx(isPrivateKey: (privKey: Buffer) => boolean, ee: EventEmit
  */
 export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenciesInterface): EthUtilsInterface {
     const ethUtilsImplementation:EthUtilsInterface = {
-        createPrivateKey: createPrivateKey(osDeps, ethereumjsUtils.isValidPrivate),
+        createPrivateKey: () => new Promise((res, rej) => {
+            osDeps.crypto.randomBytes(32)
+                .then((privateKey) => {
+                    if (!ethereumjsUtils.isValidPrivate(Buffer.from(privateKey, 'hex'))) {
+                        return rej(new errors.InvalidPrivateKeyError());
+                    }
+
+                    return res(privateKey);
+                })
+                .catch(rej);
+        }),
         savePrivateKey: savePrivateKey(ss, ethereumjsUtils, aes),
         allKeyPairs: allKeyPairs(ss),
         getPrivateKey: getPrivateKey(ss),

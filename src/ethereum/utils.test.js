@@ -36,11 +36,10 @@ describe('createPrivateKey', () => {
             },
         };
 
-        // promise that resolves with the private key as a string or an error
-        const privateKeyPromise = createPrivateKey(osDeps, ethereumjsUtil.isValidPrivate)();
+        const u = utils(null, null, osDeps);
 
         // expect to reject since we pass a error in the randomBytes mock
-        return expect(privateKeyPromise).rejects.toBe(error);
+        return expect(u.createPrivateKey()).rejects.toBe(error);
     });
 
     /**
@@ -57,11 +56,10 @@ describe('createPrivateKey', () => {
 
         };
 
-        // promise that resolves with the private key as a string or an error
-        const privateKeyPromise = createPrivateKey(osDeps, ethereumjsUtil.isValidPrivate)();
+        const u = utils(null, null, osDeps);
 
         // the promise should be rejected with an InvalidPrivateKeyError instance
-        return expect(privateKeyPromise).rejects.toEqual(new errors.InvalidPrivateKeyError());
+        return expect(u.createPrivateKey()).rejects.toEqual(new errors.InvalidPrivateKeyError());
     });
 
     /**
@@ -79,11 +77,10 @@ describe('createPrivateKey', () => {
 
         };
 
-        // promise that resolves with the private key as a string or an error
-        const privateKeyPromise = createPrivateKey(osDeps, ethereumjsUtil.isValidPrivate)();
+        const u = utils(null, null, osDeps);
 
         // Expect the private key promise to resolve with the private key we used to have node's crypto.randomBytes method
-        return expect(privateKeyPromise).resolves.toBe(PRIVATE_KEY);
+        return expect(u.createPrivateKey()).resolves.toBe(PRIVATE_KEY);
     });
 
     /**
