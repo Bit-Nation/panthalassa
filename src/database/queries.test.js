@@ -1,6 +1,6 @@
 /* eslint-disable */
 
-import {findProfiles} from './queries';
+import queries from './queries';
 
 describe('queries', () => {
     'use strict';
@@ -24,7 +24,7 @@ describe('queries', () => {
             .objects
             .mockReturnValueOnce(profiles);
 
-        expect(findProfiles(realmMock)).toBe(profiles);
+        expect(queries.findProfiles(realmMock)).toBe(profiles);
 
         expect(realmMock.objects).toBeCalledWith('Profile');
     });
