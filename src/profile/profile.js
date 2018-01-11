@@ -1,11 +1,10 @@
 // @flow
-import {findProfiles} from './../database/queries';
+import queries from './../database/queries';
 import {DB} from '../database/db';
 import {NoProfilePresent} from '../errors';
 import type {PublicProfile} from '../specification/publicProfile.js';
 import {ProfileObject} from '../database/schemata';
 import type {EthUtilsInterface} from '../ethereum/utils';
-
 export const PROFILE_VERSION = '1.0.0';
 
 /**
@@ -32,9 +31,8 @@ export interface ProfileInterface {
  */
 export default function(db: DB, ethUtils: EthUtilsInterface): ProfileInterface {
     const profileImplementation : ProfileInterface = {
-
         hasProfile: () => new Promise((res, rej) => {
-            db.query(query)
+            db.query(queries.findProfiles)
                 .then((profiles) => {
                     if (profiles.length >= 1) {
                         res(true);
@@ -51,7 +49,7 @@ export default function(db: DB, ethUtils: EthUtilsInterface): ProfileInterface {
                 // Since a user can create only one profile
                 // we will updated the existing one if it exist
 
-                const profiles:Array<ProfileObject> = findProfiles(realm);
+                const profiles:Array<ProfileObject> = queries.findProfiles(realm);
 
                 // Create profile if no exist
                 if (profiles.length === 0) {
@@ -80,7 +78,7 @@ export default function(db: DB, ethUtils: EthUtilsInterface): ProfileInterface {
 
         getProfile: (): Promise<ProfileObject> => new Promise((res, rej) => {
             db
-                .query(query)
+                .query(queries.findProfiles)
                 // Fetch the first profile or reject if user has no profiles
                 .then((profiles) => {
                     if (profiles.length <= 0) {
@@ -97,7 +95,7 @@ export default function(db: DB, ethUtils: EthUtilsInterface): ProfileInterface {
         getPublicProfile: () => new Promise(async function(res, rej) {
             try {
                 // Fetch saved profile
-                const sp = await getProfile();
+                const sp = await profileImplementation.getProfile();
 
                 // Public profile
                 const pubProfile:PublicProfile = {

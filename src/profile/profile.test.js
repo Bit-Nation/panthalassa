@@ -1,11 +1,10 @@
 /* eslint-disable */
-import {} from './../errors';
+import utils from "../ethereum/utils";
+
 const execSync = require('child_process').execSync;
 import database, {DB} from '../database/db';
-import {} from './../database/queries';
-import profile, {hasProfile, getPublicProfile} from './../profile/profile';
-import {NoProfilePresent, NoPublicProfilePresent} from './../errors';
-import {InvalidPrivateKeyError} from '../errors';
+import profile from './../profile/profile';
+import {NoProfilePresent} from './../errors';
 const {describe, expect, test} = global;
 import type {PublicProfile} from './../specification/publicProfile';
 import {ProfileObject} from '../database/schemata';
@@ -199,17 +198,22 @@ describe('profile', () => {
          * if no profile exist
          */
         test('try to fetch profile that does not exist', () => {
-            const utils = {};
 
-            const getProfile = () => {
+            const p = profile(
+                {},
+                null
+            );
+
+            p.getProfile = () => {
                 return new Promise((res, rej) => {
                     rej(new NoProfilePresent());
                 });
             };
 
-            return expect(getPublicProfile(utils, getProfile)())
+            return expect(p.getPublicProfile())
                 .rejects
                 .toBeInstanceOf(NoProfilePresent);
+
         });
 
         test('fetch my existing public profile', () => {
@@ -260,7 +264,11 @@ describe('profile', () => {
                 version: '1.0.0',
             };
 
-            return expect(getPublicProfile(ethUtils, getProfile)())
+            const p = profile(null, ethUtils);
+
+            p.getProfile = getProfile;
+
+            return expect(p.getPublicProfile())
                 .resolves
                 .toEqual(expectedPublicProfile);
         });
@@ -268,15 +276,16 @@ describe('profile', () => {
 
     describe('hasProfile', () => {
         test('true', () => {
-            const fakeQuery = () => {
-                return [
-                    // Since we count the object's returned by the query
-                    // it's ok to return empty objects as a dummy
-                    {},
-                ];
-            };
 
-            return expect(hasProfile(database(), fakeQuery)())
+            const db = database();
+
+            //Since hasProfile will query the database under the hood we just mock the database
+            db.query = () => new Promise(function (res, rej) {
+                //Resolve with an list of objects since
+                res([{}]);
+            });
+
+            return expect(profile(db).hasProfile())
                 .resolves
                 .toBeTruthy();
         });
@@ -293,9 +302,17 @@ describe('profile', () => {
         test('error during fetch', () => {
             class TestError extends Error {}
 
-            return expect(hasProfile(database(), () => {
- throw new TestError();
-})())
+            const db = database();
+
+            db.query = () => new Promise((res, rej) => {
+
+                rej(new TestError());
+
+            });
+
+            const p = profile(db);
+
+            return expect(p.hasProfile())
                 .rejects
                 .toEqual(new TestError());
         });
