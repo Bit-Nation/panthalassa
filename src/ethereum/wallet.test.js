@@ -1,8 +1,8 @@
 /* eslint-disable */
 
-import {normalizeAddress} from './utils';
+import utils from './utils';
 import {InvalidChecksumAddress} from './../errors';
-import {ethSend, ethBalance, ethSync} from './wallet';
+import wallet from './wallet';
 
 const Web3 = require('web3');
 
@@ -12,10 +12,6 @@ describe('wallet', () => {
     describe('ethBalance', () => {
         test('never synced', (done) => {
             const address = '0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98';
-
-            const ethUtilsMock = {
-                normalizeAddress: normalizeAddress,
-            };
 
             const filtered = jest.fn((filterString) => {
                 expect(filterString).toBe(`id == "${address}_ETH"`);
@@ -39,7 +35,11 @@ describe('wallet', () => {
                 },
             };
 
-            ethBalance(dbMock, ethUtilsMock)(address)
+            const u = utils();
+
+            const w = wallet(u, null, dbMock);
+
+            w.ethBalance(address)
                 .then((_) => {
                     expect(_).toBeNull();
 
@@ -79,11 +79,11 @@ describe('wallet', () => {
                 },
             };
 
-            const ethUtils = {
-                normalizeAddress: normalizeAddress,
-            };
+            const utl = utils();
 
-            ethBalance(dbMock, ethUtils)(address)
+            const w = wallet(utl, null, dbMock);
+
+            w.ethBalance(address)
                 .then((balance) => {
                     expect(balance).toEqual({
                         address: address,
@@ -98,13 +98,12 @@ describe('wallet', () => {
         });
 
         test('invlid address', (done) => {
-            const ethUtils = {
-                normalizeAddress: normalizeAddress,
-            };
 
-            const db = {};
+            const u = utils();
 
-            ethBalance(db, ethUtils)('invalid_address')
+            const w = wallet(u);
+
+            w.ethBalance('invalid_address')
                 .catch((error) => {
                     expect(error).toBeInstanceOf(InvalidChecksumAddress);
 
@@ -115,9 +114,12 @@ describe('wallet', () => {
 
     describe('ethSend', () => {
         test('send eth successfully', (done) => {
-            const fromAddress = '0x9901c66f2d4b95f7074b553da78084d708beca70';
 
-            const toAddress = '0x71d271f8b14adef568f8f28f1587ce7271ac4ca5';
+            const u = utils();
+
+            const fromAddress = '0x9901C66F2d4b95F7074b553DA78084D708BECA70';
+
+            const toAddress = '0x71d271f8B14adEf568F8f28f1587ce7271AC4Ca5';
 
             const txReceipt = {};
 
@@ -140,13 +142,9 @@ describe('wallet', () => {
                 }),
             };
 
-            const ethUtilsMock = {
-                normalizeAddress: (address) => address,
-            };
+            const w = wallet(u, web3Mock);
 
-            const sendPromise = ethSend(ethUtilsMock, web3Mock)(fromAddress, toAddress, '1');
-
-            sendPromise
+            w.ethSend(fromAddress, toAddress, '1')
                 .then((txR) => {
                     expect(txR).toBe(txReceipt);
 
@@ -163,9 +161,9 @@ describe('wallet', () => {
         test('failed to send eth', (done) => {
             class TestError extends Error {}
 
-            const fromAddress = '0x9901c66f2d4b95f7074b553da78084d708beca70';
+            const fromAddress = '0x9901C66F2d4b95F7074b553DA78084D708BECA70';
 
-            const toAddress = '0x71d271f8b14adef568f8f28f1587ce7271ac4ca5';
+            const toAddress = '0x71d271f8B14adEf568F8f28f1587ce7271AC4Ca5';
 
             const web3Mock = {
                 eth: {
@@ -186,13 +184,11 @@ describe('wallet', () => {
                 }),
             };
 
-            const ethUtilsMock = {
-                normalizeAddress: (address) => address,
-            };
+            const u = utils();
 
-            const sendPromise = ethSend(ethUtilsMock, web3Mock)(fromAddress, toAddress, '1');
+            const w = wallet(u, web3Mock);
 
-            sendPromise
+            w.ethSend(fromAddress, toAddress, '1')
                 .catch((error) => {
                     // sendTransaction should have been called since it's used to transfer eth
                     expect(web3Mock.eth.sendTransaction).toHaveBeenCalledTimes(1);
@@ -208,21 +204,19 @@ describe('wallet', () => {
 
         // Test if an invalid from address is reported.
         test('invalid from address', () => {
-            const ethUtils = {
-                normalizeAddress: normalizeAddress,
-            };
 
-            const sendPromise = ethSend(ethUtils, {})('I_AM_AN_INVALID_ADDRESS', null, '1');
+            const u = utils();
+
+            const sendPromise = wallet(u).ethSend('I_AM_AN_INVALID_ADDRESS', null, '1');
 
             return expect(sendPromise).rejects.toEqual(new InvalidChecksumAddress('I_AM_AN_INVALID_ADDRESS'));
         });
 
         test('invalid to address', () => {
-            const ethUtils = {
-                normalizeAddress: normalizeAddress,
-            };
 
-            const sendPromise = ethSend(ethUtils, {})('I_AM_AN_INVALID_TO_ADDRESS', null, '1');
+            const u = utils();
+
+            const sendPromise = wallet(u).ethSend('I_AM_AN_INVALID_TO_ADDRESS', null, '1');
 
             return expect(sendPromise).rejects.toEqual(new InvalidChecksumAddress('I_AM_AN_INVALID_TO_ADDRESS'));
         });
@@ -261,11 +255,7 @@ describe('wallet', () => {
                 },
             };
 
-            const ethUtils = {
-                normalizeAddress: normalizeAddress,
-            };
-
-            ethSync(dbMock, web3Mock, ethUtils)(address)
+            wallet(utils(), web3Mock, dbMock).ethSync(address)
                 .then((_) => {
                     expect(web3Mock.eth.getBalance).toHaveBeenCalledTimes(1);
                     expect(realm.create).toHaveBeenCalledTimes(1);
@@ -279,7 +269,7 @@ describe('wallet', () => {
         });
 
         test('invalid address', (done) => {
-            ethSync({}, {}, {normalizeAddress: normalizeAddress})('i_am_an_invalid_address')
+            wallet(utils()).ethSync('i_am_an_invalid_address')
                 .catch((error) => {
                     expect(error).toBeInstanceOf(InvalidChecksumAddress);
                     done();
@@ -291,10 +281,6 @@ describe('wallet', () => {
 
             class TestError extends Error {}
 
-            const ehtUtils = {
-                normalizeAddress: normalizeAddress,
-            };
-
             const web3Mock = {
                 eth: {
                     getBalance: jest.fn((address, cb) => {
@@ -303,7 +289,7 @@ describe('wallet', () => {
                 },
             };
 
-            ethSync(null, web3Mock, ehtUtils)(address)
+            wallet(utils(), web3Mock).ethSync(address)
                 .catch((error) => {
                     expect(error).toBeInstanceOf(TestError);
 

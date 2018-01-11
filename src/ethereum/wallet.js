@@ -30,121 +30,90 @@ export interface WalletInterface {
  *
  * @param {object} ethUtils
  * @param {object} web3
- * @return {function(string, string, number, number=, number=)}
- */
-export function ethSend(ethUtils: EthUtilsInterface, web3: Web3) {
-    return (from: string, to: string, amount: number, gasLimit: number = 21000, gasPrice: number = 20000000000): Promise<{...mixed}> => {
-        return new Promise((res, rej) => {
-            // Will throw error if invalid address so we need to catch it
-            try {
-                from = ethUtils.normalizeAddress(from);
-
-                to = ethUtils.normalizeAddress(to);
-            } catch (e) {
-                return rej(e);
-            }
-
-            web3.eth.sendTransaction({
-                from: from,
-                to: to,
-                value: web3.toWei(amount, 'ether'),
-                gasLimit: gasLimit,
-                gasPrice: gasPrice,
-            }, (error, txReceipt) => {
-                if (error) {
-                    return rej(error);
-                }
-
-                res(txReceipt);
-            });
-        });
-    };
-}
-
-/**
- *
- * @param {object} db
- * @param {object} ethUtils
- * @return {function(string)}
- */
-export function ethBalance(db: DB, ethUtils: EthUtilsInterface) {
-    return (address: string): Promise<AccountBalanceType | null> => {
-        return new Promise((res, rej) => {
-            try {
-                ethUtils.normalizeAddress(address);
-            } catch (e) {
-                rej(e);
-            }
-
-            db.query((realm) => {
-                const balances = realm.objects('AccountBalance').filtered(`id == "${address}_ETH"`);
-
-                if (balances.length <= 0) {
-                    return res(null);
-                }
-
-                if (balances.length === 1) {
-                    return res(balances[0]);
-                }
-
-                rej(`Expected balances.length to be '<=1'. Got: ${balances.length}`);
-            });
-        });
-    };
-}
-
-/**
- *
- * @param {object} db
- * @param {object} web3
- * @param {object} ethUtils
- * @return {function(string): Promise<any>}
- */
-export function ethSync(db: DB, web3: Web3, ethUtils: EthUtilsInterface) {
-    return (address: string): Promise<void> => new Promise((res, rej) => {
-        try {
-            ethUtils.normalizeAddress(address);
-        } catch (e) {
-            return rej(e);
-        }
-
-        web3.eth.getBalance(address, (error, balance) => {
-            if (error) {
-                return rej(error);
-            }
-
-            if ('string' !== typeof balance) {
-                return rej(new Error('Fetched balance is not a string'));
-            }
-
-            db.write((realm) => {
-                realm.create('AccountBalance', {
-                    id: address+'_ETH',
-                    address: address,
-                    currency: 'ETH',
-                    synced_at: Date.now(),
-                    amount: balance,
-                }, true);
-
-                res();
-            });
-        });
-    });
-}
-
-/**
- *
- * @param {object} ethUtils
- * @param {object} web3
  * @param {object} db
  * @return {WalletInterface}
  */
 export default function(ethUtils: EthUtilsInterface, web3: Web3, db: DB): WalletInterface {
-    const walletImplementation:WalletInterface = {
-        ethSend: ethSend(ethUtils, web3),
-        ethBalance: ethBalance(db, ethUtils),
-        ethSync: ethSync(db, web3, ethUtils),
+    const walletImpl:WalletInterface = {
+        ethSend: (from: string, to: string, amount: number, gasLimit: number = 21000, gasPrice: number = 20000000000): Promise<{...mixed}> => {
+            return new Promise((res, rej) => {
+                // Will throw error if invalid address so we need to catch it
+                try {
+                    from = ethUtils.normalizeAddress(from);
+
+                    to = ethUtils.normalizeAddress(to);
+                } catch (e) {
+                    return rej(e);
+                }
+
+                web3.eth.sendTransaction({
+                    from: from,
+                    to: to,
+                    value: web3.toWei(amount, 'ether'),
+                    gasLimit: gasLimit,
+                    gasPrice: gasPrice,
+                }, (error, txReceipt) => {
+                    if (error) {
+                        return rej(error);
+                    }
+
+                    res(txReceipt);
+                });
+            });
+        },
+        ethBalance: (address: string): Promise<AccountBalanceType | null> => {
+            return new Promise((res, rej) => {
+                try {
+                    ethUtils.normalizeAddress(address);
+                } catch (e) {
+                    rej(e);
+                }
+
+                db.query((realm) => {
+                    const balances = realm.objects('AccountBalance').filtered(`id == "${address}_ETH"`);
+
+                    if (balances.length <= 0) {
+                        return res(null);
+                    }
+
+                    if (balances.length === 1) {
+                        return res(balances[0]);
+                    }
+
+                    rej(`Expected balances.length to be '<=1'. Got: ${balances.length}`);
+                });
+            });
+        },
+        ethSync: (address: string): Promise<void> => new Promise((res, rej) => {
+            try {
+                ethUtils.normalizeAddress(address);
+            } catch (e) {
+                return rej(e);
+            }
+
+            web3.eth.getBalance(address, (error, balance) => {
+                if (error) {
+                    return rej(error);
+                }
+
+                if ('string' !== typeof balance) {
+                    return rej(new Error('Fetched balance is not a string'));
+                }
+
+                db.write((realm) => {
+                    realm.create('AccountBalance', {
+                        id: address+'_ETH',
+                        address: address,
+                        currency: 'ETH',
+                        synced_at: Date.now(),
+                        amount: balance,
+                    }, true);
+
+                    res();
+                });
+            });
+        })
     };
 
-    return walletImplementation;
+    return walletImpl;
 }
