@@ -4,9 +4,9 @@ import {AbortedSigningOfTx, InvalidChecksumAddress, InvalidPrivateKeyError} from
 
 const ethereumjsUtil = require('ethereumjs-util');
 const errors = require('../errors');
-const aes = require('crypto-js/aes');
 const crypto = require('crypto-js');
 const EE = require('eventemitter3');
+const aes = require('crypto-js/aes');
 
 import utils, {createPrivateKey, savePrivateKey, decryptPrivateKey, signTx, normalizeAddress, normalizePrivateKey} from './utils';
 import osDeps from '../test_implementations/nodeJsOsDependencies';
@@ -118,19 +118,18 @@ describe('savePrivateKey', () => {
         // Mock the secure storage
         const secureStorageMock = {
             get() {},
-            set: jest.fn(() => {
-                return new Promise((res, rej) => {
- res();
-});
-            }),
+            set: jest.fn(() => new Promise((res, rej) => res())),
             remove() {},
             has() {},
             destroyStorage() {},
         };
 
+        const u = utils(secureStorageMock);
+
         const testPromise = new Promise((res, rej) => {
-            savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY)
+            u.savePrivateKey(PRIVATE_KEY)
                 .then((result) => {
+
                     // The secure storage should have been called once
                     expect(secureStorageMock.set).toHaveBeenCalled();
 
@@ -161,44 +160,33 @@ describe('savePrivateKey', () => {
         const secureStorageMock = {
             get() {},
             set: jest.fn((key, value) => {
-                return new Promise((res, rej) => {
-                    res();
-                });
+
+                value = JSON.parse(value);
+
+                expect(key).toBe('PRIVATE_ETH_KEY#'+normalizeAddress(PRIVATE_KEY_ADDRESS));
+                expect(value.encryption).toBe('AES-256');
+                expect(value.encrypted).toBe(true);
+                expect(value.version).toBe('1.0.0');
+
+                let pk = aes.decrypt(value.value, 'mypw').toString(crypto.enc.Utf8);
+
+                expect(pk).toBe(PRIVATE_KEY);
+
+                return new Promise((res, rej) => res());
             }),
             remove() {},
             has() {},
             destroyStorage() {},
         };
 
-        const ENCRYPTED_PRIVATE_KEY = 'U2FsdGVkX19kYXZNtfZ2DhfNuao89++6weoGrSdWRA7JvlteIT0fqOfz4x+cTIw7JZy2IB3HbZUEwtlJQccT2+6bJ7aCbNSptaZ3/GHr5eFBGbc3TMpTrAGQOSztIWdq';
-
         const testPromise = new Promise((res, rej) => {
-            const aes = {
-                encrypt: jest.fn((value, password) => {
-                    expect(value).toBe(PRIVATE_KEY);
-                    expect(password).toBe('mypw');
 
-                    // Mock encrypted private key
-                    return 'U2FsdGVkX19kYXZNtfZ2DhfNuao89++6weoGrSdWRA7JvlteIT0fqOfz4x+cTIw7JZy2IB3HbZUEwtlJQccT2+6bJ7aCbNSptaZ3/GHr5eFBGbc3TMpTrAGQOSztIWdq';
-                }),
-            };
+            const u = utils(secureStorageMock);
 
-            savePrivateKey(secureStorageMock, ethereumjsUtil, aes)(PRIVATE_KEY, 'mypw', 'mypw')
+            u.savePrivateKey(PRIVATE_KEY, 'mypw', 'mypw')
                 .then((result) => {
                     // The secure storage should have been called once
                     expect(secureStorageMock.set).toHaveBeenCalled();
-
-                    // Expect that secure storage set is called with the prefix priv_eth_key and
-                    // the related address of the private key as a "key" and with the encrypted private key
-                    expect(secureStorageMock.set).toBeCalledWith(
-                        'PRIVATE_ETH_KEY#'+normalizeAddress(PRIVATE_KEY_ADDRESS),
-                        JSON.stringify({
-                            encryption: 'AES-256',
-                            value: ENCRYPTED_PRIVATE_KEY,
-                            encrypted: true,
-                            version: '1.0.0',
-                        })
-                    );
 
                     // Expect that set function is called with key
                     res(result);

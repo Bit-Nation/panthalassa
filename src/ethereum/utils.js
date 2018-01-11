@@ -115,79 +115,6 @@ export function normalizePrivateKey(privateKey: string): string {
 }
 
 /**
- *
- * @param {object} secureStorage
- * @param {object} ethjsUtils
- * @param {object} aes
- * @return {function(string, string, string)}
- */
-export function savePrivateKey(secureStorage: SecureStorage, ethjsUtils: ethereumjsUtils, aes: aes): ((privateKey: string, pw: ?string, pwConfirm: ?string) => Promise<void>) {
-    'use strict';
-
-    return (privateKey: string, pw: ?string, pwConfirm: ?string): Promise<void> => {
-        return new Promise((res, rej) => {
-            privateKey = normalizePrivateKey(privateKey);
-
-            const privateKeyBuffer = Buffer.from(privateKey, 'hex');
-
-            // Reject promise if private key is not a valid hey private key
-            if (!ethjsUtils.isValidPrivate(privateKeyBuffer)) {
-                rej(new errors.InvalidPrivateKeyError);
-                return;
-            }
-
-            const addressOfPrivateKey = normalizeAddress(ethjsUtils.privateToAddress(privateKeyBuffer).toString('hex'));
-
-            // Reject promise if one of the passwords is entered AND if they don't match
-            if ('undefined' !== typeof pw || 'undefined' !== typeof pwConfirm) {
-                if (pw !== pwConfirm) {
-                    rej(new errors.PasswordMismatch);
-                    return;
-                }
-
-                // Special chars mach pattern
-                const specialCharsPattern = /[ !@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
-
-                // $FlowFixMe From a logical point of view the password can't be null / undefined here
-                if (specialCharsPattern.test(pw) || specialCharsPattern.test(pwConfirm)) {
-                    rej(new errors.PasswordContainsSpecialChars());
-                    return;
-                }
-
-                const pk:PrivateKeyType = {
-                    encryption: 'AES-256',
-                    value: aes.encrypt(privateKey, pw).toString(),
-                    encrypted: true,
-                    version: '1.0.0',
-                };
-
-                // Save the private key
-                secureStorage.set(
-                    PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey,
-                    JSON.stringify(pk)
-                )
-                    .then((result) => res(result))
-                    .catch((err) => rej(err));
-            }
-
-            // Save the private key
-            // @Todo make the json data set a type (maybe)
-            secureStorage.set(
-                PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey,
-                JSON.stringify({
-                    encryption: '',
-                    value: privateKey,
-                    encrypted: false,
-                    version: '1.0.0',
-                })
-            )
-                .then((result) => res(result))
-                .catch((err) => rej(err));
-        });
-    };
-}
-
-/**
  * @desc Fetch all keyPairs
  * @param {object} secureStorage
  * @return {function()}
@@ -389,7 +316,50 @@ export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenc
                 })
                 .catch(rej);
         }),
-        savePrivateKey: savePrivateKey(ss, ethereumjsUtils, aes),
+        savePrivateKey: (privateKey: string, pw: ?string, pwConfirm: ?string): Promise<void> => new Promise((res, rej) => {
+            privateKey = normalizePrivateKey(privateKey);
+
+            const privateKeyBuffer = Buffer.from(privateKey, 'hex');
+
+            // Reject promise if private key is not a valid hey private key
+            if (!ethJsUtils.isValidPrivate(privateKeyBuffer)) {
+                return rej(new errors.InvalidPrivateKeyError);
+            }
+
+            const addressOfPrivateKey = normalizeAddress(ethJsUtils.privateToAddress(privateKeyBuffer).toString('hex'));
+
+            const pk:PrivateKeyType = {
+                encryption: '',
+                value: privateKey,
+                encrypted: false,
+                version: '1.0.0',
+            };
+
+            // Reject promise if one of the passwords is entered AND if they don't match
+            if ('undefined' !== typeof pw || 'undefined' !== typeof pwConfirm) {
+                if (pw !== pwConfirm) {
+                    return rej(new errors.PasswordMismatch);
+                }
+
+                // Special chars mach pattern
+                const specialCharsPattern = /[ !@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+
+                // $FlowFixMe From a logical point of view the password can't be null / undefined here
+                if (specialCharsPattern.test(pw) || specialCharsPattern.test(pwConfirm)) {
+                    return rej(new errors.PasswordContainsSpecialChars());
+                }
+
+                // Upgrade PK to encrypted one
+                pk.value = aes.encrypt(privateKey, pw).toString();
+                pk.encryption = 'AES-256';
+                pk.encrypted = true;
+            }
+
+            // Save the private key
+            ss.set(PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey, JSON.stringify(pk))
+                .then(res)
+                .catch(rej);
+        }),
         allKeyPairs: allKeyPairs(ss),
         getPrivateKey: getPrivateKey(ss),
         deletePrivateKey: deletePrivateKey(ss),
