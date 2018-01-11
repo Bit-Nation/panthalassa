@@ -112,7 +112,7 @@ export default function(ethUtils: EthUtilsInterface, web3: Web3, db: DB): Wallet
                     res();
                 });
             });
-        })
+        }),
     };
 
     return walletImpl;

@@ -167,9 +167,9 @@ export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenc
 
                     res(transformedKeys);
                 })
-                .catch((err) => rej(err))
+                .catch((err) => rej(err));
         }),
-        getPrivateKey: (address:string) => new Promise((res, rej) => {
+        getPrivateKey: (address: string) => new Promise((res, rej) => {
             const key = PRIVATE_ETH_KEY_PREFIX+ethUtilsImpl.normalizeAddress(address);
 
             ss
@@ -187,7 +187,7 @@ export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenc
                 })
                 .catch((err) => rej(err));
         }),
-        deletePrivateKey: (address:string) => new Promise((res, rej) => {
+        deletePrivateKey: (address: string) => new Promise((res, rej) => {
             const key = PRIVATE_ETH_KEY_PREFIX+ethUtilsImpl.normalizeAddress(address);
 
             ss

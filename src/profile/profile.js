@@ -109,7 +109,7 @@ export default function(db: DB, ethUtils: EthUtilsInterface): ProfileInterface {
                 // Fetch all keypairs
                 const keyPairs:{} = await ethUtils.allKeyPairs();
 
-                Object.keys(keyPairs).map(key => pubProfile.ethAddresses.push(key));
+                Object.keys(keyPairs).map((key) => pubProfile.ethAddresses.push(key));
 
                 res(pubProfile);
             } catch (e) {
