@@ -5,7 +5,7 @@ const schemata = require('./schemata');
 /**
  * Interface for database
  */
-export interface DB {
+export interface DBInterface {
 
     /**
      * Expect an query callback that will receive an instance of realm.
@@ -23,51 +23,9 @@ export interface DB {
 
 /**
  *
- * @param {string} realm
- * @return {function(*)}
- */
-export function query(realm: Realm): ((queryAction: (realm: any) => any) => Promise<any>) {
-    'use strict';
-
-    return (queryAction: (realm) => any): Promise<*> => {
-        return new Promise((res, rej) => {
-            realm
-                .then((r) => {
-                    res(queryAction(r));
-                })
-                .catch((e) => rej(e));
-        });
-    };
-}
-
-/**
- * Executes a writeAction
- * @param {object} realm
- * @return {function(*)}
- */
-export function write(realm: Realm): ((writeAction: (realm: any) => void) => Promise<void>) {
-    'use strict';
-    return (writeAction: (realm: any) => void): Promise<void> => {
-        return new Promise((res, rej) => {
-            'use strict';
-
-            realm
-                .then((r) => {
-                    r.write(() => {
-                        writeAction(r);
-                        res();
-                    });
-                })
-                .catch((e) => rej(e));
-        });
-    };
-}
-
-/**
- *
  * @return {DB}
  */
-export default function(): DB {
+export default function(): DBInterface {
     const realm = Realm
         .open({
             path: 'database/panthalassa',
@@ -75,8 +33,29 @@ export default function(): DB {
         });
 
     const dbImplementation : DB = {
-        query: query(realm),
-        write: write(realm),
+        query: (queryAction: (realm) => any): Promise<*> => {
+            return new Promise((res, rej) => {
+                realm
+                    .then((r) => {
+                        res(queryAction(r));
+                    })
+                    .catch((e) => rej(e));
+            });
+        },
+        write: (writeAction: (realm: any) => void): Promise<void> => {
+            return new Promise((res, rej) => {
+                'use strict';
+
+                realm
+                    .then((r) => {
+                        r.write(() => {
+                            writeAction(r);
+                            res();
+                        });
+                    })
+                    .catch((e) => rej(e));
+            });
+        },
     };
 
     return dbImplementation;
