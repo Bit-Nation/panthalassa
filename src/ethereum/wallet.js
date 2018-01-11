@@ -1,6 +1,6 @@
 // @flow
 
-import {DB} from '../database/db';
+import {DBInterface} from '../database/db';
 import {EthUtilsInterface} from './utils';
 import type {AccountBalanceType} from '../database/schemata';
 const Web3 = require('web3');
@@ -33,9 +33,12 @@ export interface WalletInterface {
  * @param {object} db
  * @return {WalletInterface}
  */
-export default function(ethUtils: EthUtilsInterface, web3: Web3, db: DB): WalletInterface {
+export default function(ethUtils: EthUtilsInterface, web3: Web3, db: DBInterface): WalletInterface {
     const walletImpl:WalletInterface = {
-        ethSend: (from: string, to: string, amount: number, gasLimit: number = 21000, gasPrice: number = 20000000000): Promise<{...mixed}> => {
+        ethSend: (from: string, to: string, amount: number, gasLimit: number, gasPrice: number): Promise<{...mixed}> => {
+            gasLimit = gasLimit || 21000;
+            gasPrice = gasPrice || 20000000000;
+
             return new Promise((res, rej) => {
                 // Will throw error if invalid address so we need to catch it
                 try {

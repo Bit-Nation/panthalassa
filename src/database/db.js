@@ -32,7 +32,7 @@ export default function(): DBInterface {
             schema: [schemata.ProfileSchema, schemata.AccountBalanceSchema],
         });
 
-    const dbImplementation : DB = {
+    const dbImplementation : DBInterface = {
         query: (queryAction: (realm) => any): Promise<*> => {
             return new Promise((res, rej) => {
                 realm

@@ -1,6 +1,6 @@
 // @flow
 import queries from './../database/queries';
-import {DB} from '../database/db';
+import {DBInterface} from '../database/db';
 import {NoProfilePresent} from '../errors';
 import type {PublicProfile} from '../specification/publicProfile.js';
 import {ProfileObject} from '../database/schemata';
@@ -29,7 +29,7 @@ export interface ProfileInterface {
  * @param {object} ethUtils
  * @return {ProfileInterface}
  */
-export default function(db: DB, ethUtils: EthUtilsInterface): ProfileInterface {
+export default function(db: DBInterface, ethUtils: EthUtilsInterface): ProfileInterface {
     const profileImplementation : ProfileInterface = {
         hasProfile: () => new Promise((res, rej) => {
             db.query(queries.findProfiles)
