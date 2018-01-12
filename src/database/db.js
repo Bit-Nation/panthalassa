@@ -27,48 +27,39 @@ export interface DBInterface {
  * @module database/db.js
  * @return {DBInterface}
  */
-export default function dbFactory() : DBInterface {
-
+export default function dbFactory(): DBInterface {
     const realm = Realm
         .open({
             path: 'database/panthalassa',
-            schema: [schemata.ProfileSchema, schemata.AccountBalanceSchema]
+            schema: [schemata.ProfileSchema, schemata.AccountBalanceSchema],
         });
 
     const dbImplementation : DBInterface = {
 
-        query: (queryAction: (realm) => any) : Promise<*> => {
-
+        query: (queryAction: (realm) => any): Promise<*> => {
             return new Promise((res, rej) => {
-
                 realm
-                    .then(r => {
-                        res(queryAction(r))
+                    .then((r) => {
+                        res(queryAction(r));
                     })
-                    .catch(e => rej(e));
-
+                    .catch((e) => rej(e));
             });
-
         },
 
-        write: (writeAction: (realm:any) => void) : Promise<void> => {
-
+        write: (writeAction: (realm: any) => void): Promise<void> => {
             return new Promise((res, rej) => {
-                "use strict";
+                'use strict';
 
                 realm
-                    .then(r => {
-
+                    .then((r) => {
                         r.write(() => {
                             writeAction(r);
                             res();
-                        })
-
+                        });
                     })
-                    .catch(e => rej(e));
+                    .catch((e) => rej(e));
             });
-
-        }
+        },
 
     };
 

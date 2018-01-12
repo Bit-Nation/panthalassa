@@ -30,7 +30,7 @@ export function getAccounts(ethUtils: EthUtilsInterface): (cb: (error: any, addr
 /**
  * @desc Responsible for tx signing
  * @ignore
- * @param ethUtils
+ * @param {EthUtilsInterface} ethUtils
  * @return {function(TxData, *)}
  */
 export function signTx(ethUtils: EthUtilsInterface): (txData: TxData, cb: (error: any, signedTx: any) => void) => void {

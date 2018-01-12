@@ -128,11 +128,9 @@ export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, d
                     res();
                 });
             });
-
-        })
+        }),
 
     };
 
     return walletImpl;
-
 }
