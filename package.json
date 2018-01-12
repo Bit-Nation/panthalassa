@@ -9,7 +9,7 @@
     "test:coveralls": "npm run test:coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "flow:lint": "flow",
     "db:flush": "rm -rf ./database && mkdir database && echo \"*\" > database/.gitignore",
-    "docs": "flow-remove-types ./src --out-dir docs_build && esdoc",
+    "docs": "flow-remove-types ./src --out-dir docs_build && esdoc && rm -rf docs_build",
     "eslint:fix": "node_modules/.bin/eslint src/ --fix",
     "eslint:lint": "node_modules/.bin/eslint src/"
   },
