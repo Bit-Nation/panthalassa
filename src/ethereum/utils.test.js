@@ -193,7 +193,7 @@ describe('savePrivateKey', () => {
 describe('allKeys', () => {
     'use strict';
 
-    test('try to fetch all', () => {
+    test('try to fetch all', (done) => {
         // KeyPair 1
         const PRIVATE_KEY_ONE = 'U2FsdGVkX19kYXZNtfZ2DhfNuao89++6weoGrSdWRA7JvlteIT0fqOfz4x+cTIw7JZy2IB3HbZUEwtlJQccT2+6bJ7aCbNSptaZ3/GHr5eFBGbc3TMpTrAGQOSztIWdq';
 
@@ -232,20 +232,28 @@ describe('allKeys', () => {
             }),
         };
 
-        return expect(utils(secureStorageMock).allKeyPairs()).resolves.toEqual({
-            '0xb293D530769790b82c187f9CD1a4fA0acDcaAb82': {
-                encryption: 'AES-256',
-                encrypted: true,
-                version: '1.0.0',
-                value: PRIVATE_KEY_ONE,
-            },
-            '0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94': {
-                encryption: '',
-                encrypted: false,
-                version: '1.0.0',
-                value: PRIVATE_KEY_TWO,
-            },
-        });
+
+
+        utils(secureStorageMock).allKeyPairs()
+            .then(result => {
+
+                expect(result['0xb293D530769790b82c187f9CD1a4fA0acDcaAb82']).toEqual({
+                    encryption: 'AES-256',
+                    encrypted: true,
+                    version: '1.0.0',
+                    value: PRIVATE_KEY_ONE,
+                });
+                expect(result['0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94']).toEqual({
+                    encryption: '',
+                    encrypted: false,
+                    version: '1.0.0',
+                    value: PRIVATE_KEY_TWO,
+                });
+
+                done();
+
+            });
+
     });
 });
 
