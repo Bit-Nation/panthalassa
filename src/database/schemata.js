@@ -5,8 +5,6 @@
 //               update the relating interfaces as well. //
 // /////////////////////////////////////////////////////////
 
-// Profile
-
 /**
  * A note on this ProfileObject interface.
  * In the project you will often see smth like this:
@@ -21,7 +19,16 @@
  * and types are striped and they are all objects. So this interface is here to
  * support the developers.
  */
-export interface ProfileObject {
+
+/**
+ * @typedef ProfileType
+ * @property {number} id
+ * @property {string} pseudo
+ * @property {string} description
+ * @property {string} image
+ * @property {string} version
+ */
+export type ProfileType = {
     id: number,
     pseudo: string,
     description: string,
@@ -42,7 +49,12 @@ export const ProfileSchema = {
 };
 
 /**
- * AccountBalance
+ * @typedef AccountBalanceType
+ * @property {string} id
+ * @property {string} address
+ * @property {string} amount
+ * @property {number} synced_at
+ * @property {string} currency
  */
 export type AccountBalanceType = {
     id: string,
