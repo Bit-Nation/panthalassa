@@ -9,7 +9,7 @@
     "test:coveralls": "npm run test:coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "flow:lint": "flow",
     "db:flush": "rm -rf ./database && mkdir database && echo \"*\" > database/.gitignore",
-    "docs": "bash docs.sh",
+    "docs": "flow-remove-types ./src --out-dir docs_build && esdoc",
     "eslint:fix": "node_modules/.bin/eslint src/ --fix",
     "eslint:lint": "node_modules/.bin/eslint src/"
   },
@@ -30,6 +30,8 @@
     "coveralls": "^3.0.0",
     "dirty": "^1.1.0",
     "documentation": "^5.3.5",
+    "esdoc": "^1.0.4",
+    "esdoc-standard-plugin": "^1.0.0",
     "eslint": "^4.15.0",
     "eslint-config-google": "^0.9.1",
     "eslint-plugin-flowtype": "^2.41.0",
