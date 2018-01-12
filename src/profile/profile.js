@@ -3,33 +3,32 @@ import queries from './../database/queries';
 import {DBInterface} from '../database/db';
 import {NoProfilePresent} from '../errors';
 import type {PublicProfile} from '../specification/publicProfile.js';
-import {ProfileObject} from '../database/schemata';
+import type {ProfileType} from '../database/schemata';
 import type {EthUtilsInterface} from '../ethereum/utils';
 export const PROFILE_VERSION = '1.0.0';
 
 /**
  * @typedef ProfileInterface
- * @property {function} hasProfile
- * @property {function(pseudo: string, description: string, image: string)} setProfile
- * @property {function} getProfile
- * @property {function} getPublicProfile
+ * @property {function() : Promise<boolean>} hasProfile
+ * @property {function(pseudo: string, description: string, image: string) : Promise<void>} setProfile
+ * @property {function() : Promise<ProfileType>} getProfile
+ * @property {function() : Promise<PublicProfile>} getPublicProfile
  */
 export interface ProfileInterface {
 
     hasProfile() : Promise<boolean>;
     setProfile(pseudo: string, description: string, image: string) : Promise<void>;
-    getProfile() : Promise<ProfileObject>;
+    getProfile() : Promise<ProfileType>;
     getPublicProfile(): Promise<PublicProfile>
 
 }
 
 /**
- *
- * @param {object} db object that implements DBInterface
- * @param {object} ethUtils
+ * @param {DBInterface} db object that satisfy the DBInterface
+ * @param {EthUtilsInterface} ethUtils object that satisfy the EthUtilsInterface
  * @return {ProfileInterface}
  */
-export default function(db: DBInterface, ethUtils: EthUtilsInterface): ProfileInterface {
+export default function profileFactory(db: DBInterface, ethUtils: EthUtilsInterface): ProfileInterface {
     const profileImplementation : ProfileInterface = {
         hasProfile: () => new Promise((res, rej) => {
             db.query(queries.findProfiles)
@@ -49,7 +48,7 @@ export default function(db: DBInterface, ethUtils: EthUtilsInterface): ProfileIn
                 // Since a user can create only one profile
                 // we will updated the existing one if it exist
 
-                const profiles:Array<ProfileObject> = queries.findProfiles(realm);
+                const profiles:Array<ProfileType> = queries.findProfiles(realm);
 
                 // Create profile if no exist
                 if (profiles.length === 0) {
@@ -76,7 +75,7 @@ export default function(db: DBInterface, ethUtils: EthUtilsInterface): ProfileIn
             });
         }),
 
-        getProfile: (): Promise<ProfileObject> => new Promise((res, rej) => {
+        getProfile: (): Promise<ProfileType> => new Promise((res, rej) => {
             db
                 .query(queries.findProfiles)
                 // Fetch the first profile or reject if user has no profiles

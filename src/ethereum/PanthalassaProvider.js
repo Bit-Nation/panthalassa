@@ -8,9 +8,10 @@ const EthTx = require('ethereumjs-tx');
 const ZeroProvider = require('web3-provider-engine/zero');
 
 /**
- * fetch all accounts
+ * @desc fetch all accounts
  * @param {object} ethUtils object that implements the EthUtilsInterface
- * @return {function(*)}
+ * @ignore
+ * @return {function}
  */
 export function getAccounts(ethUtils: EthUtilsInterface): (cb: (error: any, addresses: any) => void) => void {
     return (cb: (error: any, addresses: any) => void): void => {
@@ -27,8 +28,9 @@ export function getAccounts(ethUtils: EthUtilsInterface): (cb: (error: any, addr
 }
 
 /**
- * sign's transaction
- * @param {object} ethUtils object that implements the EthUtilsInterface
+ * @desc Responsible for tx signing
+ * @ignore
+ * @param ethUtils
  * @return {function(TxData, *)}
  */
 export function signTx(ethUtils: EthUtilsInterface): (txData: TxData, cb: (error: any, signedTx: any) => void) => void {

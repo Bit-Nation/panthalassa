@@ -27,7 +27,7 @@ export interface DBInterface {
  * @module database/db.js
  * @return {DBInterface}
  */
-export default function () : DBInterface {
+export default function dbFactory() : DBInterface {
 
     const realm = Realm
         .open({

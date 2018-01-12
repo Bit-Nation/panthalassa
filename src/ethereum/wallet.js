@@ -7,7 +7,7 @@ const Web3 = require('web3');
 
 /**
  * @typedef {Object} WalletInterface
- * @property {function(from, to, amount)} ethSend send ether
+ * @property {function(from:string, to:string, amount:string)} ethSend send ether
  * @property {function} ethBalance fetch the balance
  * @property {function} ethSync sync the ethereum accounts
  */
@@ -39,13 +39,14 @@ export interface WalletInterface {
 }
 
 /**
- *
- * @param {object} ethUtils
+ * @module ethereum/wallet.js
+ * @desc Factory that returns an wallet object
+ * @param {EthUtilsInterface} ethUtils
  * @param {object} web3
- * @param {object} db
+ * @param {DBInterface} db
  * @return {WalletInterface}
  */
-export default function(ethUtils: EthUtilsInterface, web3: Web3, db: DBInterface): WalletInterface {
+export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, db: DBInterface): WalletInterface {
     const walletImpl:WalletInterface = {
         ethSend: (from: string, to: string, amount: number, gasLimit: number, gasPrice: number): Promise<{...mixed}> => {
             gasLimit = gasLimit || 21000;
