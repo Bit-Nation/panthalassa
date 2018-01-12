@@ -25,12 +25,13 @@ export interface DBInterface {
 
 /**
  * @module database/db.js
+ * @param {string} path
  * @return {DBInterface}
  */
-export default function dbFactory(): DBInterface {
+export default function dbFactory(path: string): DBInterface {
     const realm = Realm
         .open({
-            path: 'database/panthalassa',
+            path: path,
             schema: [schemata.ProfileSchema, schemata.AccountBalanceSchema],
         });
 

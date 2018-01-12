@@ -7,7 +7,9 @@ import profile from './../profile/profile';
 import {NoProfilePresent} from './../errors';
 const {describe, expect, test} = global;
 import type {PublicProfile} from './../specification/publicProfile';
-import {ProfileObject} from '../database/schemata';
+import {ProfileType} from '../database/schemata';
+
+const DATABASE_PATH = 'database/panthalassa';
 
 describe('profile', () => {
     'use strict';
@@ -21,11 +23,11 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            const db:DB = database();
+            const db:DB = database(DATABASE_PATH);
 
             const p = profile(db);
 
-            const expectedProfile:ProfileObject = {
+            const expectedProfile:ProfileType = {
                 id: 1,
                 pseudo: 'pseudoName',
                 description: 'I am a florian',
@@ -53,7 +55,7 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            const db = database();
+            const db = database(DATABASE_PATH);
 
             const p = profile(db);
 
@@ -130,7 +132,7 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            const db:DB = database();
+            const db:DB = database(DATABASE_PATH);
 
             const p = profile(db);
 
@@ -178,7 +180,7 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            const db:DB = database();
+            const db:DB = database(DATABASE_PATH);
 
             const p = profile(db);
 
@@ -267,7 +269,7 @@ describe('profile', () => {
     describe('hasProfile', () => {
         test('true', () => {
 
-            const db = database();
+            const db = database(DATABASE_PATH);
 
             //Since hasProfile will query the database under the hood we just mock the database
             db.query = () => new Promise(function (res, rej) {
@@ -284,7 +286,7 @@ describe('profile', () => {
             // Kill the database
             execSync('npm run db:flush');
 
-            return expect(profile(database()).hasProfile())
+            return expect(profile(database(DATABASE_PATH)).hasProfile())
                 .resolves
                 .toBeFalsy();
         });
@@ -292,7 +294,7 @@ describe('profile', () => {
         test('error during fetch', () => {
             class TestError extends Error {}
 
-            const db = database();
+            const db = database(DATABASE_PATH);
 
             db.query = () => new Promise((res, rej) => {
 
