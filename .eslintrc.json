@@ -1,0 +1,17 @@
+{
+    "extends": [
+        "google",
+        "plugin:flowtype/recommended"
+    ],
+    "plugins": [
+        "flowtype"
+    ],
+    "settings": {
+        "flowtype": {
+            "onlyFilesWithFlowAnnotation": true
+        }
+    },
+    "rules" : {
+        "max-len": [2, 250]
+    }
+}

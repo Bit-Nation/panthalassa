@@ -1,11 +1,11 @@
-//@flow
+// @flow
 
-///////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////
 // ATTENTION !!! Everyime you update the schema,         //
 //               update the relating interfaces as well. //
-///////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////
 
-//Profile
+// Profile
 
 /**
  * A note on this ProfileObject interface.
@@ -37,7 +37,7 @@ export const ProfileSchema = {
         pseudo: 'string',
         description: 'string',
         image: 'string',
-        version: 'string'
+        version: 'string',
     },
 };
 
@@ -46,11 +46,11 @@ export const ProfileSchema = {
  */
 export type AccountBalanceType = {
     id: string,
-    address:string,
-    //Amount is in wei
-    amount:string,
-    synced_at:number,
-    currency:string
+    address: string,
+    // Amount is in wei
+    amount: string,
+    synced_at: number,
+    currency: string
 }
 
 export const AccountBalanceSchema = {
@@ -61,6 +61,6 @@ export const AccountBalanceSchema = {
         address: 'string',
         amount: 'string',
         synced_at: 'date',
-        currency: 'string'
-    }
+        currency: 'string',
+    },
 };

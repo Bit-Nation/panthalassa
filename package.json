@@ -4,12 +4,14 @@
   "description": "",
   "main": "src",
   "scripts": {
-    "test": "jest",
+    "test": "flow && jest",
     "test:coverage": "jest --coverage",
     "test:coveralls": "npm run test:coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "flow:lint": "flow",
     "db:flush": "rm -rf ./database && mkdir database && echo \"*\" > database/.gitignore",
-    "docs": "bash docs.sh"
+    "docs": "bash docs.sh",
+    "eslint:fix": "node_modules/.bin/eslint src/ --fix",
+    "eslint:lint": "node_modules/.bin/eslint src/"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +19,7 @@
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
+    "babel-eslint": "^8.2.1",
     "babel-jest": "^22.0.4",
     "babel-plugin-es6-promise": "^1.1.1",
     "babel-plugin-transform-async-to-generator": "^6.24.1",
@@ -27,6 +30,9 @@
     "coveralls": "^3.0.0",
     "dirty": "^1.1.0",
     "documentation": "^5.3.5",
+    "eslint": "^4.15.0",
+    "eslint-config-google": "^0.9.1",
+    "eslint-plugin-flowtype": "^2.41.0",
     "flow-remove-types": "^1.2.3",
     "jest": "^21.2.1"
   },

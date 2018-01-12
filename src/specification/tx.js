@@ -1,3 +1,4 @@
+// @flow
 export type TxData = {
     nonce: string,
     gas: string,
