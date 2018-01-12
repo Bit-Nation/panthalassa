@@ -5,20 +5,18 @@
 //               update the relating interfaces as well. //
 // /////////////////////////////////////////////////////////
 
-/**
- * A note on this ProfileObject interface.
- * In the project you will often see smth like this:
- *
- * (this is an example from the queries)
- * findProfiles(realm) : Array<ProfileObject>
- *
- * The value returned by realm is NOT directly a instance of an object that implement this interface,
- * BUT the signature is exactly the same.
- *
- * It's ok to do this, since after the compilation from flow -> js all interfaces
- * and types are striped and they are all objects. So this interface is here to
- * support the developers.
- */
+// A note on e.g. ProfileType (and all types exported from this file).
+// In the project you will often see smth like this:
+
+// (this is an example from the queries)
+// findProfiles(realm) : Array<ProfileObject>
+
+// The value returned by realm is NOT directly a instance of an object that implement this interface,
+// BUT the signature is exactly the same.
+
+// It's ok to do this, since after the compilation from flow -> js all interfaces
+// and types are striped and they are all objects. So this interface is here to
+// support the developers.
 
 /**
  * @typedef ProfileType
