@@ -5,23 +5,35 @@ import {EthUtilsInterface} from './utils';
 import type {AccountBalanceType} from '../database/schemata';
 const Web3 = require('web3');
 
+/**
+ * @typedef {Object} WalletInterface
+ * @property {function(from, to, amount)} ethSend send ether
+ * @property {function} ethBalance fetch the balance
+ * @property {function} ethSync sync the ethereum accounts
+ */
 export interface WalletInterface {
 
     /**
-     * from is the senders ethereum address
-     * to is the receiver ethereum address
-     * amount in ether NOT in wei
+     * @desc Send eth from A to B
+     * @param {string} the address of the account where to send from
+     * @param {string} address where to send
+     * @param {number} amount of eth you would like to send (in eth)
+     * @param {number} the limit of gas for this transaction (default is 21000
+     * @param {number} gas price default is 20000000000
      */
     ethSend: (from: string, to: string, amount: number, gasLimit: number, gasPrice: number) => Promise<{...mixed}>,
 
     /**
-     * Get balance of account.
-     * Will resolve in object or null
+     * @desc Fetch the eth balance of one of my owned accounts
+     * @param {string} address of your account
+     * @return {object} WalletInterface
      */
     ethBalance: (address: string) => Promise<AccountBalanceType | null>,
 
     /**
-     * Sync balance of specific ethereum address
+     * @desc Sync balance of specific ethereum address
+     * @param {string} address of the account you would like to update
+     * @return {Promise} promise that will resolve with void
      */
     ethSync: (address: string) => Promise<void>,
 }
@@ -115,8 +127,11 @@ export default function(ethUtils: EthUtilsInterface, web3: Web3, db: DBInterface
                     res();
                 });
             });
-        }),
+
+        })
+
     };
 
     return walletImpl;
+
 }

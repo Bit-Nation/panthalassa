@@ -18,7 +18,7 @@ const Web3 = require('web3');
  * @param ethUtils {EthUtilsInterface} an object that satisfies the EthUtilsInterface
  * @returns {Promise} resolves with an web3 object when the node is started successfully. If the node fail to start the promise will be rejected.
  */
-export default function (node:JsonRpcNodeInterface, ee:EventEmitter, ethUtils:EthUtilsInterface) : () => Promise<Web3> {
+export default function (node:JsonRpcNodeInterface, ee:EventEmitter, ethUtils:EthUtilsInterface) : Promise<Web3> {
 
     return new Promise((res, rej) => {
 

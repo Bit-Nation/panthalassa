@@ -1,6 +1,7 @@
 [ignore]
 ./lib
 .*/node_modules/oboe
+.*/node_modules/documentation/__tests__/fixture
 
 [include]
 ./src
