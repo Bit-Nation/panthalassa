@@ -19,7 +19,19 @@ const assert = require('assert');
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
 /**
- * Ethereum Utils Interface
+ * @typedef EthUtilsInterface
+ * @property {function} createPrivateKey
+ * @property {function(privateKey:string, pw: ?string, pwConfirm: ?string)} savePrivateKey
+ * @property {function} allKeyPairs returns @todo
+ * @property {function(address:string) : PrivateKeyType} getPrivateKey fetch private key by address
+ * @property {function(address:string)} deletePrivateKey
+ * @property {function(privateKey: PrivateKeyType, reason: string, topic: string)} decryptPrivateKey
+ * @property {function(txData: TxData, privkey: string)} signTx
+ * @property {function(address:string)} normalizeAddress
+ * @property {function(pk: string)} privateKeyToMnemonic
+ * @property {function(mnemonic: string)} mnemonicToPrivateKey
+ * @property {function(mnemonic: string)} mnemonicValid
+ *
  */
 export interface EthUtilsInterface {
 
@@ -34,7 +46,7 @@ export interface EthUtilsInterface {
     savePrivateKey: (privateKey: string, pw: ?string, pwConfirm: ?string) => Promise<void>,
 
     // @todo change this method and the doc's
-    allKeyPairs: () => Promise<{}>,
+    allKeyPairs: () => Promise<Map<string, PrivateKeyType>>,
 
     /**
      * Fetch private key by address. Make sure to normalize the address.
@@ -87,13 +99,14 @@ export interface EthUtilsInterface {
 }
 
 /**
- *
+ * @name ethereum/utils.js
+ * @desc ethereum utils factory
  * @param {object} ss secure storage
  * @param {object} ee event emitter
  * @param {object} osDeps operating system dependencies
  * @return {EthUtilsInterface}
  */
-export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenciesInterface): EthUtilsInterface {
+export default function utilsFactory(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenciesInterface): EthUtilsInterface {
     const ethUtilsImpl:EthUtilsInterface = {
         createPrivateKey: () => new Promise((res, rej) => {
             osDeps.crypto.randomBytes(32)
@@ -154,7 +167,7 @@ export default function(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenc
             ss
                 .fetchItems((key: string) => key.indexOf(PRIVATE_ETH_KEY_PREFIX) !== -1)
                 .then((keys) => {
-                    const transformedKeys = {};
+                    let transformedKeys:Map<string, PrivateKeyType> = new Map();
 
                     Object.keys(keys).map((key) => {
                         // We only accept string's since. the private key is an stringified object

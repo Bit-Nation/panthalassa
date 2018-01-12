@@ -5,3 +5,5 @@ lib/
 coverage
 testdata/*
 !testdata/.gitkeep
+docs_build
+out/

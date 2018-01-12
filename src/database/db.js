@@ -3,7 +3,9 @@ const Realm = require('realm');
 const schemata = require('./schemata');
 
 /**
- * Interface for database
+ * @typedef {Object} DBInterface
+ * @property {function} query query the realm database.
+ * @property {function} write executes an write on the database
  */
 export interface DBInterface {
 
@@ -22,10 +24,10 @@ export interface DBInterface {
 }
 
 /**
- *
- * @return {DB}
+ * @module database/db.js
+ * @return {DBInterface}
  */
-export default function(): DBInterface {
+export default function dbFactory(): DBInterface {
     const realm = Realm
         .open({
             path: 'database/panthalassa',
@@ -33,6 +35,7 @@ export default function(): DBInterface {
         });
 
     const dbImplementation : DBInterface = {
+
         query: (queryAction: (realm) => any): Promise<*> => {
             return new Promise((res, rej) => {
                 realm
@@ -42,6 +45,7 @@ export default function(): DBInterface {
                     .catch((e) => rej(e));
             });
         },
+
         write: (writeAction: (realm: any) => void): Promise<void> => {
             return new Promise((res, rej) => {
                 'use strict';
@@ -56,6 +60,7 @@ export default function(): DBInterface {
                     .catch((e) => rej(e));
             });
         },
+
     };
 
     return dbImplementation;
