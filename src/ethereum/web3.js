@@ -16,45 +16,38 @@ const Web3 = require('web3');
  */
 export default function web3Factory(node: JsonRpcNodeInterface, ee: EventEmitter, ethUtils: EthUtilsInterface, networkAccess: boolean): Promise<Web3> {
     return new Promise((res, rej) => {
-
         ethUtils
             .allKeyPairs()
             .then((keyPairsMap) => {
                 // the keys are valid ethereum addresses
                 const addresses = Object.keys(keyPairsMap);
 
-                if(networkAccess === true){
-
+                if (networkAccess === true) {
                     const web3 = new Web3();
 
-                    if(addresses.length !== 0){
-                        web3.eth.defaultAccount = addresses[0]
+                    if (addresses.length !== 0) {
+                        web3.eth.defaultAccount = addresses[0];
                     }
 
                     return res(web3);
-
                 }
 
                 // Start the ethereum node
                 node
                     .start()
-                    .then(_ => {
-
+                    .then((_) => {
                         const provider = new PanthalassaProvider(ethUtils, node.url);
 
                         const web3 = new Web3(provider);
 
-                        if(addresses.length !== 0){
+                        if (addresses.length !== 0) {
                             web3.eth.defaultAccount = addresses[0];
                         }
 
-                        return res(web3)
-
+                        return res(web3);
                     })
                     .catch(rej);
-
             })
             .catch(rej);
-
     });
 }
