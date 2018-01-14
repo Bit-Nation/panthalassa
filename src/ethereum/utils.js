@@ -182,7 +182,7 @@ export default function utilsFactory(ss: SecureStorageInterface, ee: EventEmitte
                             return rej(new Error(`Value of key: '${key}' is not an string`));
                         }
 
-                        transformedKeys[key.split(PRIVATE_ETH_KEY_PREFIX).pop()] = JSON.parse(keys[key]);
+                        transformedKeys.set(key.split(PRIVATE_ETH_KEY_PREFIX).pop(), JSON.parse(keys[key]));
                     });
 
                     res(transformedKeys);

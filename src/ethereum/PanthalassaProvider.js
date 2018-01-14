@@ -16,14 +16,8 @@ const ZeroProvider = require('web3-provider-engine/zero');
 export function getAccounts(ethUtils: EthUtilsInterface): (cb: (error: any, addresses: any) => void) => void {
     return (cb: (error: any, addresses: any) => void): void => {
         ethUtils.allKeyPairs()
-            .then((keyPairs) => {
-                const addresses:Array<string> = [];
-
-                Object.keys(keyPairs).map((key) => addresses.push(key));
-
-                cb(null, addresses);
-            })
-            .catch((error) => cb(error, null));
+            .then(keyPairsMap => cb(null, Array.from(keyPairsMap.keys())))
+            .catch(error => cb(error, null));
     };
 }
 
@@ -46,12 +40,9 @@ export function signTx(ethUtils: EthUtilsInterface): (txData: TxData, cb: (error
                     }
 
                     ethUtils.signTx(txData, pk)
+                        .then((signedTx: EthTx) => cb(null, '0x'+signedTx.serialize().toString('hex')))
+                        .catch(e => cb(e, null));
 
-                        .then(function(signedTx: EthTx) {
-                            cb(null, '0x'+signedTx.serialize().toString('hex'));
-                        })
-
-                        .catch((e) => cb(e, null));
                 } catch (e) {
                     cb(e, null);
                 }
