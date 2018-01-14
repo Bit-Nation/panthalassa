@@ -11,7 +11,8 @@
     "db:flush": "rm -rf ./database && mkdir database && echo \"*\" > database/.gitignore",
     "docs": "flow-remove-types ./src --out-dir docs_build && esdoc && rm -rf docs_build",
     "eslint:fix": "node_modules/.bin/eslint src/ --fix",
-    "eslint:lint": "node_modules/.bin/eslint src/"
+    "eslint:lint": "node_modules/.bin/eslint src/",
+    "build:js": "babel src --out-dir build"
   },
   "keywords": [],
   "author": "",
