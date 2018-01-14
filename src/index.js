@@ -13,17 +13,6 @@ import walletFactory from './ethereum/wallet';
 import type {OsDependenciesInterface} from './specification/osDependencies';
 import {APP_OFFLINE, AMOUNT_OF_ADDRESSES_CHANGED, APP_ONLINE} from './events';
 const EventEmitter = require('eventemitter3');
-const Web3 = require('web3');
-
-export interface PanthalassaInterface {
-    eventEmitter: EventEmitter,
-    profile: ProfileInterface,
-    eth: {
-        utils: EthUtilsInterface,
-        wallet: WalletInterface | null,
-        web3: Web3 | null
-    }
-}
 
 /**
  * @name panthalassaFactory
@@ -34,18 +23,15 @@ export interface PanthalassaInterface {
  * @param {OsDependenciesInterface} osDeps
  * @param {EventEmitter} ee
  * @param {boolean} networkAccess
- * @return {Promise<PanthalassaInterface>}
+ * @return {Promise<{...mixed}>}
  */
-export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: string, rpcNode: JsonRpcNodeInterface, osDeps: OsDependenciesInterface, ee: EventEmitter, networkAccess: boolean): Promise<PanthalassaInterface> {
+export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: string, rpcNode: JsonRpcNodeInterface, osDeps: OsDependenciesInterface, ee: EventEmitter, networkAccess: boolean): Promise<{...mixed}> {
     const db = dbFactory(dbPath);
     const ethUtils = utilsFactory(ss, ee, osDeps);
+    const profile = profileFactory(db, ethUtils);
 
-    const index = {
-        eventEmitter: ee,
-        eth: {
-            utils: ethUtils,
-        },
-        profile: profileFactory(db, ethUtils),
+    const panthalassa = {
+
     };
 
     // /////////////////////////////////////////////////////
@@ -56,10 +42,9 @@ export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: s
     ee.on(APP_OFFLINE, () => {
         networkAccess = false;
 
-        web3Factory(rpcNode, ee, ethUtils, false)
+        web3Factory(rpcNode, ethUtils, false)
             .then((web3) => {
-                index.eth.web3 = web3;
-                index.eth.wallet = walletFactory(ethUtils, web3, db);
+                panthalassa.eth.wallet = walletFactory(ethUtils, web3, db);
             })
             .catch((e) => {
                 throw e;
@@ -70,10 +55,9 @@ export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: s
     ee.on(APP_ONLINE, () => {
         networkAccess = true;
 
-        web3Factory(rpcNode, ee, ethUtils, true)
+        web3Factory(rpcNode, ethUtils, true)
             .then((web3) => {
-                index.eth.web3 = web3;
-                index.eth.wallet = walletFactory(ethUtils, web3, db);
+                panthalassa.eth.wallet = walletFactory(ethUtils, web3, db);
             })
             .catch((e) => {
                 throw e;
@@ -85,10 +69,9 @@ export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: s
      * to override the default address (in case of deleting private key, etc)
      */
     ee.on(AMOUNT_OF_ADDRESSES_CHANGED, () => {
-        web3Factory(rpcNode, ee, ethUtils, networkAccess)
+        web3Factory(rpcNode, ethUtils, networkAccess)
             .then((web3) => {
-                index.eth.web3 = web3;
-                index.eth.wallet = walletFactory(ethUtils, web3, db);
+                panthalassa.eth.wallet = walletFactory(ethUtils, web3, db);
             })
             .catch((e) => {
                 throw e;
@@ -96,14 +79,11 @@ export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: s
     });
 
     return new Promise((res, rej) => {
-        web3Factory(rpcNode, ee, ethUtils, networkAccess)
+        web3Factory(rpcNode, ethUtils, networkAccess)
             .then((web3) => {
-                index.eth.web3 = web3;
-                index.eth.wallet = walletFactory(ethUtils, web3, db);
-
-                const impl:PanthalassaInterface = index;
-
-                res(impl);
-            });
+                panthalassa.eth.wallet = walletFactory(ethUtils, web3, db);
+                res(panthalassa);
+            })
+            .catch(rej);
     });
 }

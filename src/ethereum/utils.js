@@ -15,7 +15,7 @@ const EthTx = require('ethereumjs-tx');
 const bip39 = require('bip39');
 const ethJsUtils = require('ethereumjs-util');
 const assert = require('assert');
-import {AMOUNT_OF_ADDRESSES_CHANGED} from '../events'
+import {AMOUNT_OF_ADDRESSES_CHANGED} from '../events';
 
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
@@ -161,12 +161,10 @@ export default function utilsFactory(ss: SecureStorageInterface, ee: EventEmitte
 
             // Save the private key
             ss.set(PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey, JSON.stringify(pk))
-                .then(result => {
-
+                .then((result) => {
                     ee.emit(AMOUNT_OF_ADDRESSES_CHANGED);
 
                     res(result);
-
                 })
                 .catch(rej);
         }),

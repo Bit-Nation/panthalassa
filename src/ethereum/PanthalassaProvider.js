@@ -17,8 +17,8 @@ export function getAccounts(ethUtils: EthUtilsInterface): (cb: (error: Error | n
     return (cb: (error: Error | null, addresses: Array<string> | null) => void): void => {
         ethUtils
             .allKeyPairs()
-            .then(keyPairsMap => cb(null, Array.from(keyPairsMap.keys())))
-            .catch(error => cb(error, null));
+            .then((keyPairsMap) => cb(null, Array.from(keyPairsMap.keys())))
+            .catch((error) => cb(error, null));
     };
 }
 
@@ -42,8 +42,7 @@ export function signTx(ethUtils: EthUtilsInterface): (txData: TxData, cb: (error
 
                     ethUtils.signTx(txData, pk)
                         .then((signedTx: EthTx) => cb(null, '0x'+signedTx.serialize().toString('hex')))
-                        .catch(e => cb(e, null));
-
+                        .catch((e) => cb(e, null));
                 } catch (e) {
                     cb(e, null);
                 }
