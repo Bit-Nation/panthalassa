@@ -13,9 +13,10 @@ const ZeroProvider = require('web3-provider-engine/zero');
  * @ignore
  * @return {function}
  */
-export function getAccounts(ethUtils: EthUtilsInterface): (cb: (error: any, addresses: any) => void) => void {
-    return (cb: (error: any, addresses: any) => void): void => {
-        ethUtils.allKeyPairs()
+export function getAccounts(ethUtils: EthUtilsInterface): (cb: (error: Error | null, addresses: Array<string> | null) => void) => void {
+    return (cb: (error: Error | null, addresses: Array<string> | null) => void): void => {
+        ethUtils
+            .allKeyPairs()
             .then(keyPairsMap => cb(null, Array.from(keyPairsMap.keys())))
             .catch(error => cb(error, null));
     };

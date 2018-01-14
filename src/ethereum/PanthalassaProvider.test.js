@@ -11,10 +11,15 @@ describe('getAccounts', () => {
         const address_two = '0x26e75307fc0c021472feb8f727839531f112f317';
 
         const ethUtils = {
-            allKeyPairs: () => new Promise((res, rej) => res({
-                '0x465868366a0f45748f24d8979a98c2118e71b2bc': '',
-                '0x26e75307fc0c021472feb8f727839531f112f317': '',
-            })),
+            allKeyPairs: () => new Promise((res, rej) => {
+
+                const m = new Map();
+                m.set('0x465868366a0f45748f24d8979a98c2118e71b2bc', '');
+                m.set('0x26e75307fc0c021472feb8f727839531f112f317', '');
+
+                res(m);
+
+            }),
         };
 
         const cb = (error, addresses) => {
