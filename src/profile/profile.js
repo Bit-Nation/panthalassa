@@ -5,6 +5,7 @@ import {NoProfilePresent} from '../errors';
 import type {PublicProfile} from '../specification/publicProfile.js';
 import type {ProfileType} from '../database/schemata';
 import type {EthUtilsInterface} from '../ethereum/utils';
+import type {PrivateKeyType} from '../specification/privateKey';
 export const PROFILE_VERSION = '1.0.0';
 
 /**
@@ -96,19 +97,16 @@ export default function profileFactory(db: DBInterface, ethUtils: EthUtilsInterf
                 // Fetch saved profile
                 const sp = await profileImplementation.getProfile();
 
+                const ethAddresses:Map<string, PrivateKeyType> = await ethUtils.allKeyPairs();
+
                 // Public profile
                 const pubProfile:PublicProfile = {
                     pseudo: sp.pseudo,
                     description: sp.description,
                     image: sp.image,
-                    ethAddresses: [],
+                    ethAddresses: Array.from(ethAddresses.keys()),
                     version: '1.0.0',
                 };
-
-                // Fetch all keypairs
-                const keyPairs:{} = await ethUtils.allKeyPairs();
-
-                Object.keys(keyPairs).map((key) => pubProfile.ethAddresses.push(key));
 
                 res(pubProfile);
             } catch (e) {

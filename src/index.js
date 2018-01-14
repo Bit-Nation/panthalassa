@@ -6,24 +6,20 @@ import profileFactory from './profile/profile';
 import dbFactory from './database/db';
 import {SecureStorageInterface} from './specification/secureStorageInterface';
 import type {JsonRpcNodeInterface} from './specification/jsonRpcNode';
-import type {ProfileInterface} from './profile/profile';
-import type {EthUtilsInterface} from './ethereum/utils';
-import type {WalletInterface} from './ethereum/wallet';
 import walletFactory from './ethereum/wallet';
 import type {OsDependenciesInterface} from './specification/osDependencies';
 import {APP_OFFLINE, AMOUNT_OF_ADDRESSES_CHANGED, APP_ONLINE} from './events';
 const EventEmitter = require('eventemitter3');
 
 /**
- * @name panthalassaFactory
- * @desc Factory to create an instance of panthalassa ready to use.
+ *
  * @param {SecureStorageInterface} ss
  * @param {string} dbPath
  * @param {JsonRpcNodeInterface} rpcNode
  * @param {OsDependenciesInterface} osDeps
  * @param {EventEmitter} ee
  * @param {boolean} networkAccess
- * @return {Promise<{...mixed}>}
+ * @return {Promise<any>}
  */
 export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: string, rpcNode: JsonRpcNodeInterface, osDeps: OsDependenciesInterface, ee: EventEmitter, networkAccess: boolean): Promise<{...mixed}> {
     const db = dbFactory(dbPath);
@@ -31,7 +27,13 @@ export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: s
     const profile = profileFactory(db, ethUtils);
 
     const panthalassa = {
+        eth: {
+            utils: ethUtils,
+        },
 
+        profile: {
+            profile,
+        },
     };
 
     // /////////////////////////////////////////////////////

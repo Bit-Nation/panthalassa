@@ -224,10 +224,10 @@ describe('profile', () => {
             const ethUtils = {
                 allKeyPairs: () => {
                     return new Promise((res, rej) => {
-                        res({
-                            '0x7ed1e469fcb3ee19c0366d829e291451be638e59' : '',
-                            '0xe0b70147149b4232a3aa58c6c1cd192c9fef385d' : ''
-                        })
+                        const m = new Map();
+                        m.set('0x7ed1e469fcb3ee19c0366d829e291451be638e59', '');
+                        m.set('0xe0b70147149b4232a3aa58c6c1cd192c9fef385d', '');
+                        res(m);
                     });
                 },
             };
