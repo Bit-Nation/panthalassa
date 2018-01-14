@@ -258,15 +258,16 @@ describe('allKeys', () => {
 
 
         utils(secureStorageMock).allKeyPairs()
-            .then(result => {
+            .then(keyPairMap => {
 
-                expect(result['0xb293D530769790b82c187f9CD1a4fA0acDcaAb82']).toEqual({
+                expect(keyPairMap.get('0xb293D530769790b82c187f9CD1a4fA0acDcaAb82')).toEqual({
                     encryption: 'AES-256',
                     encrypted: true,
                     version: '1.0.0',
                     value: PRIVATE_KEY_ONE,
                 });
-                expect(result['0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94']).toEqual({
+
+                expect(keyPairMap.get('0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94')).toEqual({
                     encryption: '',
                     encrypted: false,
                     version: '1.0.0',
