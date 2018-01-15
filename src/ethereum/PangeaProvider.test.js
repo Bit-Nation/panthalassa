@@ -1,6 +1,6 @@
 /* eslint-disable */
 
-import {getAccounts, signTx} from './PanthalassaProvider';
+import {getAccounts, signTx} from './PangeaProvider';
 import type {PrivateKeyType} from '../specification/privateKey';
 const EthTx = require('ethereumjs-tx');
 
