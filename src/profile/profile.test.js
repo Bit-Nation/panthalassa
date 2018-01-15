@@ -9,7 +9,7 @@ const {describe, expect, test} = global;
 import type {PublicProfile} from './../specification/publicProfile';
 import {ProfileType} from '../database/schemata';
 
-const DATABASE_PATH = 'database/panthalassa';
+const DATABASE_PATH = 'database/pangea';
 
 describe('profile', () => {
     'use strict';
