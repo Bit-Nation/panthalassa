@@ -1,6 +1,6 @@
 // @flow
 
-import type {SecureStorage} from '../specification/secureStorageInterface';
+import type {SecureStorageInterface} from '../specification/secureStorageInterface';
 import type {PrivateKeyType} from '../specification/privateKey';
 import type {TxData} from '../specification/tx';
 import {AbortedSigningOfTx, InvalidPrivateKeyError, InvalidChecksumAddress} from '../errors';
@@ -15,6 +15,7 @@ const EthTx = require('ethereumjs-tx');
 const bip39 = require('bip39');
 const ethJsUtils = require('ethereumjs-util');
 const assert = require('assert');
+import {AMOUNT_OF_ADDRESSES_CHANGED} from '../events';
 
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
@@ -106,7 +107,7 @@ export interface EthUtilsInterface {
  * @param {object} osDeps operating system dependencies
  * @return {EthUtilsInterface}
  */
-export default function utilsFactory(ss: SecureStorage, ee: EventEmitter, osDeps: OsDependenciesInterface): EthUtilsInterface {
+export default function utilsFactory(ss: SecureStorageInterface, ee: EventEmitter, osDeps: OsDependenciesInterface): EthUtilsInterface {
     const ethUtilsImpl:EthUtilsInterface = {
         createPrivateKey: () => new Promise((res, rej) => {
             osDeps.crypto.randomBytes(32)
@@ -160,7 +161,11 @@ export default function utilsFactory(ss: SecureStorage, ee: EventEmitter, osDeps
 
             // Save the private key
             ss.set(PRIVATE_ETH_KEY_PREFIX+addressOfPrivateKey, JSON.stringify(pk))
-                .then(res)
+                .then((result) => {
+                    ee.emit(AMOUNT_OF_ADDRESSES_CHANGED);
+
+                    res(result);
+                })
                 .catch(rej);
         }),
         allKeyPairs: () => new Promise((res, rej) => {
@@ -175,7 +180,7 @@ export default function utilsFactory(ss: SecureStorage, ee: EventEmitter, osDeps
                             return rej(new Error(`Value of key: '${key}' is not an string`));
                         }
 
-                        transformedKeys[key.split(PRIVATE_ETH_KEY_PREFIX).pop()] = JSON.parse(keys[key]);
+                        transformedKeys.set(key.split(PRIVATE_ETH_KEY_PREFIX).pop(), JSON.parse(keys[key]));
                     });
 
                     res(transformedKeys);

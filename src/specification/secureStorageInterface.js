@@ -4,7 +4,7 @@
  * All method of the interface take a amount of input data and return
  * the callable methods. They are working like mini factorys.
  */
-export interface SecureStorage {
+export interface SecureStorageInterface {
 
     /**
      * Set a key and a value. Return's a void promise that get's

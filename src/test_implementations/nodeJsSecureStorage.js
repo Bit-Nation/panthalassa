@@ -1,5 +1,5 @@
 // @flow
-import {SecureStorage} from '../specification/secureStorageInterface';
+import {SecureStorageInterface} from '../specification/secureStorageInterface';
 
 // ///////////////////////////////////////////////////////////////////////////////////
 // This key value storage is not save. It's only intend to be used for development //
@@ -7,12 +7,12 @@ import {SecureStorage} from '../specification/secureStorageInterface';
 
 /**
  *
- * @return {SecureStorage}
+ * @return {SecureStorageInterface}
  */
-export default function(): SecureStorage {
+export default function(): SecureStorageInterface {
     let storeage = {};
 
-    const secureStorageImplementation : SecureStorage = {
+    const secureStorageImplementation : SecureStorageInterface = {
 
         set: (key: string, value: any): Promise<void> => new Promise((res, rej) => {
             storeage[key] = value;

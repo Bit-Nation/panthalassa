@@ -9,7 +9,7 @@ const EE = require('eventemitter3');
 const aes = require('crypto-js/aes');
 
 import utils, {createPrivateKey, savePrivateKey, decryptPrivateKey, signTx, normalizeAddress, normalizePrivateKey} from './utils';
-import osDeps from '../test_implementations/nodeJsOsDependencies';
+import {AMOUNT_OF_ADDRESSES_CHANGED} from './../events';
 
 // Private key dummy
 const PRIVATE_KEY = '6b270aa6bec685e1c1d55b8b1953a410ab8c650a9dca57c46dd7a0cace55fc22';
@@ -88,6 +88,29 @@ describe('createPrivateKey', () => {
 describe('savePrivateKey', () => {
     'use strict';
 
+    test('event AMOUNT_OF_ADDRESSES_CHANGED should be emitted', (done) => {
+
+        // Mock the secure storage
+        const secureStorageMock = {
+            get() {},
+            set: jest.fn(() => new Promise((res, rej) => res())),
+            remove() {},
+            has() {},
+            destroyStorage() {},
+        };
+
+        const ee = new EE();
+
+        ee.on(AMOUNT_OF_ADDRESSES_CHANGED, function () {
+            done();
+        });
+
+        const u = utils(secureStorageMock, ee);
+
+        u.savePrivateKey(PRIVATE_KEY);
+
+    });
+
     // Save private key unencrypted
     test('save private key unencrypted', () => {
         // Mock the secure storage
@@ -99,7 +122,7 @@ describe('savePrivateKey', () => {
             destroyStorage() {},
         };
 
-        const u = utils(secureStorageMock);
+        const u = utils(secureStorageMock, new EE());
 
         const testPromise = new Promise((res, rej) => {
             u.savePrivateKey(PRIVATE_KEY)
@@ -156,7 +179,7 @@ describe('savePrivateKey', () => {
 
         const testPromise = new Promise((res, rej) => {
 
-            const u = utils(secureStorageMock);
+            const u = utils(secureStorageMock, new EE());
 
             u.savePrivateKey(PRIVATE_KEY, 'mypw', 'mypw')
                 .then((result) => {
@@ -186,7 +209,7 @@ describe('savePrivateKey', () => {
             destroyStorage() {},
         };
 
-        return expect(utils(secureStorageMock).savePrivateKey(PRIVATE_KEY, 'pw \n', 'pw \n')).rejects.toEqual(new errors.PasswordContainsSpecialChars());
+        return expect(utils(secureStorageMock, new EE()).savePrivateKey(PRIVATE_KEY, 'pw \n', 'pw \n')).rejects.toEqual(new errors.PasswordContainsSpecialChars());
     });
 });
 
@@ -235,15 +258,16 @@ describe('allKeys', () => {
 
 
         utils(secureStorageMock).allKeyPairs()
-            .then(result => {
+            .then(keyPairMap => {
 
-                expect(result['0xb293D530769790b82c187f9CD1a4fA0acDcaAb82']).toEqual({
+                expect(keyPairMap.get('0xb293D530769790b82c187f9CD1a4fA0acDcaAb82')).toEqual({
                     encryption: 'AES-256',
                     encrypted: true,
                     version: '1.0.0',
                     value: PRIVATE_KEY_ONE,
                 });
-                expect(result['0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94']).toEqual({
+
+                expect(keyPairMap.get('0xb7eCdc30Aae0fB80C6E8a80b1B68444BEbC2CB94')).toEqual({
                     encryption: '',
                     encrypted: false,
                     version: '1.0.0',
