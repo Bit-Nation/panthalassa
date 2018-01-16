@@ -32,7 +32,11 @@ export default function dbFactory(path: string): DBInterface {
     const realm = Realm
         .open({
             path: path,
-            schema: [schemata.ProfileSchema, schemata.AccountBalanceSchema],
+            schema: [
+                schemata.ProfileSchema,
+                schemata.AccountBalanceSchema,
+                schemata.MessageJobSchema,
+            ],
         });
 
     const dbImplementation : DBInterface = {
