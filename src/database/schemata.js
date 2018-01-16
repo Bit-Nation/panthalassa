@@ -28,7 +28,10 @@
  */
 export type ProfileType = {
     id: number,
-    pseudo: string,
+    name: string,
+    location: string,
+    latitude: string,
+    longitude: string,
     description: string,
     image: string,
     version: string
@@ -39,7 +42,10 @@ export const ProfileSchema = {
     primaryKey: 'id',
     properties: {
         id: 'int',
-        pseudo: 'string',
+        name: 'string',
+        location: 'string',
+        latitude: 'string',
+        longitude: 'string',
         description: 'string',
         image: 'string',
         version: 'string',
