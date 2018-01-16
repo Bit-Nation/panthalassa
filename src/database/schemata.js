@@ -95,7 +95,7 @@ export const MessageJobSchema = {
     name: 'MessageJob',
     primaryKey: 'id',
     properties: {
-        id: 'number',
+        id: 'int',
         heading: 'string',
         text: 'string',
         version: 'date',
