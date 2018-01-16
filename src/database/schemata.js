@@ -99,6 +99,6 @@ export const MessageJobSchema = {
         heading: 'string',
         text: 'string',
         version: 'int',
-        created_at: 'date'
-    }
+        created_at: 'date',
+    },
 };

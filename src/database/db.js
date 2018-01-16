@@ -35,7 +35,7 @@ export default function dbFactory(path: string): DBInterface {
             schema: [
                 schemata.ProfileSchema,
                 schemata.AccountBalanceSchema,
-                schemata.MessageJobSchema
+                schemata.MessageJobSchema,
             ],
         });
 
