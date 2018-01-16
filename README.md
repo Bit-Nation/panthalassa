@@ -1,13 +1,11 @@
-# Panthalassa
-> A Javascript + Flow implementation of panthalassa
+# Pangea Libs
+> A Javascript + Flow implementation of the pangea utils
 
 [![Build Status](https://semaphoreci.com/api/v1/florianlenz/panthalassa/branches/feature-test_coverage/badge.svg)](https://semaphoreci.com/florianlenz/panthalassa)
 [![Coverage Status](https://coveralls.io/repos/github/Bit-Nation/Panthalassa/badge.svg)](https://coveralls.io/github/Bit-Nation/Panthalassa)
 
 ## Api
-> Panthalassa is under heavy development. Things will change fast.
-
-Pantalassa follows a modular approache to provide more flexibilty since it will be used on our mobile & desktop client. The context in which panthalassa run's on mobile and on desktop is pretty different (on mobile it's the browser engine and on desktop it's node js), so you might see us abstracting some thing's like the random bytes function because the context is different (`crypto.randomBytes()` can't be used in the browser)
+> The pangea libs are under heavy development. Things will change fast. You can build the technical documentation by running `npm run docs`
 
 Modules:
 - [Database](src/database) contain database related functionality

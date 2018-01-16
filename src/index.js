@@ -1,5 +1,3 @@
-// @flow
-
 import web3Factory from './ethereum/web3';
 import utilsFactory from './ethereum/utils';
 import profileFactory from './profile/profile';
@@ -12,21 +10,20 @@ import {APP_OFFLINE, AMOUNT_OF_ADDRESSES_CHANGED, APP_ONLINE} from './events';
 const EventEmitter = require('eventemitter3');
 
 /**
- *
  * @param {SecureStorageInterface} ss
  * @param {string} dbPath
  * @param {JsonRpcNodeInterface} rpcNode
  * @param {OsDependenciesInterface} osDeps
  * @param {EventEmitter} ee
  * @param {boolean} networkAccess
- * @return {Promise<any>}
+ * @return {Promise<{...mixed}>}
  */
-export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: string, rpcNode: JsonRpcNodeInterface, osDeps: OsDependenciesInterface, ee: EventEmitter, networkAccess: boolean): Promise<{...mixed}> {
+export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: string, rpcNode: JsonRpcNodeInterface, osDeps: OsDependenciesInterface, ee: EventEmitter, networkAccess: boolean): Promise<{...mixed}> {
     const db = dbFactory(dbPath);
     const ethUtils = utilsFactory(ss, ee, osDeps);
     const profile = profileFactory(db, ethUtils);
 
-    const panthalassa = {
+    const pangeaLibs = {
         eth: {
             utils: ethUtils,
         },
@@ -46,7 +43,7 @@ export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: s
 
         web3Factory(rpcNode, ethUtils, false)
             .then((web3) => {
-                panthalassa.eth.wallet = walletFactory(ethUtils, web3, db);
+                pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
             })
             .catch((e) => {
                 throw e;
@@ -59,7 +56,7 @@ export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: s
 
         web3Factory(rpcNode, ethUtils, true)
             .then((web3) => {
-                panthalassa.eth.wallet = walletFactory(ethUtils, web3, db);
+                pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
             })
             .catch((e) => {
                 throw e;
@@ -73,7 +70,7 @@ export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: s
     ee.on(AMOUNT_OF_ADDRESSES_CHANGED, () => {
         web3Factory(rpcNode, ethUtils, networkAccess)
             .then((web3) => {
-                panthalassa.eth.wallet = walletFactory(ethUtils, web3, db);
+                pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
             })
             .catch((e) => {
                 throw e;
@@ -83,8 +80,8 @@ export default function panthalassaFactory(ss: SecureStorageInterface, dbPath: s
     return new Promise((res, rej) => {
         web3Factory(rpcNode, ethUtils, networkAccess)
             .then((web3) => {
-                panthalassa.eth.wallet = walletFactory(ethUtils, web3, db);
-                res(panthalassa);
+                pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
+                res(pangeaLibs);
             })
             .catch(rej);
     });

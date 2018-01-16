@@ -2,7 +2,7 @@
 
 import {JsonRpcNodeInterface} from '../specification/jsonRpcNode';
 import type {EthUtilsInterface} from './utils';
-import PanthalassaProvider from './PanthalassaProvider';
+import PangeaProvider from './PangeaProvider';
 const Web3 = require('web3');
 
 /**
@@ -36,7 +36,7 @@ export default function web3Factory(node: JsonRpcNodeInterface, ethUtils: EthUti
                 node
                     .start()
                     .then((_) => {
-                        const provider = new PanthalassaProvider(ethUtils, node.url);
+                        const provider = new PangeaProvider(ethUtils, node.url);
 
                         const web3 = new Web3(provider);
 

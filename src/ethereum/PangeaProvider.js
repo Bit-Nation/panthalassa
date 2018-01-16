@@ -54,7 +54,7 @@ export function signTx(ethUtils: EthUtilsInterface): (txData: TxData, cb: (error
 /**
  * @desc Provider used by pangea to customize interactions with web3
  */
-export default class PanthalassaProvider extends ZeroProvider {
+export default class PangeaProvider extends ZeroProvider {
     /**
      *
      * @param {object} ethUtils object that implements the EthUtilsInterface
