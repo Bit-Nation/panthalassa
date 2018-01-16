@@ -88,7 +88,7 @@ export type MessageJobType = {
     heading: string,
     text: string,
     version: number,
-    created_at: number
+    created_at: Date
 }
 
 export const MessageJobSchema = {
@@ -98,7 +98,7 @@ export const MessageJobSchema = {
         id: 'int',
         heading: 'string',
         text: 'string',
-        version: 'date',
+        version: 'int',
         created_at: 'date'
     }
 };
