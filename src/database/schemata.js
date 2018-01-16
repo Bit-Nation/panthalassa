@@ -81,9 +81,10 @@ export const AccountBalanceSchema = {
  * @property {string} heading
  * @property {string} text
  * @property {number} version
+ * @property {date} created_at
  */
 export type MessageJobType = {
-    id: string,
+    id: number,
     heading: string,
     text: string,
     version: number,
@@ -94,7 +95,7 @@ export const MessageJobSchema = {
     name: 'MessageJob',
     primaryKey: 'id',
     properties: {
-        id: 'string',
+        id: 'number',
         heading: 'string',
         text: 'string',
         version: 'date',
