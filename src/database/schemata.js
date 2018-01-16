@@ -74,3 +74,30 @@ export const AccountBalanceSchema = {
         currency: 'string',
     },
 };
+
+/**
+ * @typedef MessageJobType
+ * @property {number} id
+ * @property {string} heading
+ * @property {string} text
+ * @property {number} version
+ */
+export type MessageJobType = {
+    id: string,
+    heading: string,
+    text: string,
+    version: number,
+    created_at: number
+}
+
+export const MessageJobSchema = {
+    name: 'MessageJob',
+    primaryKey: 'id',
+    properties: {
+        id: 'string',
+        heading: 'string',
+        text: 'string',
+        version: 'date',
+        created_at: 'date'
+    }
+};
