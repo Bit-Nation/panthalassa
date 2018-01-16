@@ -3,7 +3,7 @@
 export type PublicProfile = {
 
     // Pseudo name of the user
-    pseudo: string,
+    name: string,
 
     // Description of the user
     description: string,

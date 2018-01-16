@@ -1,3 +1,5 @@
+// @flow
+
 import web3Factory from './ethereum/web3';
 import utilsFactory from './ethereum/utils';
 import profileFactory from './profile/profile';
@@ -37,30 +39,27 @@ export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: st
     // update web3 (and wallet since it depends on web3) //
     // /////////////////////////////////////////////////////
 
-    // listen for network change
-    ee.on(APP_OFFLINE, () => {
-        networkAccess = false;
-
-        web3Factory(rpcNode, ethUtils, false)
+    function refreshWeb3(networkAccess) {
+        web3Factory(rpcNode, ethUtils, networkAccess)
             .then((web3) => {
+                // $FlowFixMe
                 pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
             })
             .catch((e) => {
                 throw e;
             });
+    }
+
+    // listen for network change
+    ee.on(APP_OFFLINE, () => {
+        networkAccess = false;
+        refreshWeb3(networkAccess);
     });
 
     // listen for network change
     ee.on(APP_ONLINE, () => {
         networkAccess = true;
-
-        web3Factory(rpcNode, ethUtils, true)
-            .then((web3) => {
-                pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
-            })
-            .catch((e) => {
-                throw e;
-            });
+        refreshWeb3(networkAccess);
     });
 
     /**
@@ -68,18 +67,13 @@ export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: st
      * to override the default address (in case of deleting private key, etc)
      */
     ee.on(AMOUNT_OF_ADDRESSES_CHANGED, () => {
-        web3Factory(rpcNode, ethUtils, networkAccess)
-            .then((web3) => {
-                pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
-            })
-            .catch((e) => {
-                throw e;
-            });
+        refreshWeb3(networkAccess);
     });
 
     return new Promise((res, rej) => {
         web3Factory(rpcNode, ethUtils, networkAccess)
             .then((web3) => {
+                // $FlowFixMe
                 pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
                 res(pangeaLibs);
             })
