@@ -69,7 +69,51 @@ describe('messaging', () => {
 
     });
 
-    test('removeJob', () => {
+    test('removeJob', (done) => {
+
+        const db = dbFactory(createDbPath());
+
+        const queue = messagingQueueFactory(new EventEmitter(), db);
+
+        db
+            .write(function (realm) {
+
+                realm.create('MessageJob', {
+                    id: 1,
+                    heading: 'Dummy',
+                    text: 'Dummy',
+                    version: 1,
+                    created_at: new Date()
+                })
+
+            })
+            .then(_ => {
+
+                db
+                    .query(realm => realm.objects('MessageJob'))
+                    .then(jobs => {
+                        expect(jobs.length).toBe(1);
+                        expect(jobs[0].id).toBe(1);
+
+                        return queue.removeJob(1);
+                    })
+                    .then(result => {
+
+                        expect(result).toBeUndefined();
+
+                        db
+                            .query(realm => realm.objects('MessageJob'))
+                            .then(jobs => {
+
+                                expect(jobs.length).toBe(0);
+                                done();
+                            })
+
+                    }).catch(done.fail)
+
+            })
+            .catch(done.fail)
+
 
     });
 
