@@ -24,6 +24,7 @@ export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: st
     const profile = profileFactory(db, ethUtils);
 
     const pangeaLibs = {
+        eventEmitter: ee,
         eth: {
             utils: ethUtils,
         },
