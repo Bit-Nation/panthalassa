@@ -9,7 +9,9 @@ const {describe, expect, test} = global;
 import type {PublicProfile} from './../specification/publicProfile';
 import {ProfileType} from '../database/schemata';
 
-const DATABASE_PATH = 'database/pangea';
+function dbPath() {
+    return './database/'+Math.random()
+}
 
 describe('profile', () => {
     'use strict';
@@ -19,105 +21,87 @@ describe('profile', () => {
          * A profile has three parameters, a pseudo name, a description and a image
          * This is a functional test
          */
-        test('create profile', () => {
-            // Kill the database
-            execSync('npm run db:flush');
+        test('create profile', (done) => {
 
-            const db:DB = database(DATABASE_PATH);
+            const db:DB = database(dbPath());
 
             const p = profile(db);
 
             const expectedProfile:ProfileType = {
                 id: 1,
-                pseudo: 'pseudoName',
                 description: 'I am a florian',
                 image: 'base64...',
                 version: '1.0.0',
+                name: '',
+                location: '',
+                latitude: '',
+                longitude: ''
             };
 
-            // This is a promise used for the expect statement
-            const testPromise = new Promise((res, rej) => {
-                p
-                    .setProfile('pseudoName', 'I am a florian', 'base64...')
-                    .then((_) => {
-                        return p.getProfile();
-                    })
-                    .then((profile) => res(JSON.stringify(profile)))
-                    .catch((err) => rej(err));
-            });
+            p
+                .setProfile(expectedProfile)
+                .then(_ => p.getProfile())
+                .then((profile:ProfileType) => {
 
-            return expect(testPromise)
-                .resolves
-                .toBe(JSON.stringify(expectedProfile));
+                    expect(profile.name).toBe(expectedProfile.name);
+                    expect(profile.id).toBe(expectedProfile.id);
+                    expect(profile.description).toBe(expectedProfile.description);
+                    expect(profile.image).toBe(expectedProfile.image);
+                    expect(profile.location).toBe(expectedProfile.location);
+                    expect(profile.latitude).toBe(expectedProfile.latitude);
+                    expect(profile.version).toBe(expectedProfile.version);
+
+                    done();
+
+                })
+                .catch((err) => rej(err));
+
         });
 
-        test('try to update profile', () => {
+        test('try to update profile', (done) => {
             // Kill the database
-            execSync('npm run db:flush');
 
-            const db = database(DATABASE_PATH);
+            const db = database(dbPath());
 
             const p = profile(db);
 
-            const testPromie = new Promise((res, rej) => {
-                p
-
-                    // Create profile
-                    .setProfile('pseudoName', 'I am a florian', 'base64...')
-
-                    // After saving fetch it and return the promise
-                    .then((_) => {
-                        return p.getProfile();
-                    })
-
-                    // The profile content should match since get profile
-                    // fetched the profile
-                    .then((profileContent) => {
-                        // Assert profile matches
-                        expect({
-                            pseudo: profileContent.pseudo,
-                            description: profileContent.description,
-                            image: profileContent.image,
-                            id: profileContent.id,
-                        })
-                            .toEqual({
-                                pseudo: 'pseudoName',
-                                description: 'I am a florian',
-                                image: 'base64...',
-                                id: 1,
-                            });
-
-                        // Update profile after ensure that it was written to the db
-                        return p.setProfile('pseudoNameUpdated', 'I am a florian updated', 'base64...new image');
-                    })
-
-                    // Fetch the updated profile
-                    .then((_) => {
-                        return p.getProfile();
-                    })
-
-                    .then((profile) => {
-                        res(JSON.stringify({
-                            id: profile.id,
-                            pseudo: profile.pseudo,
-                            description: profile.description,
-                            image: profile.image,
-                            version: profile.version,
-                        }));
-                    });
-            });
-
-            const expectedProfile:ProfileObject = {
+            const expectedProfile:ProfileType = {
                 id: 1,
-                pseudo: 'pseudoNameUpdated',
-                description: 'I am a florian updated',
-                image: 'base64...new image',
+                description: 'I am a florian',
+                image: 'base64...',
                 version: '1.0.0',
+                name: 'Florian',
+                location: '',
+                latitude: '',
+                longitude: ''
             };
 
-            return expect(testPromie)
-                .resolves
-                .toEqual(JSON.stringify(expectedProfile));
+            p
+                // Create profile
+                .setProfile(expectedProfile)
+
+                // After saving fetch it and return the promise
+                .then(_ => p.getProfile())
+
+                // The profile content should match since get profile
+                // fetched the profile
+                .then((profileContent:ProfileType) => {
+
+                    expect(profileContent.name).toBe('Florian');
+
+                    profileContent.name = 'Jaspy';
+
+                    // Update profile after ensure that it was written to the db
+                    return p.setProfile(profileContent);
+                })
+
+                // Fetch the updated profile
+                .then(_ => p.getProfile())
+                .then((profile) => {
+                    expect(profile.name).toBe('Jaspy');
+                    done();
+                });
+
         });
     });
 
@@ -128,49 +112,53 @@ describe('profile', () => {
         /**
          * Fetch my existing profile successfully
          */
-        test('get profile that exist', () => {
-            // Kill the database
-            execSync('npm run db:flush');
+        test('get profile that exist', (done) => {
 
-            const db:DB = database(DATABASE_PATH);
+            const db:DB = database(dbPath());
 
             const p = profile(db);
 
-            const testPromise = new Promise((res, rej) => {
-                p
-                    // Make sure that no profile is present
-                    .hasProfile()
-
-                    // Set Profile
-                    .then((hasProfile) => {
-                        expect(hasProfile).toBeFalsy();
-                        return p.setProfile('pedsa', 'i am a programmer', 'base64....');
-                    })
-
-                    // fetch profile
-                    .then((_) => {
-                        expect(_).toBeUndefined();
-                        return p.getProfile();
-                    })
-
-                    .then((profile) => {
-                        res(JSON.stringify(profile));
-                    })
-
-                    .catch((err) => rej(err));
-            });
-
-            const expectedProfile:ProfileObject = {
+            const expectedProfile:ProfileType = {
                 id: 1,
-                pseudo: 'pedsa',
-                description: 'i am a programmer',
-                image: 'base64....',
+                description: 'I am a florian',
+                image: 'base64...',
                 version: '1.0.0',
+                name: 'Florian',
+                location: '',
+                latitude: '',
+                longitude: ''
             };
 
-            return expect(testPromise)
-                .resolves
-                .toEqual(JSON.stringify(expectedProfile));
+            p
+                // Make sure that no profile is present
+                .hasProfile()
+
+                // Set Profile
+                .then(hasProfile => {
+                    expect(hasProfile).toBeFalsy();
+                    return p.setProfile(expectedProfile);
+                })
+
+                // fetch profile
+                .then(_ => {
+                    expect(_).toBeUndefined();
+                    return p.getProfile();
+                })
+
+                .then((profile:ProfileType) => {
+                    expect(profile.name).toBe(expectedProfile.name);
+                    expect(profile.id).toBe(expectedProfile.id);
+                    expect(profile.description).toBe(expectedProfile.description);
+                    expect(profile.image).toBe(expectedProfile.image);
+                    expect(profile.version).toBe(expectedProfile.version);
+                    expect(profile.location).toBe(expectedProfile.location);
+                    expect(profile.latitude).toBe(expectedProfile.latitude);
+                    expect(profile.longitude).toBe(expectedProfile.longitude);
+                    done();
+                })
+
+                .catch(done.fail);
+
         });
 
         /**
@@ -178,9 +166,8 @@ describe('profile', () => {
          */
         test('get profile that do not exist', () => {
             // Kill the database
-            execSync('npm run db:flush');
 
-            const db:DB = database(DATABASE_PATH);
+            const db:DB = database(dbPath());
 
             const p = profile(db);
 
@@ -236,7 +223,7 @@ describe('profile', () => {
             const getProfile = () => {
                 return new Promise((res, rej) => {
                     res({
-                        pseudo: 'peasded',
+                        name: 'peasded',
                         description: 'I am a description',
                         image: 'base64....',
                         version: '1.0.0',
@@ -246,7 +233,7 @@ describe('profile', () => {
 
             // The expected public profile
             const expectedPublicProfile:PublicProfile = {
-                pseudo: 'peasded',
+                name: 'peasded',
                 description: 'I am a description',
                 image: 'base64....',
                 ethAddresses: [
@@ -269,7 +256,7 @@ describe('profile', () => {
     describe('hasProfile', () => {
         test('true', () => {
 
-            const db = database(DATABASE_PATH);
+            const db = database(dbPath());
 
             //Since hasProfile will query the database under the hood we just mock the database
             db.query = () => new Promise(function (res, rej) {
@@ -284,9 +271,8 @@ describe('profile', () => {
 
         test('false', () => {
             // Kill the database
-            execSync('npm run db:flush');
 
-            return expect(profile(database(DATABASE_PATH)).hasProfile())
+            return expect(profile(database(dbPath())).hasProfile())
                 .resolves
                 .toBeFalsy();
         });
@@ -294,7 +280,7 @@ describe('profile', () => {
         test('error during fetch', () => {
             class TestError extends Error {}
 
-            const db = database(DATABASE_PATH);
+            const db = database(dbPath());
 
             db.query = () => new Promise((res, rej) => {
 

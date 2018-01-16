@@ -18,9 +18,13 @@ export const PROFILE_VERSION = '1.0.0';
 export interface ProfileInterface {
 
     hasProfile() : Promise<boolean>;
-    setProfile(pseudo: string, description: string, image: string) : Promise<void>;
+    setProfile(profile: ProfileType) : Promise<void>;
     getProfile() : Promise<ProfileType>;
     getPublicProfile(): Promise<PublicProfile>
+
+}
+
+export type ProfileInputType = {
 
 }
 
@@ -44,36 +48,16 @@ export default function profileFactory(db: DBInterface, ethUtils: EthUtilsInterf
                 .catch((e) => rej(e));
         }),
 
-        setProfile: (pseudo: string, description: string, image: string): Promise<void> => new Promise((res, rej) => {
-            db.write((realm: any) => {
-                // Since a user can create only one profile
-                // we will updated the existing one if it exist
+        setProfile: (profile: ProfileType): Promise<void> => new Promise((res, rej) => {
+            db
+                .write((realm: any) => {
+                    // Since we only support one profile at the moment, we can just set this always to 1
+                    profile.id = 1;
 
-                const profiles:Array<ProfileType> = queries.findProfiles(realm);
-
-                // Create profile if no exist
-                if (profiles.length === 0) {
-                    realm.create('Profile', {
-                        id: profiles.length +1,
-                        pseudo: pseudo,
-                        description: description,
-                        image: image,
-                        version: PROFILE_VERSION,
-                    });
-
-                    res();
-                    return;
-                }
-
-                // Updated existing profile
-                const profile = profiles[0];
-
-                profile.pseudo = pseudo;
-                profile.description = description;
-                profile.image = image;
-
-                res();
-            });
+                    realm.create('Profile', profile, true);
+                })
+                .then(res)
+                .catch(rej);
         }),
 
         getProfile: (): Promise<ProfileType> => new Promise((res, rej) => {
@@ -82,11 +66,21 @@ export default function profileFactory(db: DBInterface, ethUtils: EthUtilsInterf
                 // Fetch the first profile or reject if user has no profiles
                 .then((profiles) => {
                     if (profiles.length <= 0) {
-                        rej(new NoProfilePresent());
-                        return;
+                        return rej(new NoProfilePresent());
                     }
 
-                    res(profiles[0]);
+                    const profile:ProfileType = {
+                        id: profiles[0].id,
+                        name: profiles[0].name,
+                        description: profiles[0].description,
+                        location: profiles[0].location,
+                        latitude: profiles[0].latitude,
+                        longitude: profiles[0].longitude,
+                        image: profiles[0].image,
+                        version: profiles[0].version,
+                    };
+
+                    res(profile);
                 })
 
                 .catch((err) => rej(err));
@@ -95,13 +89,13 @@ export default function profileFactory(db: DBInterface, ethUtils: EthUtilsInterf
         getPublicProfile: () => new Promise(async function(res, rej) {
             try {
                 // Fetch saved profile
-                const sp = await profileImplementation.getProfile();
+                const sp:ProfileType = await profileImplementation.getProfile();
 
                 const ethAddresses:Map<string, PrivateKeyType> = await ethUtils.allKeyPairs();
 
                 // Public profile
                 const pubProfile:PublicProfile = {
-                    pseudo: sp.pseudo,
+                    name: sp.name,
                     description: sp.description,
                     image: sp.image,
                     ethAddresses: Array.from(ethAddresses.keys()),
