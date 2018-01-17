@@ -21,3 +21,9 @@ export const AMOUNT_OF_ADDRESSES_CHANGED = 'amount_of_addresses_changed';
  * @type {string}
  */
 export const MESSAGING_QUEUE_JOB_ADDED = 'messaging_queue:job:added';
+
+/**
+ * @desc Is emitted when an job as added to the transaction queue
+ * @type {string}
+ */
+export const TRANSACTION_QUEUE_JOB_ADDED = 'transaction_queue:job:added';
