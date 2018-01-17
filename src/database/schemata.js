@@ -108,3 +108,46 @@ export const MessageJobSchema = {
         created_at: 'date',
     },
 };
+
+/**
+ * @typedef TransactionJobType
+ * @property {number} id
+ * @property {number} timeout
+ * @property {string} processor
+ * @property {object} data
+ * @property {string} status
+ * @property {number} version
+ * @property {string} successHeading
+ * @property {string} successBody
+ * @property {string} failHeading
+ * @property {string} failBody
+ */
+export type TransactionJobType = {
+    id: number,
+    timeout: number,
+    processor: string,
+    data: string,
+    successHeading: string,
+    successBody: string,
+    failHeading: string,
+    failBody: string,
+    status: 'WAITING' | 'DONE' | 'PROCESSING' | 'FAILED',
+    version: number
+}
+
+export const TransactionJobSchema = {
+    name: 'TransactionJob',
+    primaryKey: 'id',
+    properties: {
+        id: 'int',
+        timeout: 'int',
+        processor: 'string',
+        data: 'string',
+        successHeading: 'string',
+        successBody: 'string',
+        failHeading: 'string',
+        failBody: 'string',
+        status: 'string',
+        version: 'int',
+    },
+};
