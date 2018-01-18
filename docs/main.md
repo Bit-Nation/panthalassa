@@ -18,3 +18,5 @@ The pangea lib's are splitted into different modules e.g. `ethereum`, `profile` 
 - database
     - [schemata](./database/schemata.md)
     - [db](./database/db.md)
+- profile
+    - [profile](./profile/profile.md)
