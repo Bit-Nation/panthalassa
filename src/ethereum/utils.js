@@ -67,8 +67,24 @@ export interface EthUtilsInterface {
     decryptPrivateKey: (privateKey: PrivateKeyType, reason: string, topic: string) => Promise<string>,
 
     /**
-     * Sign eth transaction data. have a look at the readme in this folder to see
-     * how to use this method.
+     * @desc sign an transaction
+     * @example
+     * const EE = require('eventemitter3')
+     *
+     * const eventEmitter = new EE()
+     *
+     * eventEmitter.on('eth:tx:sign', function(data){
+     *
+     *      //call confirm to sign the transaction
+     *      data.confirm();
+     *
+     *      //call abort to cancel the transaction
+     *      data.abort();
+     *
+     * })
+     *
+     * ethUtilsInstance.signTx('I_AM_A_HEX_PRIVATE_KEY', {from: xyz})
+     *
      */
     signTx: (txData: TxData, privkey: string) => Promise<EthTx>,
 
