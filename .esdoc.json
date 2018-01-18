@@ -1,6 +1,6 @@
 {
   "source": "./docs_build",
-  "destination": "./docs",
+  "destination": "./tec_docs",
   "plugins": [
     {"name": "esdoc-standard-plugin"}
   ]
