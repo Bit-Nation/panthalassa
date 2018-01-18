@@ -20,3 +20,6 @@ The pangea lib's are splitted into different modules e.g. `ethereum`, `profile` 
     - [db](./database/db.md)
 - profile
     - [profile](./profile/profile.md)
+- queues
+    - [messaging](./queues/messaging.md)
+-
