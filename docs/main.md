@@ -22,4 +22,4 @@ The pangea lib's are splitted into different modules e.g. `ethereum`, `profile` 
     - [profile](./profile/profile.md)
 - queues
     - [messaging](./queues/messaging.md)
--
+- [specification](./specification/main.md)
