@@ -6,6 +6,7 @@
 
 ## Api
 > The pangea libs are under heavy development. Things will change fast. You can build the technical documentation by running `npm run docs`
+> For a high level documentation have a look [here](./docs/main.md)
 
 Modules:
 - [Database](src/database) contain database related functionality
