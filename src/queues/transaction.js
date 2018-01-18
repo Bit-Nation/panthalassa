@@ -10,31 +10,61 @@ const Realm = require('realm');
 
 /**
  * @typedef TransactionQueueInterface
- * @property {function(job:TransactionJobType) : Promise<void>} addJob Add's an job to the queue and emit's the "transaction_queue:job:added" event
+ * @property {function(job:TransactionJobInputType) : Promise<void>} addJob Add's an job to the queue and emit's the "transaction_queue:job:added" event
  */
 export interface TransactionQueueInterface {
-    addJob(job:TransactionJobType) : Promise<void>,
+    addJob(job:TransactionJobInputType) : Promise<void>,
     registerProcessor(name:string, processor: (done: () => void, data:TransactionJobType) => void) : void,
     process() : Promise<void>
 }
 
+/**
+ * @typedef TransactionJobInputType
+ * @property {number} timeout
+ * @property {string} processor
+ * @property {object} data
+ * @property {string} successHeading
+ * @property {string} successBody
+ * @property {string} failHeading
+ * @property {string} failBody
+ */
+export type TransactionJobInputType = {
+    timeout: number,
+    processor: 'string',
+    data: {...mixed},
+    successHeading: string,
+    successBody: string,
+    failHeading: string,
+    failBody: string,
+}
+
+/**
+ *
+ * @param {DBInterface} db
+ * @param {EventEmitter} ee
+ * @param messagingQueue
+ * @return {{processors: {}, addJob: function(TransactionJobInputType): Promise<any>, registerProcessor: function(string, *), process: function(): Promise<any>}}
+ */
 export default function (db:DBInterface, ee:EventEmitter, messagingQueue:MessagingQueueInterface) : TransactionQueueInterface {
 
     const impl = {
         processors: {},
-        addJob: (job:TransactionJobType) : Promise<void> => new Promise((res, rej) => {
+        addJob: (job:TransactionJobInputType) : Promise<void> => new Promise((res, rej) => {
             db
                 .write((realm) => {
 
-                    const countOfJobs = realm.objects('TransactionJob').length;
-
-                    //Set job default data
-                    job.id = countOfJobs +1;
-                    job.data = JSON.stringify(job.data);
-                    job.version = 1;
-                    job.status = 'WAITING';
-
-                    realm.create('TransactionJob', job)
+                    realm.create('TransactionJob', {
+                        timeout: job.timeout,
+                        processor: job.processor,
+                        data: JSON.stringify(job.data),
+                        id: realm.objects('TransactionJob').length +1,
+                        version: 1,
+                        successHeading: job.successHeading,
+                        successBody: job.successBody,
+                        failHeading: job.failHeading,
+                        failBody: job.failBody,
+                        status: 'WAITING'
+                    })
 
                 })
                 .then(_ => {
@@ -68,47 +98,26 @@ export default function (db:DBInterface, ee:EventEmitter, messagingQueue:Messagi
                             return rej(new Error(`Couldn't find processor for ${TXJob.processor}`));
                         }
 
-                        function done() {
+                        /**
+                         * @desc This should be called in the processor to end the job
+                         * @param data
+                         */
+                        function done(data) {
+
+                            if(typeof data !== 'object'){
+                                return rej('data is not an object');
+                            }
 
                             db
-                                .write(function (realm:Realm) : void {
-
-                                    //update the job (true mean's the it's an update)
-                                    const job = realm.create('TransactionJob', TXJob, true);
-
-                                    //if the job is done we will remove it and add a message for the user
-                                    if(job.status === 'DONE'){
-                                        messagingQueue
-                                            .addJob(
-                                                job.messages.successHeading,
-                                                job.messages.successBody
-                                            ).then(_ => {
-                                                realm.delete(job);
-                                                cb()
-                                            })
-                                            .catch(cb);
-
-                                        return;
-                                    }
-
-                                    if(job.status === 'FAILED'){
-                                        messagingQueue
-                                            .addJob(
-                                                job.messages.failHeading,
-                                                job.messages.failBody
-                                            )
-                                            .then(_ => cb())
-                                            .catch(cb)
-                                    }
-
-                                })
-                                .then(cb)
-                                .catch(cb)
+                                .write((realm:Realm) => realm.create('TransactionJob', data, true))
+                                .then(_ => cb())
+                                .catch(error => cb(error));
 
                         }
 
-                        //
-                        processor(done)
+                        //JOSN.parse / stringify is used to remove the realm context from the object
+                        //there might be a better solution for it
+                        processor(done, JSON.parse(JSON.stringify(TXJob)));
 
                     }, (error) => {
 

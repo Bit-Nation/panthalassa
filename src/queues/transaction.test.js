@@ -1,4 +1,5 @@
 import transactionQueue from './transaction';
+import messagingQueue from './messaging';
 import type {TransactionJobType} from "../database/schemata";
 const EventEmitter = require('eventemitter3');
 import {TRANSACTION_QUEUE_JOB_ADDED} from '../events';
@@ -100,15 +101,89 @@ describe('transaction', () => {
 
     describe('process', () => {
 
-        test('successful', (done) => {
+        test('processor not found', (done) => {
 
-            const db = {
-                query: () => new Promise({})
+            const db = dbFactory(dbPath());
+
+            const job:TransactionJobType = {
+                timeout: 30,
+                processor: 'my_processor',
+                data: {
+                    key_one: 'data_one',
+                    key_two: 'data_two'
+                },
+                successHeading: 'success_heading',
+                successBody: 'success_body',
+                failHeading: 'fail_heading',
+                failBody: 'fail_body'
             };
 
             const txQueue = transactionQueue(db, new EventEmitter());
 
-            done();
+            txQueue
+                .addJob(job)
+                .then(_ => txQueue.process())
+                .then(_ => {
+                    done.fail('The promise should be rejected');
+                })
+                .catch(e => {
+                    expect(e.message).toBe('Couldn\'t find processor for my_processor');
+                    done();
+                })
+
+        });
+
+        test('added success message when job is completed', (done) => {
+
+            const db = dbFactory(dbPath());
+
+            const job:TransactionJobType = {
+                timeout: 30,
+                processor: 'my_processor',
+                data: {
+                    key_one: 'data_one',
+                    key_two: 'data_two'
+                },
+                successHeading: 'success_heading',
+                successBody: 'success_body',
+                failHeading: 'fail_heading',
+                failBody: 'fail_body'
+            };
+
+            const msgQueue = {
+                addJob: jest.fn(function (title, body) {
+                    expect(title).toBe('success_heading');
+                    expect(body).toBe('success_body');
+                    return new Promise((res, rej) => res());
+                })
+            };
+
+            const txQueue = transactionQueue(db, new EventEmitter(), msgQueue);
+
+            txQueue.registerProcessor('my_processor', function (done, txJob) {
+
+                expect(typeof txJob).toBe('object');
+
+                txJob.status = 'DONE';
+
+                done(txJob);
+
+            });
+
+            txQueue
+                .addJob(job)
+                .then(_ => db.query((realm) => realm.objects('TransactionJob')))
+                .then(jobs => expect(jobs[0].status).toBe('WAITING'))
+                .then(_ => txQueue.process())
+                .then(_ => db.query((realm) => realm.objects('TransactionJob')))
+                .then(jobs => {
+
+                    expect(jobs[0].status).toBe('DONE');
+                    done();
+
+                })
+
+                .catch(done.fail);
 
         })
 

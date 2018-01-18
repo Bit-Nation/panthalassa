@@ -126,7 +126,7 @@ export type TransactionJobType = {
     id: number,
     timeout: number,
     processor: string,
-    data: string,
+    data: ?string,
     successHeading: string,
     successBody: string,
     failHeading: string,
@@ -142,7 +142,10 @@ export const TransactionJobSchema = {
         id: 'int',
         timeout: 'int',
         processor: 'string',
-        data: 'string',
+        data: {
+            type: 'string',
+            optional: true
+        },
         successHeading: 'string',
         successBody: 'string',
         failHeading: 'string',
