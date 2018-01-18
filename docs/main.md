@@ -23,3 +23,6 @@ The pangea lib's are splitted into different modules e.g. `ethereum`, `profile` 
 - queues
     - [messaging](./queues/messaging.md)
 - [specification](./specification/main.md)
+- errors (Hold all errors consumed by the application)
+- events (Hold all events consumed by the application)
+- index (project index file)
