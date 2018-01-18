@@ -113,6 +113,9 @@ export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, d
                     return rej(error);
                 }
 
+                //Transform balance to string (will be in wei)
+                balance = balance.toString(10);
+
                 if ('string' !== typeof balance) {
                     return rej(new Error('Fetched balance is not a string'));
                 }
@@ -123,7 +126,7 @@ export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, d
                         address: address,
                         currency: 'ETH',
                         synced_at: Date.now(),
-                        amount: balance,
+                        amount: web3.fromWei(balance.toString(10), 'ether'),
                     }, true);
 
                     res();

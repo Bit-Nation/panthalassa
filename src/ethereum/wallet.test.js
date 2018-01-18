@@ -3,6 +3,7 @@
 import utils from './utils';
 import {InvalidChecksumAddress} from './../errors';
 import wallet from './wallet';
+const BigNumber = require('bignumber.js');
 
 const Web3 = require('web3');
 
@@ -235,7 +236,7 @@ describe('wallet', () => {
                     expect(data.address).toBe(address);
                     expect(data.currency).toBe('ETH');
                     expect('number' === typeof data.synced_at).toBeTruthy();
-                    expect(data.amount).toBe('1000000000000');
+                    expect(data.amount).toBe('0.000001');
                 }),
             };
 
@@ -245,27 +246,25 @@ describe('wallet', () => {
                 }),
             };
 
-            const web3Mock = {
-                eth: {
-                    getBalance: jest.fn((addr, cb) => {
-                        expect(addr).toBe(address);
+            const web3 = new Web3();
 
-                        cb(null, '1000000000000');
-                    }),
-                },
-            };
+            web3.eth.getBalance = jest.fn((addr, cb) => {
+                expect(addr).toBe(address);
 
-            wallet(utils(), web3Mock, dbMock).ethSync(address)
+                cb(null, new BigNumber('1000000000000'));
+            });
+
+            wallet(utils(), web3, dbMock).ethSync(address)
                 .then((_) => {
-                    expect(web3Mock.eth.getBalance).toHaveBeenCalledTimes(1);
+                    expect(web3.eth.getBalance).toHaveBeenCalledTimes(1);
                     expect(realm.create).toHaveBeenCalledTimes(1);
                     expect(dbMock.write).toHaveBeenCalledTimes(1);
 
                     done();
                 })
                 .catch((error) => {
- throw error;
-});
+                    throw error;
+                });
         });
 
         test('invalid address', (done) => {
