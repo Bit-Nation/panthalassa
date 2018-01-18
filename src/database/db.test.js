@@ -23,7 +23,7 @@ describe('write', () => {
 
         return expect(db.write(writeAction))
             .resolves
-            .toBeUndefined();
+            .toBe('I wrote the profile');
     });
 
     test('error', () => {
