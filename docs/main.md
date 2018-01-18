@@ -15,3 +15,6 @@ The pangea lib's are splitted into different modules e.g. `ethereum`, `profile` 
     - [web3](./ethereum/web3.md)
     - [utils](./ethereum/utils.md)
     - [PangeaProvider](./ethereum/pangeaProvider.md)
+- database
+    - [schemata](./database/schemata.md)
+    - [db](./database/db.md)
