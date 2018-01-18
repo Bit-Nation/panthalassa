@@ -3,6 +3,8 @@
 import database from './db';
 const execSync = require('child_process').execSync;
 
+const dbPath = () => 'database/'+Math.random();
+
 describe('write', () => {
     'use strict';
 
@@ -10,10 +12,8 @@ describe('write', () => {
      * A database write should be void and will always result in a void promise
      */
     test('successfully', () => {
-        // Kill the database
-        execSync('npm run db:flush');
 
-        const db = database();
+        const db = database(dbPath());
 
         function writeAction(realm) {
             expect(realm).toBeDefined();
@@ -27,12 +27,10 @@ describe('write', () => {
     });
 
     test('error', () => {
-        // Kill the database
-        execSync('npm run db:flush');
 
         class CustomError extends Error {}
 
-        const db = database();
+        const db = database(dbPath());
 
         function writeAction(realm) {
             expect(realm).toBeDefined();
@@ -50,10 +48,8 @@ describe('query', () => {
     'use strict';
 
     test('successfully', () => {
-        // Kill the database
-        execSync('npm run db:flush');
 
-        const db = database();
+        const db = database(dbPath());
 
         function searchPets(realm) {
             expect(realm).toBeDefined();
@@ -70,10 +66,8 @@ describe('query', () => {
     });
 
     test('error', () => {
-        // Kill the database
-        execSync('npm run db:flush');
 
-        const db = database();
+        const db = database(dbPath());
 
         class CustomError extends Error {}
 
