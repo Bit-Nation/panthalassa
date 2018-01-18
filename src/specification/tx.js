@@ -1,4 +1,5 @@
 // @flow
+//@todo move this
 export type TxData = {
     nonce: string,
     gas: string,

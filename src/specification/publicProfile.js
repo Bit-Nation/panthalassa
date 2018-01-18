@@ -1,5 +1,5 @@
 // @flow
-
+//@todo move to profile
 export type PublicProfile = {
 
     // Pseudo name of the user

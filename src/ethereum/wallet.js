@@ -20,13 +20,14 @@ export interface WalletInterface {
      * @param {number} amount of eth you would like to send (in eth)
      * @param {number} the limit of gas for this transaction (default is 21000
      * @param {number} gas price default is 20000000000
+     * @return {Promise<string>} resolves in transaction hash
      */
-    ethSend: (from: string, to: string, amount: number, gasLimit: number, gasPrice: number) => Promise<{...mixed}>,
+    ethSend: (from: string, to: string, amount: number, gasLimit: number, gasPrice: number) => Promise<string>,
 
     /**
      * @desc Fetch the eth balance of one of my owned accounts
-     * @param {string} address of your account
-     * @return {object} WalletInterface
+     * @param {string} address of the account you would like to sync
+     * @return {Promise<AccountBalanceType>}
      */
     ethBalance: (address: string) => Promise<AccountBalanceType | null>,
 
@@ -48,7 +49,7 @@ export interface WalletInterface {
  */
 export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, db: DBInterface): WalletInterface {
     const walletImpl:WalletInterface = {
-        ethSend: (from: string, to: string, amount: number, gasLimit: number, gasPrice: number): Promise<{...mixed}> => {
+        ethSend: (from: string, to: string, amount: number, gasLimit: number, gasPrice: number): Promise<string> => {
             gasLimit = gasLimit || 21000;
             gasPrice = gasPrice || 20000000000;
 

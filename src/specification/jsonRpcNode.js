@@ -1,5 +1,12 @@
 // @flow
 
+/**
+ * @typedef JsonRpcNodeInterface
+ * @property {string} name
+ * @property {string} url
+ * @property {function} start
+ * @property {function} stop
+ */
 export interface JsonRpcNodeInterface {
 
     /**
