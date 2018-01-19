@@ -19,7 +19,7 @@ export interface DBInterface {
      * Expect an callback that that will receive an instance of realm.
      * The callback should return nothing.
      */
-    write(writeAction: (realm: Realm) => void) : Promise<void>;
+    write(writeAction: (realm: Realm) => void) : Promise<any>;
 
 }
 
@@ -49,7 +49,7 @@ export default function dbFactory(path: string): DBInterface {
                 .catch(rej);
         }),
 
-        write: (writeAction: (realm: any) => void): Promise<void> => new Promise((res, rej) => {
+        write: (writeAction: (realm: any) => void): Promise<*> => new Promise((res, rej) => {
             'use strict';
 
             realm
