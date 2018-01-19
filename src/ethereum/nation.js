@@ -1,4 +1,4 @@
-//@todo
+//@flow
 
 import type {NationType} from "../database/schemata";
 import type {DBInterface} from "../database/db";
@@ -32,11 +32,21 @@ export type NationInputType = {
     governanceService: string
 }
 
+/**
+ * @typedef NationInterface
+ * @property {function(nationData:NationInputType)} create
+ * @property {function()} all fetch all nations
+ */
 export interface NationInterface {
     create(nationData:NationInputType) : Promise<NationType>,
     all() : Promise<NationType>
 }
 
+/**
+ *
+ * @param db
+ * @return {NationInterface}
+ */
 export default function (db:DBInterface) {
 
     const impl:NationInterface = {
