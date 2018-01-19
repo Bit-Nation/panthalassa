@@ -3,6 +3,21 @@
 import type {NationType} from "../database/schemata";
 import type {DBInterface} from "../database/db";
 
+/**
+ * @typedef NationType
+ * @property {boolean} created Created mean's if it is on the blockchain
+ * @property {string} nationName
+ * @property {string} nationDescription
+ * @property {boolean} exists
+ * @property {boolean} virtualNation
+ * @property {string} nationCode
+ * @property {string} lawEnforcementMechanism
+ * @property {boolean} profit
+ * @property {boolean} nonCitizenUse
+ * @property {boolean} diplomaticRecognition
+ * @property {string} decisionMakingProcess
+ * @property {string} governanceService
+ */
 export type NationInputType = {
     nationName: string,
     nationDescription: string,
