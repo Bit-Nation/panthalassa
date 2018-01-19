@@ -2,6 +2,8 @@
 
 import type {NationType} from "../database/schemata";
 import type {DBInterface} from "../database/db";
+import type {TransactionQueueInterface} from "../queues/transaction";
+import type {TransactionJobInputType} from "../queues/transaction";
 
 /**
  * @typedef NationType
@@ -45,12 +47,13 @@ export interface NationInterface {
 /**
  *
  * @param db
+ * @param {TransactionQueueInterface} txQueue
  * @return {NationInterface}
  */
-export default function (db:DBInterface) {
+export default function (db:DBInterface, txQueue:TransactionQueueInterface) {
 
     const impl:NationInterface = {
-        create: (nationData:NationInputType) => new Promise((res, rej) => {
+        create: (nationData:NationInputType) : Promise<NationType> => new Promise((res, rej) => {
 
             db
                 .write(function (realm) {
@@ -76,11 +79,24 @@ export default function (db:DBInterface) {
 
                     return nation;
                 })
-                .then((nationDBId:NationType) => {
+                .then((nation:NationType) => {
 
-                    //@todo place queue job
+                    const txJob:TransactionJobInputType = {
+                        timeout: 30,
+                        processor: 'NATION',
+                        data: {
+                            dataBaseId: nation.id
+                        },
+                        successHeading: `Nation created`,
+                        successBody: `Your nation: ${nation.nationName} was created successfully`,
+                        failHeading: 'Failed to create nation',
+                        failBody: ''
+                    };
 
-                    res(nationDBId);
+                    txQueue
+                        .addJob(txJob)
+                        .then(_ => res(nation))
+                        .catch(rej);
 
                 })
                 .catch(rej)
