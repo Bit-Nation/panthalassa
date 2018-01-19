@@ -195,7 +195,7 @@ export const NationSchema = {
     properties: {
         id: 'int',
         idInSmartContract: {
-            default: 0,
+            default: -1,
             type: 'int'
         },
         created: 'bool',
