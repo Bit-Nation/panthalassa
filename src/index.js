@@ -8,6 +8,7 @@ import {SecureStorageInterface} from './specification/secureStorageInterface';
 import type {JsonRpcNodeInterface} from './specification/jsonRpcNode';
 import walletFactory from './ethereum/wallet';
 import type {OsDependenciesInterface} from './specification/osDependencies';
+import nationFactory from './ethereum/nation';
 import {APP_OFFLINE, AMOUNT_OF_ADDRESSES_CHANGED, APP_ONLINE} from './events';
 const EventEmitter = require('eventemitter3');
 
@@ -24,11 +25,13 @@ export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: st
     const db = dbFactory(dbPath);
     const ethUtils = utilsFactory(ss, ee, osDeps);
     const profile = profileFactory(db, ethUtils);
+    const nation = nationFactory(db);
 
     const pangeaLibs = {
         eventEmitter: ee,
         eth: {
             utils: ethUtils,
+            nation: nation
         },
 
         profile: {
