@@ -3,7 +3,6 @@
 import type {TransactionJobType} from "../database/schemata";
 import type {DBInterface} from "../database/db";
 import {TRANSACTION_QUEUE_JOB_ADDED} from '../events'
-import {MessagingQueueInterface} from "./messaging";
 const EventEmitter = require('eventemitter3');
 const each = require('async/each');
 const Realm = require('realm');
@@ -30,7 +29,7 @@ export interface TransactionQueueInterface {
  */
 export type TransactionJobInputType = {
     timeout: number,
-    processor: 'string',
+    processor: string,
     data: {...mixed},
     successHeading: string,
     successBody: string,
@@ -42,10 +41,9 @@ export type TransactionJobInputType = {
  *
  * @param {DBInterface} db
  * @param {EventEmitter} ee
- * @param messagingQueue
- * @return {{processors: {}, addJob: function(TransactionJobInputType): Promise<any>, registerProcessor: function(string, *), process: function(): Promise<any>}}
+ * @return {TransactionQueueInterface}
  */
-export default function (db:DBInterface, ee:EventEmitter, messagingQueue:MessagingQueueInterface) : TransactionQueueInterface {
+export default function (db:DBInterface, ee:EventEmitter) : TransactionQueueInterface {
 
     const impl = {
         processors: {},
