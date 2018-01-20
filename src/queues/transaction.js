@@ -3,6 +3,7 @@
 import type {TransactionJobType} from "../database/schemata";
 import type {DBInterface} from "../database/db";
 import {TRANSACTION_QUEUE_JOB_ADDED} from '../events'
+import type {TxData} from "../specification/tx";
 const EventEmitter = require('eventemitter3');
 const each = require('async/each');
 const Realm = require('realm');
@@ -13,7 +14,7 @@ const Realm = require('realm');
  */
 export interface TransactionQueueInterface {
     addJob(job:TransactionJobInputType) : Promise<void>,
-    registerProcessor(name:string, processor: (done: () => void, data:TransactionJobType) => void) : void,
+    registerProcessor(name:string, processor: (done: (job:TransactionJobType) => void, job:TransactionJobType) => void) : void,
     process() : Promise<void>
 }
 
@@ -74,7 +75,7 @@ export default function (db:DBInterface, ee:EventEmitter) : TransactionQueueInte
                 })
                 .catch(rej)
         }),
-        registerProcessor: (name:string, processor: (done: () => void, data:TransactionJobType) => void) : void => {
+        registerProcessor: (name:string, processor: (done: (job:TransactionJobType) => void, job:TransactionJobType) => void) : void => {
 
             impl.processors[name] = processor;
 
@@ -98,16 +99,18 @@ export default function (db:DBInterface, ee:EventEmitter) : TransactionQueueInte
 
                         /**
                          * @desc This should be called in the processor to end the job
-                         * @param data
+                         * @param {TransactionJobType} job
                          */
-                        function done(data) {
+                        function done(job:TransactionJobType) {
 
-                            if(typeof data !== 'object'){
-                                return rej('data is not an object');
+                            if(typeof job.data !== 'string'){
+                                return rej('data must be an string');
                             }
 
+                            job.id = TXJob.id;
+
                             db
-                                .write((realm:Realm) => realm.create('TransactionJob', data, true))
+                                .write((realm:Realm) => realm.create('TransactionJob', job, true))
                                 .then(_ => cb())
                                 .catch(error => cb(error));
 
