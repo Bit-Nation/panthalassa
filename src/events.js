@@ -27,3 +27,9 @@ export const MESSAGING_QUEUE_JOB_ADDED = 'messaging_queue:job:added';
  * @type {string}
  */
 export const TRANSACTION_QUEUE_JOB_ADDED = 'transaction_queue:job:added';
+
+/**
+ * @desc Is emitted when a nation is created
+ * @type {string}
+ */
+export const NATION_CREATE = 'nation:create';
