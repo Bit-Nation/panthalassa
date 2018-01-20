@@ -164,6 +164,11 @@ describe('transaction', () => {
 
                 expect(typeof txJob).toBe('object');
 
+                //Set job it to fake id. The transaction queue should fix that
+                //by setting the id of the job passed by the "done" callback
+                //to it's correct value
+                txJob.id = 1111111;
+
                 txJob.status = 'DONE';
 
                 done(txJob);
@@ -173,12 +178,18 @@ describe('transaction', () => {
             txQueue
                 .addJob(job)
                 .then(_ => db.query((realm) => realm.objects('TransactionJob')))
-                .then(jobs => expect(jobs[0].status).toBe('WAITING'))
+                .then(jobs => {
+
+                    expect(jobs[0].status).toBe('WAITING');
+                    expect(jobs[0].id).toBe(1);
+
+                })
                 .then(_ => txQueue.process())
                 .then(_ => db.query((realm) => realm.objects('TransactionJob')))
                 .then(jobs => {
 
                     expect(jobs[0].status).toBe('DONE');
+                    expect(jobs[0].id).toBe(1);
                     done();
 
                 })
