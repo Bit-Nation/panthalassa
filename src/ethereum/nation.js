@@ -3,7 +3,7 @@
 import type {NationType} from "../database/schemata";
 import type {DBInterface} from "../database/db";
 import type {TransactionQueueInterface} from "../queues/transaction";
-import type {TransactionJobInputType} from "../queues/transaction";
+import {NATION_CONTRACT_ABI} from '../constants'
 import {NATION_CREATE} from '../events';
 const Web3 = require('web3');
 const EventEmitter = require('eventemitter3');
@@ -58,6 +58,8 @@ export interface NationInterface {
  */
 export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3:Web3, ee:EventEmitter, nationContractAddress: string) {
 
+    const nationContract = web3.eth.contract(NATION_CONTRACT_ABI).at(nationContractAddress);
+
     const impl:NationInterface = {
         create: (nationData:NationInputType) : Promise<NationType> => new Promise((res, rej) => {
 
@@ -90,52 +92,18 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
                 })
                 .then((nation:NationType) => {
 
-                    /**
-                     * submit data to job queue
-                     */
-                    const createNation = () => {
+                    nationContract.createNation(
+                        JSON.stringify(nationData),
+                        function (err, data) {
 
-                        const txJob:TransactionJobInputType = {
-                            timeout: 60,
-                            processor: 'NATION',
-                            data: {
-                                dataBaseId: nation.id,
-                                gasPrice: web3.toWei(30, 'gwei'),
-                                from: address,
-                                steps: {
-                                    createNationCore: {
-                                        done: false,
-                                        txHash: ""
-                                    },
-                                    setNationPolicy: {
-                                        done: false,
-                                        txHash: ""
-                                    },
-                                    setNationGovernance: {
-                                        done: false,
-                                        txHash: ""
-                                    }
-                                }
-                            },
-                            successHeading: `Nation created`,
-                            successBody: `Your nation: ${nation.nationName} was created successfully`,
-                            failHeading: 'Failed to create nation',
-                            failBody: ''
-                        };
+                            if(err){
+                                throw err;
+                            }
 
-                        txQueue
-                            .addJob(txJob)
-                            .then(_ => res(nation))
-                            .catch(rej);
+                            console.log(data);
 
-                    };
-
-                    ee.emit(NATION_CREATE, {
-                        heading: `Confirm nation creation`,
-                        msg: `In order to create your nation you have to pay 0.05 ETH. Please confirm or abort it.`,
-                        confirm: createNation,
-                        abort: async () => await db.write((realm) => realm.delete(nation))
-                    });
+                        }
+                    )
 
                 })
                 .catch(rej)
