@@ -1,5 +1,10 @@
 import nationsFactory from './nation';
 import dbFactory from '../database/db';
+import {NATION_CREATE} from '../events';
+const EventEmitter = require('eventemitter3');
+const Web3 = require('web3');
+
+const NATION_CONTRACT_ADDR = "0xba221ca5c5d72dca6508dfda17efc0dd646a664d";
 
 const randomPath = () => 'database/'+Math.random();
 
@@ -10,10 +15,26 @@ describe('nation', () => {
         const txQueue = {
             addJob: jest.fn((data) => {
 
-                expect(data.timeout).toBe(30);
+                expect(data.timeout).toBe(60);
                 expect(data.processor).toBe('NATION');
                 expect(data.data).toEqual({
-                    dataBaseId: 1
+                    dataBaseId: 1,
+                    from: '0x85c725a18b09907e874229fcaf36f4e16792214d',
+                    gasPrice: '30000000000',
+                    steps: {
+                        createNationCore: {
+                            done: false,
+                            txHash: ""
+                        },
+                        setNationPolicy: {
+                            done: false,
+                            txHash: ""
+                        },
+                        setNationGovernance: {
+                            done: false,
+                            txHash: ""
+                        }
+                    }
                 });
                 expect(data.successHeading).toBe('Nation created');
                 expect(data.successBody).toBe('Your nation: Bitnation was created successfully');
@@ -25,7 +46,17 @@ describe('nation', () => {
             })
         };
 
-        const nations = nationsFactory(dbFactory(randomPath()), txQueue);
+        const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
+        web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
+
+        const ee = new EventEmitter();
+
+        //Make sure to confirm nation creation
+        ee.on(NATION_CREATE, function (eventData) {
+            eventData.confirm();
+        });
+
+        const nations = nationsFactory(dbFactory(randomPath()), txQueue, web3, ee, NATION_CONTRACT_ADDR);
 
         const nationData = {
             nationName: 'Bitnation',
@@ -78,7 +109,17 @@ describe('nation', () => {
             addJob: () => new Promise((res, rej) => res())
         };
 
-        const nations = nationsFactory(dbFactory(randomPath()), txQueue);
+        const ee = new EventEmitter();
+
+        //Make sure to confirm nation creation
+        ee.on(NATION_CREATE, function (eventData) {
+            eventData.confirm();
+        });
+
+        const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
+        web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
+
+        const nations = nationsFactory(dbFactory(randomPath()), txQueue, web3, ee);
 
         const nationData = {
             nationName: 'Bitnation',
@@ -122,7 +163,17 @@ describe('nation', () => {
             addJob: () => new Promise((res, rej) => res())
         };
 
-        const nations = nationsFactory(dbFactory(randomPath()), txQueue);
+        const ee = new EventEmitter();
+
+        //Make sure to confirm nation creation
+        ee.on(NATION_CREATE, function (eventData) {
+            eventData.confirm();
+        });
+
+        const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
+        web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
+
+        const nations = nationsFactory(dbFactory(randomPath()), txQueue, web3, ee);
 
         const nationData = {
             nationName: 'Bitnation',
@@ -152,6 +203,6 @@ describe('nation', () => {
             })
             .catch(done.fail);
 
-    })
+    });
 
 });

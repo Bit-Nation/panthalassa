@@ -5,10 +5,7 @@ import type {DBInterface} from "../database/db";
 import type {TransactionQueueInterface} from "../queues/transaction";
 import type {TransactionJobInputType} from "../queues/transaction";
 import {NATION_CREATE} from '../events';
-import {NATION_CONTRACT_ABI} from '../constants'
 const Web3 = require('web3');
-const waterfall = require('async/waterfall');
-const BigNumber = require('bignumber.js');
 const EventEmitter = require('eventemitter3');
 
 /**
@@ -93,105 +90,51 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
                 })
                 .then((nation:NationType) => {
 
-                    const nationContract = web3.eth.contract(NATION_CONTRACT_ABI).at(nationContractAddress);
-
                     /**
-                     * Calculate gas for the whole nation creation process
+                     * submit data to job queue
                      */
-                    const gasSummary = {};
-                    waterfall([
-                        (cb) => {
-                            //@todo change the to address to real address of contract
-                            gasSummary.nationCore = web3.eth.estimateGas({
-                                data: nationContract.createNationCore.getData(
-                                    nation.nationName,
-                                    nation.nationDescription,
-                                    nation.exists,
-                                    nation.virtualNation
-                                ),
-                                to: '0x627306090abaB3A6e1400e9345bC60c78a8BEf57'
-                            });
+                    const createNation = () => {
 
-                            cb()
-                        },
-                        (cb) => {
-
-                            gasSummary.nationPolicy = web3.eth.estimateGas({
-                                data: nationContract.SetNationPolicy.getData(
-                                    999999999999999999,
-                                    nation.nationCode,
-                                    "",
-                                    nation.lawEnforcementMechanism,
-                                    nation.profit
-                                ),
-                                to: "0x627306090abaB3A6e1400e9345bC60c78a8BEf57"
-                            });
-
-                            cb()
-
-                        },
-                        (cb) => {
-
-                            gasSummary.nationGovernance = web3.eth.estimateGas({
-                                data: nationContract.SetNationGovernance.getData(
-                                    999999999999999999,
-                                    nation.decisionMakingProcess,
-                                    nation.diplomaticRecognition,
-                                    nation.governanceService,
-                                    nation.nonCitizenUse
-                                ),
-                                to: "0x627306090abaB3A6e1400e9345bC60c78a8BEf57"
-                            });
-
-                            cb();
-                        }
-                    ], function (err) {
-
-                        if (err) {
-                            return rej(err);
-                        }
-
-                        //Gas price for nation creation (in wei). ethToSpend = gas * gasPrice
-                        const gasPrice = web3.toWei(30, 'gwei');
-
-                        //price for all three transactions (nation creation must be submitted in multiple transactions)
-                        let totalPrice = new BigNumber(gasSummary.nationCore + gasSummary.nationPolicy + gasSummary.nationGovernance);
-                        totalPrice = web3.fromWei(totalPrice.times(gasPrice), 'ether').toString(10);
-
-                        /**
-                         * submit data to job queue
-                         */
-                        const createNation = () => {
-
-                            const txJob:TransactionJobInputType = {
-                                timeout: 30,
-                                processor: 'NATION',
-                                data: {
-                                    dataBaseId: nation.id,
-                                    gasSummary: gasSummary,
-                                    gasPrice: gasPrice,
-                                    from: address
-                                },
-                                successHeading: `Nation created`,
-                                successBody: `Your nation: ${nation.nationName} was created successfully`,
-                                failHeading: 'Failed to create nation',
-                                failBody: ''
-                            };
-
-                            txQueue
-                                .addJob(txJob)
-                                .then(_ => res(nation))
-                                .catch(rej);
-
+                        const txJob:TransactionJobInputType = {
+                            timeout: 60,
+                            processor: 'NATION',
+                            data: {
+                                dataBaseId: nation.id,
+                                gasPrice: web3.toWei(30, 'gwei'),
+                                from: address,
+                                steps: {
+                                    createNationCore: {
+                                        done: false,
+                                        txHash: ""
+                                    },
+                                    setNationPolicy: {
+                                        done: false,
+                                        txHash: ""
+                                    },
+                                    setNationGovernance: {
+                                        done: false,
+                                        txHash: ""
+                                    }
+                                }
+                            },
+                            successHeading: `Nation created`,
+                            successBody: `Your nation: ${nation.nationName} was created successfully`,
+                            failHeading: 'Failed to create nation',
+                            failBody: ''
                         };
 
-                        ee.emit(NATION_CREATE, {
-                            heading: `Confirm nation creation`,
-                            msg: `In order to create your nation you have to pay ${totalPrice} ETH. Please confirm or abort it.`,
-                            confirm: createNation,
-                            abort: async () => await db.write((realm) => realm.delete(nation))
-                        });
+                        txQueue
+                            .addJob(txJob)
+                            .then(_ => res(nation))
+                            .catch(rej);
 
+                    };
+
+                    ee.emit(NATION_CREATE, {
+                        heading: `Confirm nation creation`,
+                        msg: `In order to create your nation you have to pay 0.05 ETH. Please confirm or abort it.`,
+                        confirm: createNation,
+                        abort: async () => await db.write((realm) => realm.delete(nation))
                     });
 
                 })
