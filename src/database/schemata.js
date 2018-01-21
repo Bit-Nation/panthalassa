@@ -198,6 +198,10 @@ export const NationSchema = {
             default: -1,
             type: 'int'
         },
+        txHash: {
+            type: 'string',
+            optional: true
+        },
         created: 'bool',
         nationName: 'string',
         nationDescription: 'string',
