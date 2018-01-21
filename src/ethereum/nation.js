@@ -4,7 +4,6 @@ import type {NationType} from "../database/schemata";
 import type {DBInterface} from "../database/db";
 import type {TransactionQueueInterface} from "../queues/transaction";
 import {NATION_CONTRACT_ABI} from '../constants'
-import {NATION_CREATE} from '../events';
 const Web3 = require('web3');
 const EventEmitter = require('eventemitter3');
 
@@ -63,8 +62,6 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
     const impl:NationInterface = {
         create: (nationData:NationInputType) : Promise<NationType> => new Promise((res, rej) => {
 
-            //@todo check if address is valid
-            const address = web3.eth.defaultAccount;
 
             db
                 .write(function (realm) {
@@ -94,13 +91,17 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
 
                     nationContract.createNation(
                         JSON.stringify(nationData),
-                        function (err, data) {
+                        function (err, txHash) {
 
                             if(err){
-                                throw err;
+                                return rej(err);
                             }
 
-                            console.log(data);
+                            //Attach transaction hash to nation
+                            db
+                                .write(realm => nation.txHash = txHash)
+                                .then(res)
+                                .catch(rej);
 
                         }
                     )
