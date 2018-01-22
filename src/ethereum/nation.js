@@ -46,7 +46,8 @@ export interface NationInterface {
     create(nationData:NationInputType) : Promise<NationType>,
     all() : Promise<NationType>,
     index() : Promise<void>,
-    joinNation(id:number) : Promise<void>
+    joinNation(id:number) : Promise<void>,
+    leaveNation(id:number) : Promise<void>
 }
 
 /**
@@ -211,6 +212,19 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
                 }
 
                 res();
+
+            })
+
+        }),
+        leaveNation: (id:number) : Promise<void> => new Promise((res, rej) => {
+
+            nationContract.leaveNation(id, function (err, txHash) {
+
+                if(err){
+                    return rej(err);
+                }
+
+                return res();
 
             })
 
