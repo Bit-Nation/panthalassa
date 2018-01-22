@@ -45,7 +45,8 @@ export type NationInputType = {
 export interface NationInterface {
     create(nationData:NationInputType) : Promise<NationType>,
     all() : Promise<NationType>,
-    index() : Promise<void>
+    index() : Promise<void>,
+    joinNation(id:number) : Promise<void>
 }
 
 /**
@@ -197,6 +198,19 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
 
                     res();
                 })
+
+            })
+
+        }),
+        joinNation: (id:number) : Promise<void> => new Promise((res, rej) => {
+
+            nationContract.joinNation(id, function (err, txHash) {
+
+                if(err){
+                    return rej(err);
+                }
+
+                res();
 
             })
 
