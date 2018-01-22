@@ -12,7 +12,7 @@ import nationFactory from './ethereum/nation';
 import {APP_OFFLINE, AMOUNT_OF_ADDRESSES_CHANGED, APP_ONLINE} from './events';
 import txQueueFactory from './queues/transaction';
 import messagingFactory from './queues/messaging';
-import {NATION_CONTRACT_ADDRESS_DEV, NATION_CONTRACT_ADDRESS_PROD} from './constants';
+import {NATION_CONTRACT_ABI, NATION_CONTRACT_ADDRESS_DEV, NATION_CONTRACT_ADDRESS_PROD} from './constants';
 const EventEmitter = require('eventemitter3');
 
 /**
@@ -37,10 +37,10 @@ export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: st
     const pangeaLibs = {
         eventEmitter: ee,
         eth: {
-            utils: ethUtils
+            utils: ethUtils,
         },
         queue: {
-            txQueue: txQueue
+            txQueue: txQueue,
         },
         profile: {
             profile,
@@ -56,9 +56,11 @@ export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: st
             .then((web3) => {
                 // $FlowFixMe
                 pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
-                // $FlowFixMe
-                pangeaLibs.eth.nation = nationFactory(db, txQueue, web3, ee, nationContractAddress);
 
+                const nationContract = web3.eth.contract(NATION_CONTRACT_ABI).at(nationContractAddress);
+
+                // $FlowFixMe
+                pangeaLibs.eth.nation = nationFactory(db, txQueue, web3, ee, nationContract);
             })
             .catch((e) => {
                 throw e;
@@ -90,8 +92,11 @@ export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: st
             .then((web3) => {
                 // $FlowFixMe
                 pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
+
+                const nationContract = web3.eth.contract(NATION_CONTRACT_ABI).at(nationContractAddress);
+
                 // $FlowFixMe
-                pangeaLibs.eth.nation = nationFactory(db, txQueue, web3, ee, nationContractAddress);
+                pangeaLibs.eth.nation = nationFactory(db, txQueue, web3, ee, nationContract);
 
                 res(pangeaLibs);
             })

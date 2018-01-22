@@ -300,7 +300,7 @@ export default function utilsFactory(ss: SecureStorageInterface, ee: EventEmitte
 
             const web3 = new Web3();
 
-            //calculate tx fee's
+            // calculate tx fee's
             let txFee = new BigNumber(txData.gas);
             txFee = txFee.times(txData.gasPrice).toString(10);
 

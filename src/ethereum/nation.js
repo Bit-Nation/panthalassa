@@ -1,9 +1,8 @@
-//@flow
+// @flow
 
-import type {NationType} from "../database/schemata";
-import type {DBInterface} from "../database/db";
-import type {TransactionQueueInterface} from "../queues/transaction";
-import {NATION_CONTRACT_ABI} from '../constants'
+import type {NationType} from '../database/schemata';
+import type {DBInterface} from '../database/db';
+import type {TransactionQueueInterface} from '../queues/transaction';
 const Web3 = require('web3');
 const EventEmitter = require('eventemitter3');
 const eachSeries = require('async/eachSeries');
@@ -44,11 +43,11 @@ export type NationInputType = {
  * @property {function()} all fetch all nations
  */
 export interface NationInterface {
-    create(nationData:NationInputType) : Promise<NationType>,
+    create(nationData: NationInputType) : Promise<NationType>,
     all() : Promise<NationType>,
     index() : Promise<void>,
-    joinNation(id:number) : Promise<void>,
-    leaveNation(id:number) : Promise<void>
+    joinNation(id: number) : Promise<void>,
+    leaveNation(id: number) : Promise<void>
 }
 
 /**
@@ -57,23 +56,17 @@ export interface NationInterface {
  * @param {TransactionQueueInterface} txQueue
  * @param {Web3} web3
  * @param {EventEmitter} ee
- * @param {string} nationContractAddress
+ * @param {object} nationContract
  * @return {NationInterface}
  */
-export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3:Web3, ee:EventEmitter, nationContractAddress: string) {
-
-    const nationContract = web3.eth.contract(NATION_CONTRACT_ABI).at(nationContractAddress);
-
+export default function(db: DBInterface, txQueue: TransactionQueueInterface, web3: Web3, ee: EventEmitter, nationContract: {...any}) {
     const impl:NationInterface = {
-        create: (nationData:NationInputType) : Promise<NationType> => new Promise((res, rej) => {
-
-
+        create: (nationData: NationInputType): Promise<NationType> => new Promise((res, rej) => {
             db
-                .write(function (realm) {
-
-                    //Persist nation data
-                    //created is set to false, since the nation is not written
-                    //to the blockchain
+                .write(function(realm) {
+                    // Persist nation data
+                    // created is set to false, since the nation is not written
+                    // to the blockchain
                     const nation = realm.create('Nation', {
                         id: realm.objects('Nation').length +1,
                         created: false,
@@ -87,42 +80,35 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
                         nonCitizenUse: nationData.nonCitizenUse,
                         diplomaticRecognition: nationData.diplomaticRecognition,
                         decisionMakingProcess: nationData.decisionMakingProcess,
-                        governanceService: nationData.governanceService
+                        governanceService: nationData.governanceService,
                     });
 
                     return nation;
                 })
-                .then((nation:NationType) => {
-
+                .then((nation: NationType) => {
                     nationContract.createNation(
                         JSON.stringify(nationData),
-                        function (err, txHash) {
-
-                            if(err){
+                        function(err, txHash) {
+                            if (err) {
                                 return rej(err);
                             }
 
-                            //Attach transaction hash to nation
+                            // Attach transaction hash to nation
                             db
-                                .write(realm => nation.txHash = txHash)
-                                .then(res)
+                                .write((realm) => nation.txHash = txHash)
+                                .then((_) => res(nation))
                                 .catch(rej);
-
                         }
-                    )
-
+                    );
                 })
-                .catch(rej)
-
+                .catch(rej);
         }),
         all: () => db.query((realm) => realm.objects('Nation')),
         index: () => new Promise((res, rej) => {
-
             const nationCreatedEvent = nationContract.NationCreated({}, {fromBlock: 0, toBlock: 'latest'});
 
-            nationCreatedEvent.get(function (err, logs) {
-
-                if(err){
+            nationCreatedEvent.get(function(err, logs) {
+                if (err) {
                     return rej(err);
                 }
 
@@ -131,39 +117,34 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
                 waterfall(
                     [
                         (cb) => {
-                            nationContract.getJoinedNations(function (err, res) {
-
-                                if(err){
+                            nationContract.getJoinedNations(function(err, res) {
+                                if (err) {
                                     return cb(err);
                                 }
 
-                                res.map(nationBigNumber => joinedNations.push(nationBigNumber.toNumber()));
+                                res.map((nationBigNumber) => joinedNations.push(nationBigNumber.toNumber()));
 
                                 cb();
-
-                            })
+                            });
                         },
                         (cb) => {
-                            eachSeries(logs, function (log, cb) {
-
+                            eachSeries(logs, function(log, cb) {
                                 const nationId = log.args.nationId.toNumber();
 
-                                nationContract.getNumCitizens(nationId, function (err, citizens) {
-
-                                    if(err){
+                                nationContract.getNumCitizens(nationId, function(err, citizens) {
+                                    if (err) {
                                         return cb(err);
                                     }
 
                                     citizens = citizens.toNumber();
 
                                     db
-                                    //We query for txHash since we get the tx hash when submitting the nation to the blockchain
+                                    // We query for txHash since we get the tx hash when submitting the nation to the blockchain
                                         .query((realm) => realm.objects('Nation').filtered(`txHash = "${log.transactionHash}"`))
-                                        .then(nations => {
-
+                                        .then((nations) => {
                                             const nation = nations[0];
 
-                                            if(nation){
+                                            if (nation) {
                                                 return db.write((realm) => {
                                                     nation.idInSmartContract = nationId;
                                                     nation.created = true;
@@ -173,22 +154,19 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
                                             }
 
                                             return new Promise((res, rej) => {
-
-                                                nationContract.getNationMetaData(nationId, function (err, result) {
-
-                                                    if(err){
+                                                nationContract.getNationMetaData(nationId, function(err, result) {
+                                                    if (err) {
                                                         return rej(err);
                                                     }
 
-                                                    try{
+                                                    try {
                                                         result = JSON.parse(result);
-                                                    }catch (e){
+                                                    } catch (e) {
                                                         return rej(e);
                                                     }
 
                                                     db
                                                         .write((realm) => {
-
                                                             const nationCount = realm.objects('Nation').length;
 
                                                             realm.create('Nation', {
@@ -208,74 +186,55 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
                                                                 decisionMakingProcess: result.decisionMakingProcess,
                                                                 governanceService: result.governanceService,
                                                                 joined: joinedNations.includes(nationId),
-                                                                citizens: citizens
-                                                            })
-
+                                                                citizens: citizens,
+                                                            });
                                                         })
-                                                        .then(_ => res())
+                                                        .then((_) => res())
                                                         .catch(rej);
-
                                                 });
-
-                                            })
+                                            });
                                         })
-                                        .then(_ => setTimeout(cb, 200))
+                                        .then((_) => setTimeout(cb, 200))
                                         .catch(cb);
-
                                 });
-
-                            }, function (err) {
-
-                                if(err){
+                            }, function(err) {
+                                if (err) {
                                     return rej(err);
                                 }
 
                                 cb();
-                            })
-                        }
+                            });
+                        },
                     ],
-                    function (err) {
-
-                        if(err){
+                    function(err) {
+                        if (err) {
                             return rej(err);
                         }
 
                         res();
-
                     }
-                )
-
-            })
-
+                );
+            });
         }),
-        joinNation: (id:number) : Promise<void> => new Promise((res, rej) => {
-
-            nationContract.joinNation(id, function (err, txHash) {
-
-                if(err){
+        joinNation: (id: number): Promise<void> => new Promise((res, rej) => {
+            nationContract.joinNation(id, function(err, txHash) {
+                if (err) {
                     return rej(err);
                 }
-                console.log(txHash);
+
                 res();
-
-            })
-
+            });
         }),
-        leaveNation: (id:number) : Promise<void> => new Promise((res, rej) => {
-
-            nationContract.leaveNation(id, function (err, txHash) {
-
-                if(err){
+        leaveNation: (id: number): Promise<void> => new Promise((res, rej) => {
+            nationContract.leaveNation(id, function(err, txHash) {
+                if (err) {
                     return rej(err);
                 }
 
                 return res();
-
-            })
-
-        })
+            });
+        }),
     };
 
     return impl;
-
 }

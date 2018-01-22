@@ -1,9 +1,9 @@
-//@flow
+// @flow
 
-import type {TransactionJobType} from "../database/schemata";
-import type {DBInterface} from "../database/db";
-import {TRANSACTION_QUEUE_JOB_ADDED} from '../events'
-import type {TxData} from "../specification/tx";
+import type {TransactionJobType} from '../database/schemata';
+import type {DBInterface} from '../database/db';
+import {TRANSACTION_QUEUE_JOB_ADDED} from '../events';
+import type {TxData} from '../specification/tx';
 const EventEmitter = require('eventemitter3');
 const each = require('async/each');
 const Realm = require('realm');
@@ -13,8 +13,8 @@ const Realm = require('realm');
  * @property {function(job:TransactionJobInputType) : Promise<void>} addJob Add's an job to the queue and emit's the "transaction_queue:job:added" event
  */
 export interface TransactionQueueInterface {
-    addJob(job:TransactionJobInputType) : Promise<void>,
-    registerProcessor(name:string, processor: (done: (job:TransactionJobType) => void, job:TransactionJobType) => void) : void,
+    addJob(job: TransactionJobInputType) : Promise<void>,
+    registerProcessor(name: string, processor: (done: (job: TransactionJobType) => void, job: TransactionJobType) => void) : void,
     process() : Promise<void>
 }
 
@@ -44,14 +44,12 @@ export type TransactionJobInputType = {
  * @param {EventEmitter} ee
  * @return {TransactionQueueInterface}
  */
-export default function (db:DBInterface, ee:EventEmitter) : TransactionQueueInterface {
-
+export default function(db: DBInterface, ee: EventEmitter): TransactionQueueInterface {
     const impl = {
         processors: {},
-        addJob: (job:TransactionJobInputType) : Promise<void> => new Promise((res, rej) => {
+        addJob: (job: TransactionJobInputType): Promise<void> => new Promise((res, rej) => {
             db
                 .write((realm) => {
-
                     realm.create('TransactionJob', {
                         timeout: job.timeout,
                         processor: job.processor,
@@ -62,38 +60,30 @@ export default function (db:DBInterface, ee:EventEmitter) : TransactionQueueInte
                         successBody: job.successBody,
                         failHeading: job.failHeading,
                         failBody: job.failBody,
-                        status: 'WAITING'
-                    })
-
+                        status: 'WAITING',
+                    });
                 })
-                .then(_ => {
-
+                .then((_) => {
                     ee.emit(TRANSACTION_QUEUE_JOB_ADDED);
 
                     res();
-
                 })
-                .catch(rej)
+                .catch(rej);
         }),
-        registerProcessor: (name:string, processor: (done: (job:TransactionJobType) => void, job:TransactionJobType) => void) : void => {
-
+        registerProcessor: (name: string, processor: (done: (job: TransactionJobType) => void, job: TransactionJobType) => void): void => {
             impl.processors[name] = processor;
-
         },
-        process: () : Promise<void> => new Promise((res, rej) => {
-
+        process: (): Promise<void> => new Promise((res, rej) => {
             db
-                .query(function (realm) {
+                .query(function(realm) {
                     return realm.objects('TransactionJob');
                 })
                 .then((jobs) => {
-
-                    each(jobs, function (TXJob:TransactionJobType, cb) {
-
-                        //find processor
+                    each(jobs, function(TXJob: TransactionJobType, cb) {
+                        // find processor
                         const processor = impl.processors[TXJob.processor];
 
-                        if(typeof processor !== 'function'){
+                        if (typeof processor !== 'function') {
                             return rej(new Error(`Couldn't find processor for ${TXJob.processor}`));
                         }
 
@@ -101,41 +91,33 @@ export default function (db:DBInterface, ee:EventEmitter) : TransactionQueueInte
                          * @desc This should be called in the processor to end the job
                          * @param {TransactionJobType} job
                          */
-                        function done(job:TransactionJobType) {
-
-                            if(typeof job.data !== 'string'){
+                        function done(job: TransactionJobType) {
+                            if (typeof job.data !== 'string') {
                                 return rej('data must be an string');
                             }
 
                             job.id = TXJob.id;
 
                             db
-                                .write((realm:Realm) => realm.create('TransactionJob', job, true))
-                                .then(_ => cb())
-                                .catch(error => cb(error));
-
+                                .write((realm: Realm) => realm.create('TransactionJob', job, true))
+                                .then((_) => cb())
+                                .catch((error) => cb(error));
                         }
 
-                        //JOSN.parse / stringify is used to remove the realm context from the object
-                        //there might be a better solution for it
+                        // JOSN.parse / stringify is used to remove the realm context from the object
+                        // there might be a better solution for it
                         processor(done, JSON.parse(JSON.stringify(TXJob)));
-
                     }, (error) => {
-
-                        if(error){
-                            return rej(error)
+                        if (error) {
+                            return rej(error);
                         }
 
                         res();
-
                     });
-
                 })
-                .catch(rej)
-
-        })
+                .catch(rej);
+        }),
     };
 
     return impl;
-
 }

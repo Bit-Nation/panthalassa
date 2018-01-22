@@ -1,20 +1,16 @@
 import nationsFactory from './nation';
 import dbFactory from '../database/db';
 import {NATION_CREATE} from '../events';
+import {NATION_CONTRACT_ABI} from '../constants';
 const EventEmitter = require('eventemitter3');
 const Web3 = require('web3');
-
-const NATION_CONTRACT_ADDR = "0xba221ca5c5d72dca6508dfda17efc0dd646a664d";
 
 const randomPath = () => 'database/'+Math.random();
 
 describe('nation', () => {
-
     test('create nation with tx queue job', (done) => {
-
         const txQueue = {
             addJob: jest.fn((data) => {
-
                 expect(data.timeout).toBe(60);
                 expect(data.processor).toBe('NATION');
                 expect(data.data).toEqual({
@@ -24,17 +20,17 @@ describe('nation', () => {
                     steps: {
                         createNationCore: {
                             done: false,
-                            txHash: ""
+                            txHash: '',
                         },
                         setNationPolicy: {
                             done: false,
-                            txHash: ""
+                            txHash: '',
                         },
                         setNationGovernance: {
                             done: false,
-                            txHash: ""
-                        }
-                    }
+                            txHash: '',
+                        },
+                    },
                 });
                 expect(data.successHeading).toBe('Nation created');
                 expect(data.successBody).toBe('Your nation: Bitnation was created successfully');
@@ -42,21 +38,13 @@ describe('nation', () => {
                 expect(data.failBody).toBe('');
 
                 return new Promise((res, rej) => res());
-
-            })
+            }),
         };
 
-        const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
+        const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/development'));
         web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
 
         const ee = new EventEmitter();
-
-        //Make sure to confirm nation creation
-        ee.on(NATION_CREATE, function (eventData) {
-            eventData.confirm();
-        });
-
-        const nations = nationsFactory(dbFactory(randomPath()), txQueue, web3, ee, NATION_CONTRACT_ADDR);
 
         const nationData = {
             nationName: 'Bitnation',
@@ -69,21 +57,34 @@ describe('nation', () => {
             nonCitizenUse: false,
             diplomaticRecognition: false,
             decisionMakingProcess: 'dictatorship',
-            governanceService: 'Security'
+            governanceService: 'Security',
         };
+
+        // Make sure to confirm nation creation
+        ee.on(NATION_CREATE, function(eventData) {
+            eventData.confirm();
+        });
+
+        const nationContractMock = {
+            createNation: jest.fn(function(data, cb) {
+                expect(JSON.parse(data)).toEqual(nationData);
+                cb(null, 'I_AM_A_TRANSACTION_HASH');
+            }),
+        };
+
+        const nations = nationsFactory(dbFactory(randomPath()), txQueue, web3, ee, nationContractMock);
 
         nations
             .create(nationData)
-            .then(nationData => {
+            .then((nationData) => {
+                // Make sure that the smart contract was called
+                expect(nationContractMock.createNation).toHaveBeenCalledTimes(1);
 
-                //Make sure that the id is incremented by one
-                expect(txQueue.addJob).toHaveBeenCalledTimes(1);
-
-                //Created by write action
+                // Created by write action
                 expect(nationData.id).toBe(1);
-                //Default value from realm
+                // Default value from realm
                 expect(nationData.idInSmartContract).toBe(-1);
-                //Should be false since all nation's are only created locally
+                // Should be false since all nation's are only created locally
                 expect(nationData.created).toBe(false);
                 expect(nationData.nationName).toBe('Bitnation');
                 expect(nationData.nationDescription).toBe('We <3 cryptography');
@@ -95,31 +96,35 @@ describe('nation', () => {
                 expect(nationData.nonCitizenUse).toBe(false);
                 expect(nationData.decisionMakingProcess).toBe('dictatorship');
                 expect(nationData.governanceService).toBe('Security');
+                expect(nationData.txHash).toBe('I_AM_A_TRANSACTION_HASH');
 
                 done();
-
             })
             .catch(done.fail);
-
     });
 
     test('increment database id', (done) => {
-
         const txQueue = {
-            addJob: () => new Promise((res, rej) => res())
+            addJob: () => new Promise((res, rej) => res()),
+        };
+
+        const nationContractMock = {
+            createNation: jest.fn(function(data, cb) {
+                cb(null, 'I_AM_A_TRANSACTION_HASH');
+            }),
         };
 
         const ee = new EventEmitter();
 
-        //Make sure to confirm nation creation
-        ee.on(NATION_CREATE, function (eventData) {
+        // Make sure to confirm nation creation
+        ee.on(NATION_CREATE, function(eventData) {
             eventData.confirm();
         });
 
         const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
         web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
 
-        const nations = nationsFactory(dbFactory(randomPath()), txQueue, web3, ee);
+        const nations = nationsFactory(dbFactory(randomPath()), txQueue, web3, ee, nationContractMock);
 
         const nationData = {
             nationName: 'Bitnation',
@@ -132,48 +137,49 @@ describe('nation', () => {
             nonCitizenUse: false,
             diplomaticRecognition: false,
             decisionMakingProcess: 'dictatorship',
-            governanceService: 'Security'
+            governanceService: 'Security',
         };
 
         nations
             .create(nationData)
-            .then(createdNation => {
-
-                //Created by write action
+            .then((createdNation) => {
+                // Created by write action
                 expect(createdNation.id).toBe(1);
 
-                //create a second nation with same data
+                // create a second nation with same data
                 return nations.create(nationData);
             })
-            .then(nationData => {
-
-                //Make sure that the id is incremented by one
+            .then((nationData) => {
+                // Make sure that the id is incremented by one
                 expect(nationData.id).toBe(2);
-                
-                done();
 
+                done();
             })
             .catch(done.fail);
-
     });
 
     test('nations', (done) => {
-
         const txQueue = {
-            addJob: () => new Promise((res, rej) => res())
+            addJob: () => new Promise((res, rej) => res()),
         };
 
         const ee = new EventEmitter();
 
-        //Make sure to confirm nation creation
-        ee.on(NATION_CREATE, function (eventData) {
+        // Make sure to confirm nation creation
+        ee.on(NATION_CREATE, function(eventData) {
             eventData.confirm();
         });
+
+        const nationContractMock = {
+            createNation: jest.fn(function(data, cb) {
+                cb(null, 'I_AM_A_TRANSACTION_HASH');
+            }),
+        };
 
         const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
         web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
 
-        const nations = nationsFactory(dbFactory(randomPath()), txQueue, web3, ee);
+        const nations = nationsFactory(dbFactory(randomPath()), txQueue, web3, ee, nationContractMock);
 
         const nationData = {
             nationName: 'Bitnation',
@@ -186,23 +192,19 @@ describe('nation', () => {
             nonCitizenUse: false,
             diplomaticRecognition: false,
             decisionMakingProcess: 'dictatorship',
-            governanceService: 'Security'
+            governanceService: 'Security',
         };
 
         nations
             .create(nationData)
-            .then(_ => nations.create(nationData))
-            .then(_ => nations.create(nationData))
-            .then(_ => nations.all())
-            .then(nations => {
-
+            .then((_) => nations.create(nationData))
+            .then((_) => nations.create(nationData))
+            .then((_) => nations.all())
+            .then((nations) => {
                 expect(nations.length).toBe(3);
 
                 done();
-
             })
             .catch(done.fail);
-
     });
-
 });

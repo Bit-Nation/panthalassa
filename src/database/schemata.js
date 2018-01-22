@@ -144,7 +144,7 @@ export const TransactionJobSchema = {
         processor: 'string',
         data: {
             type: 'string',
-            optional: true
+            optional: true,
         },
         successHeading: 'string',
         successBody: 'string',
@@ -199,11 +199,11 @@ export const NationSchema = {
         id: 'int',
         idInSmartContract: {
             default: -1,
-            type: 'int'
+            type: 'int',
         },
         txHash: {
             type: 'string',
-            optional: true
+            optional: true,
         },
         created: 'bool',
         nationName: 'string',
@@ -219,11 +219,11 @@ export const NationSchema = {
         governanceService: 'string',
         citizens: {
             type: 'int',
-            default: 0
+            default: 0,
         },
         joined: {
             type: 'bool',
-            default: false
-        }
-    }
+            default: false,
+        },
+    },
 };
