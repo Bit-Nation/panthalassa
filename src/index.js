@@ -10,6 +10,9 @@ import walletFactory from './ethereum/wallet';
 import type {OsDependenciesInterface} from './specification/osDependencies';
 import nationFactory from './ethereum/nation';
 import {APP_OFFLINE, AMOUNT_OF_ADDRESSES_CHANGED, APP_ONLINE} from './events';
+import txQueueFactory from './queues/transaction';
+import messagingFactory from './queues/messaging';
+import {NATION_CONTRACT_ADDRESS_DEV, NATION_CONTRACT_ADDRESS_PROD} from './constants';
 const EventEmitter = require('eventemitter3');
 
 /**
@@ -19,21 +22,26 @@ const EventEmitter = require('eventemitter3');
  * @param {OsDependenciesInterface} osDeps
  * @param {EventEmitter} ee
  * @param {boolean} networkAccess
+ * @param {boolean} production
  * @return {Promise<{...mixed}>}
  */
-export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: string, rpcNode: JsonRpcNodeInterface, osDeps: OsDependenciesInterface, ee: EventEmitter, networkAccess: boolean): Promise<{...mixed}> {
+export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: string, rpcNode: JsonRpcNodeInterface, osDeps: OsDependenciesInterface, ee: EventEmitter, networkAccess: boolean, production: boolean): Promise<{...mixed}> {
     const db = dbFactory(dbPath);
     const ethUtils = utilsFactory(ss, ee, osDeps);
     const profile = profileFactory(db, ethUtils);
-    const nation = nationFactory(db);
+    const msgQueue = messagingFactory(ee, db);
+    const txQueue = txQueueFactory(db, ee);
+
+    const nationContractAddress = (production ? NATION_CONTRACT_ADDRESS_PROD : NATION_CONTRACT_ADDRESS_DEV);
 
     const pangeaLibs = {
         eventEmitter: ee,
         eth: {
-            utils: ethUtils,
-            nation: nation
+            utils: ethUtils
         },
-
+        queue: {
+            txQueue: txQueue
+        },
         profile: {
             profile,
         },
@@ -48,6 +56,9 @@ export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: st
             .then((web3) => {
                 // $FlowFixMe
                 pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
+                // $FlowFixMe
+                pangeaLibs.eth.nation = nationFactory(db, txQueue, web3, ee, nationContractAddress);
+
             })
             .catch((e) => {
                 throw e;
@@ -79,6 +90,9 @@ export default function pangeaLibsFactory(ss: SecureStorageInterface, dbPath: st
             .then((web3) => {
                 // $FlowFixMe
                 pangeaLibs.eth.wallet = walletFactory(ethUtils, web3, db);
+                // $FlowFixMe
+                pangeaLibs.eth.nation = nationFactory(db, txQueue, web3, ee, nationContractAddress);
+
                 res(pangeaLibs);
             })
             .catch(rej);
