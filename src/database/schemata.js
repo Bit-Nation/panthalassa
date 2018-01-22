@@ -144,7 +144,7 @@ export const TransactionJobSchema = {
         processor: 'string',
         data: {
             type: 'string',
-            optional: true
+            optional: true,
         },
         successHeading: 'string',
         successBody: 'string',
@@ -152,5 +152,78 @@ export const TransactionJobSchema = {
         failBody: 'string',
         status: 'string',
         version: 'int',
+    },
+};
+
+/**
+ * @typedef NationType
+ * @property {number} id
+ * @property {number} idInSmartContract
+ * @property {boolean} created Created mean's if it is on the blockchain
+ * @property {string} nationName
+ * @property {string} nationDescription
+ * @property {boolean} exists
+ * @property {boolean} virtualNation
+ * @property {string} nationCode
+ * @property {string} lawEnforcementMechanism
+ * @property {boolean} profit
+ * @property {boolean} nonCitizenUse
+ * @property {boolean} diplomaticRecognition
+ * @property {string} decisionMakingProcess
+ * @property {string} governanceService
+ */
+export type NationType = {
+    id: number,
+    idInSmartContract: number,
+    created: boolean,
+    nationName: string,
+    nationDescription: string,
+    exists: boolean,
+    virtualNation: boolean,
+    nationCode: string,
+    lawEnforcementMechanism: string,
+    profit: boolean,
+    nonCitizenUse: boolean,
+    diplomaticRecognition: boolean,
+    decisionMakingProcess: string,
+    governanceService: string,
+    citizens: number,
+    joined: boolean,
+    txHash: string
+}
+
+export const NationSchema = {
+    name: 'Nation',
+    primaryKey: 'id',
+    properties: {
+        id: 'int',
+        idInSmartContract: {
+            default: -1,
+            type: 'int',
+        },
+        txHash: {
+            type: 'string',
+            optional: true,
+        },
+        created: 'bool',
+        nationName: 'string',
+        nationDescription: 'string',
+        exists: 'bool',
+        virtualNation: 'bool',
+        nationCode: 'string',
+        lawEnforcementMechanism: 'string',
+        profit: 'bool',
+        nonCitizenUse: 'bool',
+        diplomaticRecognition: 'bool',
+        decisionMakingProcess: 'string',
+        governanceService: 'string',
+        citizens: {
+            type: 'int',
+            default: 0,
+        },
+        joined: {
+            type: 'bool',
+            default: false,
+        },
     },
 };

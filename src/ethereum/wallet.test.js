@@ -237,12 +237,14 @@ describe('wallet', () => {
                     expect(data.currency).toBe('ETH');
                     expect('number' === typeof data.synced_at).toBeTruthy();
                     expect(data.amount).toBe('0.000001');
+
                 }),
             };
 
             const dbMock = {
                 write: jest.fn((cb) => {
                     cb(realm);
+                    return new Promise((res, rej) => res());
                 }),
             };
 

@@ -19,7 +19,7 @@ export interface DBInterface {
      * Expect an callback that that will receive an instance of realm.
      * The callback should return nothing.
      */
-    write(writeAction: (realm: Realm) => void) : Promise<void>;
+    write(writeAction: (realm: Realm) => void) : Promise<any>;
 
 }
 
@@ -36,36 +36,26 @@ export default function dbFactory(path: string): DBInterface {
                 schemata.ProfileSchema,
                 schemata.AccountBalanceSchema,
                 schemata.MessageJobSchema,
-                schemata.TransactionJobSchema
+                schemata.TransactionJobSchema,
+                schemata.NationSchema,
             ],
         });
 
     const dbImplementation : DBInterface = {
 
-        query: (queryAction: (realm) => any): Promise<*> => {
-            return new Promise((res, rej) => {
-                realm
-                    .then((r) => {
-                        res(queryAction(r));
-                    })
-                    .catch((e) => rej(e));
-            });
-        },
+        query: (queryAction: (realm) => any): Promise<*> => new Promise((res, rej) => {
+            realm
+                .then((r) => res(queryAction(r)))
+                .catch(rej);
+        }),
 
-        write: (writeAction: (realm: any) => void): Promise<void> => {
-            return new Promise((res, rej) => {
-                'use strict';
+        write: (writeAction: (realm: any) => void): Promise<*> => new Promise((res, rej) => {
+            'use strict';
 
-                realm
-                    .then((r) => {
-                        r.write(() => {
-                            writeAction(r);
-                            res();
-                        });
-                    })
-                    .catch((e) => rej(e));
-            });
-        },
+            realm
+                .then((r) => r.write((_) => res(writeAction(r))))
+                .catch(rej);
+        }),
 
     };
 
