@@ -158,7 +158,7 @@ export const TransactionJobSchema = {
 /**
  * @typedef NationType
  * @property {number} id
- * @property {number} idOnBlockChain
+ * @property {number} idInSmartContract
  * @property {boolean} created Created mean's if it is on the blockchain
  * @property {string} nationName
  * @property {string} nationDescription
@@ -174,7 +174,7 @@ export const TransactionJobSchema = {
  */
 export type NationType = {
     id: number,
-    idOnBlockChain: number,
+    idInSmartContract: number,
     created: boolean,
     nationName: string,
     nationDescription: string,
@@ -186,7 +186,9 @@ export type NationType = {
     nonCitizenUse: boolean,
     diplomaticRecognition: boolean,
     decisionMakingProcess: string,
-    governanceService: string
+    governanceService: string,
+    citizens: number,
+    joined: boolean
 }
 
 export const NationSchema = {
@@ -213,6 +215,14 @@ export const NationSchema = {
         nonCitizenUse: 'bool',
         diplomaticRecognition: 'bool',
         decisionMakingProcess: 'string',
-        governanceService: 'string'
+        governanceService: 'string',
+        citizens: {
+            type: 'int',
+            default: 0
+        },
+        joined: {
+            type: 'bool',
+            default: false
+        }
     }
 };
