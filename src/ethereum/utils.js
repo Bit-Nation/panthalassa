@@ -17,7 +17,7 @@ const ethJsUtils = require('ethereumjs-util');
 const assert = require('assert');
 const BigNumber = require('bignumber.js');
 const Web3 = require('web3');
-import {AMOUNT_OF_ADDRESSES_CHANGED} from '../events';
+import {AMOUNT_OF_ADDRESSES_CHANGED, ETH_TX_SIGN} from '../events';
 
 const PRIVATE_ETH_KEY_PREFIX = 'PRIVATE_ETH_KEY#';
 
@@ -308,9 +308,10 @@ export default function utilsFactory(ss: SecureStorageInterface, ee: EventEmitte
              * client need's to react to this event
              * in order to sign the transaction
              */
-            ee.emit('eth:tx:sign', {
+            ee.emit(ETH_TX_SIGN, {
                 from: txData.from,
                 to: txData.to,
+                value: web3.fromWei(txData.value, 'ether'),
                 transactionFee: web3.fromWei(txFee, 'ether'),
                 confirm: () => {
                     tx.sign(pKB);
