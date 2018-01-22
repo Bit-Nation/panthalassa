@@ -3,9 +3,12 @@
 import utils from './utils';
 import {InvalidChecksumAddress} from './../errors';
 import wallet from './wallet';
+import dbFactory from '../database/db';
 const BigNumber = require('bignumber.js');
 
 const Web3 = require('web3');
+
+const dbPath = () => 'database/'+Math.random();
 
 describe('wallet', () => {
     'use strict';
@@ -15,7 +18,7 @@ describe('wallet', () => {
             const address = '0xfbb1b73c4f0bda4f67dca266ce6ef42f520fbb98';
 
             const filtered = jest.fn((filterString) => {
-                expect(filterString).toBe(`id == "${address}_ETH"`);
+                expect(filterString).toBe(`id == "0xFBb1b73C4f0BDa4f67dcA266ce6Ef42f520fBB98_ETH"`);
 
                 return [];
             });
@@ -227,46 +230,41 @@ describe('wallet', () => {
         test('success', (done) => {
             const address = '0x9901c66f2d4b95f7074b553da78084d708beca70';
 
-            const realm = {
-                create: jest.fn((schemaName, data, update) => {
-                    expect(update).toBe(true);
-                    expect(schemaName).toBe('AccountBalance');
-
-                    expect(data.id).toBe(address+'_ETH');
-                    expect(data.address).toBe(address);
-                    expect(data.currency).toBe('ETH');
-                    expect('number' === typeof data.synced_at).toBeTruthy();
-                    expect(data.amount).toBe('0.000001');
-
-                }),
-            };
-
-            const dbMock = {
-                write: jest.fn((cb) => {
-                    cb(realm);
-                    return new Promise((res, rej) => res());
-                }),
-            };
-
+            const db = dbFactory(dbPath());
+          
             const web3 = new Web3();
 
             web3.eth.getBalance = jest.fn((addr, cb) => {
-                expect(addr).toBe(address);
+                expect(addr).toBe('0x9901C66F2d4b95F7074b553DA78084D708BECA70');
 
                 cb(null, new BigNumber('1000000000000'));
             });
 
-            wallet(utils(), web3, dbMock).ethSync(address)
-                .then((_) => {
-                    expect(web3.eth.getBalance).toHaveBeenCalledTimes(1);
-                    expect(realm.create).toHaveBeenCalledTimes(1);
-                    expect(dbMock.write).toHaveBeenCalledTimes(1);
+            const w = wallet(utils(), web3, db);
+
+            db
+                .query((realm) => realm.objects('AccountBalance'))
+                .then(accountBalances => {
+                    expect(accountBalances.length).toBe(0);
+
+                    return w.ethSync(address);
+                })
+                .then(result => {
+                    expect(result).toBeUndefined();
+                    return db.query((realm) => realm.objects('AccountBalance'))
+                })
+                .then(accountBalances => {
+
+                    expect(accountBalances[0].id).toBe('0x9901C66F2d4b95F7074b553DA78084D708BECA70_ETH');
+                    expect(accountBalances[0].address).toBe('0x9901C66F2d4b95F7074b553DA78084D708BECA70');
+                    expect(accountBalances[0].amount).toBe('0.000001');
+                    expect(accountBalances[0].currency).toBe('ETH');
 
                     done();
+
                 })
-                .catch((error) => {
-                    throw error;
-                });
+                .catch(done.fail);
+
         });
 
         test('invalid address', (done) => {

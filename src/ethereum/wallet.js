@@ -81,9 +81,9 @@ export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, d
         ethBalance: (address: string): Promise<AccountBalanceType | null> => {
             return new Promise((res, rej) => {
                 try {
-                    ethUtils.normalizeAddress(address);
+                    address = ethUtils.normalizeAddress(address);
                 } catch (e) {
-                    rej(e);
+                    return rej(e);
                 }
 
                 db
@@ -106,7 +106,7 @@ export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, d
         },
         ethSync: (address: string): Promise<void> => new Promise((res, rej) => {
             try {
-                ethUtils.normalizeAddress(address);
+                address = ethUtils.normalizeAddress(address);
             } catch (e) {
                 return rej(e);
             }
@@ -129,11 +129,11 @@ export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, d
                             id: address+'_ETH',
                             address: address,
                             currency: 'ETH',
-                            synced_at: Date.now(),
+                            synced_at: new Date(),
                             amount: web3.fromWei(balance.toString(10), 'ether'),
                         }, true);
                     })
-                    .then((_) => res())
+                    .then(_ => res())
                     .catch(rej);
             });
         }),
