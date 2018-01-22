@@ -188,7 +188,8 @@ export type NationType = {
     decisionMakingProcess: string,
     governanceService: string,
     citizens: number,
-    joined: boolean
+    joined: boolean,
+    txHash: string
 }
 
 export const NationSchema = {
