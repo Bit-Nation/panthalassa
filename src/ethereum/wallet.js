@@ -86,19 +86,22 @@ export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, d
                     rej(e);
                 }
 
-                db.query((realm) => {
-                    const balances = realm.objects('AccountBalance').filtered(`id == "${address}_ETH"`);
+                db
+                    .query((realm) => {
+                        const balances = realm.objects('AccountBalance').filtered(`id == "${address}_ETH"`);
 
-                    if (balances.length <= 0) {
-                        return res(null);
-                    }
+                        if (balances.length <= 0) {
+                            return res(null);
+                        }
 
-                    if (balances.length === 1) {
-                        return res(balances[0]);
-                    }
+                        if (balances.length === 1) {
+                            return res(balances[0]);
+                        }
 
-                    rej(`Expected balances.length to be '<=1'. Got: ${balances.length}`);
-                });
+                        rej(`Expected balances.length to be '<=1'. Got: ${balances.length}`);
+                    })
+                    .then(res)
+                    .catch(rej);
             });
         },
         ethSync: (address: string): Promise<void> => new Promise((res, rej) => {
@@ -120,17 +123,19 @@ export default function walletFactory(ethUtils: EthUtilsInterface, web3: Web3, d
                     return rej(new Error('Fetched balance is not a string'));
                 }
 
-                db.write((realm) => {
-                    realm.create('AccountBalance', {
-                        id: address+'_ETH',
-                        address: address,
-                        currency: 'ETH',
-                        synced_at: Date.now(),
-                        amount: web3.fromWei(balance.toString(10), 'ether'),
-                    }, true);
+                db
+                    .write((realm) => {
+                        realm.create('AccountBalance', {
+                            id: address+'_ETH',
+                            address: address,
+                            currency: 'ETH',
+                            synced_at: Date.now(),
+                            amount: web3.fromWei(balance.toString(10), 'ether'),
+                        }, true);
 
-                    res();
-                });
+                    })
+                    .then(_ => res())
+                    .catch(rej);
             });
         }),
 
