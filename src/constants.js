@@ -1,302 +1,321 @@
 export const NATION_CONTRACT_ABI = [
     {
-        constant: false,
-        inputs: [
+        "constant": false,
+        "inputs": [
             {
-                name: "_nationId",
-                type: "uint256"
+                "name": "_nationId",
+                "type": "uint256"
             }
         ],
-        name: "joinNation",
-        outputs: [ ],
-        payable: false,
-        stateMutability: "nonpayable",
-        type: "function"
+        "name": "joinNation",
+        "outputs": [],
+        "payable": false,
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
-        constant: true,
-        inputs: [ ],
-        name: "numNations",
-        outputs: [
+        "constant": true,
+        "inputs": [],
+        "name": "numNations",
+        "outputs": [
             {
-                name: "",
-                type: "uint256"
+                "name": "",
+                "type": "uint256"
             }
         ],
-        payable: false,
-        stateMutability: "view",
-        type: "function"
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        constant: false,
-        inputs: [
+        "constant": true,
+        "inputs": [
             {
-                name: "_metaData",
-                type: "string"
+                "name": "_nationId",
+                "type": "uint256"
             }
         ],
-        name: "createNation",
-        outputs: [ ],
-        payable: false,
-        stateMutability: "nonpayable",
-        type: "function"
+        "name": "getNationMetaData",
+        "outputs": [
+            {
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        constant: true,
-        inputs: [
+        "constant": false,
+        "inputs": [
             {
-                name: "_citizenAddress",
-                type: "address"
+                "name": "_metaData",
+                "type": "string"
+            }
+        ],
+        "name": "createNation",
+        "outputs": [],
+        "payable": false,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [
+            {
+                "name": "_citizenAddress",
+                "type": "address"
             },
             {
-                name: "_nationId",
-                type: "uint256"
+                "name": "_nationId",
+                "type": "uint256"
             }
         ],
-        name: "checkCitizen",
-        outputs: [
+        "name": "checkCitizen",
+        "outputs": [
             {
-                name: "",
-                type: "bool"
+                "name": "",
+                "type": "bool"
             }
         ],
-        payable: false,
-        stateMutability: "view",
-        type: "function"
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        constant: false,
-        inputs: [
+        "constant": false,
+        "inputs": [
             {
-                name: "_nationId",
-                type: "uint256"
+                "name": "_nationId",
+                "type": "uint256"
             }
         ],
-        name: "leaveNation",
-        outputs: [ ],
-        payable: false,
-        stateMutability: "nonpayable",
-        type: "function"
+        "name": "leaveNation",
+        "outputs": [],
+        "payable": false,
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
-        constant: false,
-        inputs: [
+        "constant": false,
+        "inputs": [
             {
-                name: "_newNation",
-                type: "address"
+                "name": "_newNation",
+                "type": "address"
             }
         ],
-        name: "upgradeNation",
-        outputs: [ ],
-        payable: false,
-        stateMutability: "nonpayable",
-        type: "function"
+        "name": "upgradeNation",
+        "outputs": [],
+        "payable": false,
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
-        constant: true,
-        inputs: [ ],
-        name: "NationCoreVersion",
-        outputs: [
+        "constant": true,
+        "inputs": [],
+        "name": "NationCoreVersion",
+        "outputs": [
             {
-                name: "",
-                type: "uint256"
+                "name": "",
+                "type": "uint256"
             }
         ],
-        payable: false,
-        stateMutability: "view",
-        type: "function"
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        constant: true,
-        inputs: [ ],
-        name: "getInitializationBlock",
-        outputs: [
+        "constant": true,
+        "inputs": [],
+        "name": "getInitializationBlock",
+        "outputs": [
             {
-                name: "",
-                type: "uint256"
+                "name": "",
+                "type": "uint256"
             }
         ],
-        payable: false,
-        stateMutability: "view",
-        type: "function"
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        constant: true,
-        inputs: [ ],
-        name: "owner",
-        outputs: [
+        "constant": true,
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
             {
-                name: "",
-                type: "address"
+                "name": "",
+                "type": "address"
             }
         ],
-        payable: false,
-        stateMutability: "view",
-        type: "function"
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        constant: false,
-        inputs: [
+        "constant": false,
+        "inputs": [
             {
-                name: "_newOwner",
-                type: "address"
+                "name": "_newOwner",
+                "type": "address"
             }
         ],
-        name: "changeOwner",
-        outputs: [ ],
-        payable: false,
-        stateMutability: "nonpayable",
-        type: "function"
+        "name": "changeOwner",
+        "outputs": [],
+        "payable": false,
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
-        constant: true,
-        inputs: [ ],
-        name: "nationImpl",
-        outputs: [
+        "constant": true,
+        "inputs": [],
+        "name": "nationImpl",
+        "outputs": [
             {
-                name: "",
-                type: "address"
+                "name": "",
+                "type": "address"
             }
         ],
-        payable: false,
-        stateMutability: "view",
-        type: "function"
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        constant: true,
-        inputs: [
+        "constant": true,
+        "inputs": [
             {
-                name: "_founder",
-                type: "address"
+                "name": "_founder",
+                "type": "address"
             }
         ],
-        name: "getFoundedNations",
-        outputs: [
+        "name": "getFoundedNations",
+        "outputs": [
             {
-                name: "",
-                type: "uint256[]"
+                "name": "",
+                "type": "uint256[]"
             }
         ],
-        payable: false,
-        stateMutability: "view",
-        type: "function"
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        constant: false,
-        inputs: [
+        "constant": false,
+        "inputs": [
             {
-                name: "_owner",
-                type: "address"
+                "name": "_owner",
+                "type": "address"
             }
         ],
-        name: "initialize",
-        outputs: [ ],
-        payable: false,
-        stateMutability: "nonpayable",
-        type: "function"
+        "name": "initialize",
+        "outputs": [],
+        "payable": false,
+        "stateMutability": "nonpayable",
+        "type": "function"
     },
     {
-        constant: true,
-        inputs: [
+        "constant": true,
+        "inputs": [
             {
-                name: "_nationId",
-                type: "uint256"
+                "name": "_nationId",
+                "type": "uint256"
             }
         ],
-        name: "getNumCitizens",
-        outputs: [
+        "name": "getNumCitizens",
+        "outputs": [
             {
-                name: "",
-                type: "uint256"
+                "name": "",
+                "type": "uint256"
             }
         ],
-        payable: false,
-        stateMutability: "view",
-        type: "function"
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        inputs: [ ],
-        payable: false,
-        stateMutability: "nonpayable",
-        type: "constructor"
+        "inputs": [],
+        "payable": false,
+        "stateMutability": "nonpayable",
+        "type": "constructor"
     },
     {
-        anonymous: false,
-        inputs: [
+        "anonymous": false,
+        "inputs": [
             {
-                indexed: true,
-                name: "newNation",
-                type: "address"
+                "indexed": true,
+                "name": "newNation",
+                "type": "address"
             }
         ],
-        name: "UpgradeNation",
-        type: "event"
+        "name": "UpgradeNation",
+        "type": "event"
     },
     {
-        anonymous: false,
-        inputs: [
+        "anonymous": false,
+        "inputs": [
             {
-                indexed: true,
-                name: "newOwner",
-                type: "address"
+                "indexed": true,
+                "name": "newOwner",
+                "type": "address"
             }
         ],
-        name: "OwnerChanged",
-        type: "event"
+        "name": "OwnerChanged",
+        "type": "event"
     },
     {
-        anonymous: false,
-        inputs: [
+        "anonymous": false,
+        "inputs": [
             {
-                indexed: true,
-                name: "founder",
-                type: "address"
+                "indexed": true,
+                "name": "founder",
+                "type": "address"
             },
             {
-                indexed: true,
-                name: "nationId",
-                type: "uint256"
+                "indexed": true,
+                "name": "nationId",
+                "type": "uint256"
             }
         ],
-        name: "NationCreated",
-        type: "event"
+        "name": "NationCreated",
+        "type": "event"
     },
     {
-        anonymous: false,
-        inputs: [
+        "anonymous": false,
+        "inputs": [
             {
-                indexed: true,
-                name: "nationId",
-                type: "uint256"
+                "indexed": true,
+                "name": "nationId",
+                "type": "uint256"
             },
             {
-                indexed: false,
-                name: "citizenAddress",
-                type: "address"
+                "indexed": false,
+                "name": "citizenAddress",
+                "type": "address"
             }
         ],
-        name: "CitizenJoined",
-        type: "event"
+        "name": "CitizenJoined",
+        "type": "event"
     },
     {
-        anonymous: false,
-        inputs: [
+        "anonymous": false,
+        "inputs": [
             {
-                indexed: true,
-                name: "nationId",
-                type: "uint256"
+                "indexed": true,
+                "name": "nationId",
+                "type": "uint256"
             },
             {
-                indexed: false,
-                name: "citizenAddress",
-                type: "address"
+                "indexed": false,
+                "name": "citizenAddress",
+                "type": "address"
             }
         ],
-        name: "CitizenLeft",
-        type: "event"
+        "name": "CitizenLeft",
+        "type": "event"
     }
 ];
 
-export const NATION_CONTRACT_ADDRESS_DEV = "0xdC0Abc72874CdBb4FAe148cC4BaC35A6A3b585c3";
+export const NATION_CONTRACT_ADDRESS_DEV = "0x4089fd6a2d193b7564b48a0c8178664f40cfef3f";
 
 export const NATION_CONTRACT_ADDRESS_PROD = "";

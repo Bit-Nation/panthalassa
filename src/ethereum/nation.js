@@ -6,6 +6,7 @@ import type {TransactionQueueInterface} from "../queues/transaction";
 import {NATION_CONTRACT_ABI} from '../constants'
 const Web3 = require('web3');
 const EventEmitter = require('eventemitter3');
+const eachSeries = require('async/eachSeries');
 
 /**
  * @typedef NationType
@@ -43,7 +44,8 @@ export type NationInputType = {
  */
 export interface NationInterface {
     create(nationData:NationInputType) : Promise<NationType>,
-    all() : Promise<NationType>
+    all() : Promise<NationType>,
+    index() : Promise<void>
 }
 
 /**
@@ -110,7 +112,95 @@ export default function (db:DBInterface, txQueue:TransactionQueueInterface, web3
                 .catch(rej)
 
         }),
-        all: () => db.query((realm) => realm.objects('Nation'))
+        all: () => db.query((realm) => realm.objects('Nation')),
+        index: () => new Promise((res, rej) => {
+
+            const event = nationContract.NationCreated({}, {fromBlock: 0, toBlock: 'latest'});
+
+            event.get(function (err, logs) {
+
+                if(err){
+                    return rej(err);
+                }
+
+                eachSeries(logs, function (log, cb) {
+
+                    const nationId = log.args.nationId.toNumber();
+
+                    db
+                        //We query for txHash since we get the tx hash when submitting the nation to the blockchain
+                        .query((realm) => realm.objects('Nation').filtered(`txHash = "${log.transactionHash}"`))
+                        .then(nations => {
+
+                            const nation = nations[0];
+
+                            if(nation){
+                                return db.write((realm) => {
+                                    nation.idOnBlockChain = nationId;
+                                    nation.created = true;
+                                });
+                            }
+
+                            return new Promise((res, rej) => {
+
+                                nationContract.getNationMetaData(nationId, function (err, result) {
+
+                                    if(err){
+                                        return rej(err);
+                                    }
+
+                                    try{
+                                        result = JSON.parse(result);
+                                    }catch (e){
+                                        return rej(e);
+                                    }
+
+                                    db
+                                        .write((realm) => {
+
+                                            const nationCount = realm.objects('Nation').length;
+
+                                            realm.create('Nation', {
+                                                id: nationCount+1,
+                                                idInSmartContract: nationId,
+                                                txHash: log.transactionHash,
+                                                nationName: result.nationName,
+                                                nationDescription: result.nationDescription,
+                                                created: true,
+                                                exists: result.exists,
+                                                virtualNation: result.virtualNation,
+                                                nationCode: result.nationCode,
+                                                lawEnforcementMechanism: result.lawEnforcementMechanism,
+                                                profit: result.profit,
+                                                nonCitizenUse: result.nonCitizenUse,
+                                                diplomaticRecognition: result.diplomaticRecognition,
+                                                decisionMakingProcess: result.decisionMakingProcess,
+                                                governanceService: result.governanceService
+                                            })
+
+                                        })
+                                        .then(_ => res())
+                                        .catch(rej);
+
+                                });
+
+                            })
+                        })
+                        .then(_ => setTimeout(cb, 200))
+                        .catch(cb);
+
+                }, function (err) {
+
+                    if(err){
+                        return rej(err);
+                    }
+
+                    res();
+                })
+
+            })
+
+        })
     };
 
     return impl;
