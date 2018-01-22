@@ -183,6 +183,20 @@ export const NATION_CONTRACT_ABI = [
     },
     {
         "constant": true,
+        "inputs": [],
+        "name": "getJoinedNations",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256[]"
+            }
+        ],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
         "inputs": [
             {
                 "name": "_founder",
@@ -316,6 +330,6 @@ export const NATION_CONTRACT_ABI = [
     }
 ];
 
-export const NATION_CONTRACT_ADDRESS_DEV = "0x4089fd6a2d193b7564b48a0c8178664f40cfef3f";
+export const NATION_CONTRACT_ADDRESS_DEV = "0x217707774f4fd67b6e69375e2eba5ac1d3895aea";
 
 export const NATION_CONTRACT_ADDRESS_PROD = "";
