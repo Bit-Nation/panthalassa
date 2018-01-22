@@ -318,4 +318,75 @@ describe('nation', () => {
 
     });
 
+    describe('index', () => {
+
+        test('NationCreated event filter', (done) => {
+
+            const nationContract = {
+                NationCreated: (filter, blockFilter) => {
+
+                    expect(filter).toEqual({});
+
+                    expect(blockFilter).toEqual({
+                        fromBlock: 0,
+                        toBlock:  'latest'
+                    });
+
+
+                    return {
+                        get: () => {
+
+                            done();
+
+                        }
+                    }
+
+                }
+            };
+
+            const nations = nationsFactory(null, null, null, null, nationContract);
+
+            nations
+                .index()
+                .then()
+
+        });
+
+        test('NationCreated event error handling', (done) => {
+
+            const nationContract = {
+                NationCreated: (filter, blockFilter) => {
+
+                    expect(filter).toEqual({});
+
+                    expect(blockFilter).toEqual({
+                        fromBlock: 0,
+                        toBlock:  'latest'
+                    });
+
+                    return {
+                        get: (cb) => {
+                            cb('i_am_an_error');
+                        }
+                    }
+
+                }
+            };
+
+            const nations = nationsFactory(null, null, null, null, nationContract);
+
+            nations
+                .index()
+                .then(_ => done.fail('should be rejected'))
+                .catch(error => {
+
+                    expect(error).toBe('i_am_an_error');
+                    done();
+
+                })
+
+        });
+
+    })
+
 });
