@@ -1,5 +1,5 @@
 // @flow
-//@todo move to ethereum/utils.js
+// @todo move to ethereum/utils.js
 /**
  * @typedef PrivateKeyType
  * @property {string} encryption should be an string of the encryption algo used

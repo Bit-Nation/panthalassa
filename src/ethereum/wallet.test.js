@@ -231,7 +231,7 @@ describe('wallet', () => {
             const address = '0x9901c66f2d4b95f7074b553da78084d708beca70';
 
             const db = dbFactory(dbPath());
-
+          
             const web3 = new Web3();
 
             web3.eth.getBalance = jest.fn((addr, cb) => {

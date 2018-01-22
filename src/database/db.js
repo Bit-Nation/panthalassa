@@ -37,7 +37,7 @@ export default function dbFactory(path: string): DBInterface {
                 schemata.AccountBalanceSchema,
                 schemata.MessageJobSchema,
                 schemata.TransactionJobSchema,
-                schemata.NationSchema
+                schemata.NationSchema,
             ],
         });
 
@@ -45,7 +45,7 @@ export default function dbFactory(path: string): DBInterface {
 
         query: (queryAction: (realm) => any): Promise<*> => new Promise((res, rej) => {
             realm
-                .then(r => res(queryAction(r)))
+                .then((r) => res(queryAction(r)))
                 .catch(rej);
         }),
 
@@ -53,7 +53,7 @@ export default function dbFactory(path: string): DBInterface {
             'use strict';
 
             realm
-                .then(r => r.write(_ => res(writeAction(r))))
+                .then((r) => r.write((_) => res(writeAction(r))))
                 .catch(rej);
         }),
 
