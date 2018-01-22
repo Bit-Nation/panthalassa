@@ -207,4 +207,115 @@ describe('nation', () => {
             })
             .catch(done.fail);
     });
+
+    describe('joinNation', () => {
+
+        test('success', (done) => {
+
+            const nationContractMock = {
+                joinNation: jest.fn(function (nationId, cb) {
+                    expect(nationId).toEqual(4);
+                    cb();
+                })
+            };
+
+            const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
+            web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
+
+            const nations = nationsFactory(null, null, null, null, nationContractMock);
+
+            nations
+                .joinNation(4)
+                .then(_ => {
+                    expect(_).toBeUndefined();
+                    done();
+                })
+                .catch(done.fail)
+
+        });
+
+        test('fail', (done) => {
+
+            const nationContractMock = {
+                joinNation: jest.fn(function (nationId, cb) {
+                    expect(nationId).toEqual(4);
+                    cb('i_am_a_error');
+                    done();
+                })
+            };
+
+            const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
+            web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
+
+            const nations = nationsFactory(null, null, null, null, nationContractMock);
+
+            nations
+                .joinNation(4)
+                .then(_ => {
+                    done.fail('should be rejected');
+                })
+                .catch(error => {
+                    expect(error).toBe('i_am_a_error');
+                    done();
+                })
+
+        })
+
+    });
+
+    describe('leaveNation', () => {
+
+        test('success', (done) => {
+
+            const nationContractMock = {
+                leaveNation: jest.fn(function (nationId, cb) {
+                    expect(nationId).toEqual(4);
+                    cb();
+                })
+            };
+
+            const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
+            web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
+
+            const nations = nationsFactory(null, null, null, null, nationContractMock);
+
+            nations
+                .leaveNation(4)
+                .then(_ => {
+                    expect(_).toBeUndefined();
+                    done();
+                })
+                .catch(done.fail)
+
+        });
+
+        test('fail', (done) => {
+
+            const nationContractMock = {
+                leaveNation: jest.fn(function (nationId, cb) {
+                    expect(nationId).toEqual(4);
+                    cb('i_am_a_error');
+                    done();
+                })
+            };
+
+            const web3 = new Web3(new Web3.providers.HttpProvider('https://rinkeby.infura.io/d'));
+            web3.eth.defaultAccount = '0x85c725a18b09907e874229fcaf36f4e16792214d';
+
+            const nations = nationsFactory(null, null, null, null, nationContractMock);
+
+            nations
+                .leaveNation(4)
+                .then(_ => {
+                    done.fail('should be rejected');
+                })
+                .catch(error => {
+                    expect(error).toBe('i_am_a_error');
+                    done();
+                })
+
+        })
+
+    });
+
 });
