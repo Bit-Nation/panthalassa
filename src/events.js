@@ -29,6 +29,12 @@ export const MESSAGING_QUEUE_JOB_ADDED = 'messaging_queue:job:added';
 export const TRANSACTION_QUEUE_JOB_ADDED = 'transaction_queue:job:added';
 
 /**
+ * @desc Emitted when there is an transaction to sign
+ * @type {string}
+ */
+export const ETH_TX_SIGN = 'eth:tx:sign';
+
+/**
  * @desc Is emitted when a nation is created
  * @type {string}
  */
