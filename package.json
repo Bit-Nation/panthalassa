@@ -1,0 +1,24 @@
+{
+  "author": "florian",
+  "bugs": {
+    "url": "githu.com"
+  },
+  "gx": {
+    "dvcsimport": "github.com/florianlenz/panthalassa"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp",
+      "name": "go-libp2p",
+      "version": "5.0.14"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "",
+  "name": "panthalassa",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.0"
+}
+
