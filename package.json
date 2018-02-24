@@ -12,6 +12,11 @@
       "hash": "QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp",
       "name": "go-libp2p",
       "version": "5.0.14"
+    },
+    {
+      "hash": "QmVSep2WwKcXxMonPASsAJ3nZVjfVMKgMcaSigxKnUWpJv",
+      "name": "go-libp2p-kad-dht",
+      "version": "3.0.16"
     }
   ],
   "gxVersion": "0.12.1",
