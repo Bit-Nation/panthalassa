@@ -13,3 +13,6 @@ ios:
 android:
 	make deps
 	gomobile bind -target android -o build/panthalassa.aar
+build:
+	make deps
+	go build -o build/panthalassa
