@@ -17,6 +17,18 @@
       "hash": "QmVSep2WwKcXxMonPASsAJ3nZVjfVMKgMcaSigxKnUWpJv",
       "name": "go-libp2p-kad-dht",
       "version": "3.0.16"
+    },
+    {
+      "author": "why",
+      "hash": "QmQViVWBHbU6HmYjXcdNq7tVASCNgdg64ZGcauuDkLCivW",
+      "name": "go-ipfs-addr",
+      "version": "0.1.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmctbcXMMhxTjm5ybWpjMwDmabB39ANuhB5QNn8jpD4JTv",
+      "name": "go-libp2p-floodsub",
+      "version": "0.9.11"
     }
   ],
   "gxVersion": "0.12.1",
