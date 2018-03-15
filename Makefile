@@ -7,6 +7,7 @@ deps:
 	gx install
 	gomobile clean
 	gomobile init
+	go get github.com/mattn/goveralls
 ios:
 	make deps
 	gomobile bind -target ios -o build/panthalassa.framework
@@ -19,3 +20,5 @@ build:
 test:
 	go fmt
 	go test
+coveralls:
+	goveralls -repotoken ${COVERALS_TOKEN}
