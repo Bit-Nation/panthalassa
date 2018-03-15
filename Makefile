@@ -16,5 +16,6 @@ android:
 build:
 	make deps
 	go build -o build/panthalassa
-tests:
-	go test ./...
+test:
+	go fmt
+	go test
