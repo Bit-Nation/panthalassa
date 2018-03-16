@@ -1,4 +1,4 @@
-package main
+package panthalassa
 
 import (
 	"crypto/aes"
@@ -11,7 +11,7 @@ import (
 )
 
 // encrypt string to base64 crypto using AES
-func encrypt(key string, text string) (string, error) {
+func Encrypt(key string, text string) (string, error) {
 	// key := []byte(keyText)
 	plaintext := []byte(text)
 
@@ -36,7 +36,7 @@ func encrypt(key string, text string) (string, error) {
 }
 
 // decrypt from base64 to decrypted string
-func decrypt(key string, cryptoText string) (string, error) {
+func Decrypt(key string, cryptoText string) (string, error) {
 	cipherText, _ := base64.URLEncoding.DecodeString(cryptoText)
 
 	block, err := aes.NewCipher([]byte(key))
