@@ -12,13 +12,13 @@ func TestEncryptAndDecrypt(t *testing.T) {
 	secret = "1111111111111111"
 	value = "I am the value"
 
-	cipherText, e := Encrypt(secret, value)
+	cipherText, e := encrypt(secret, value)
 
 	if e != nil {
 		t.Error(e)
 	}
 
-	rawValue, e := Decrypt(secret, cipherText)
+	rawValue, e := decrypt(secret, cipherText)
 
 	if e != nil {
 		t.Error(e)
@@ -31,7 +31,7 @@ func TestEncryptAndDecrypt(t *testing.T) {
 }
 
 func TestEncryptInvalidKeyLen(t *testing.T) {
-	_, e := Encrypt("too_short", "")
+	_, e := encrypt("too_short", "")
 
 	if e.Error() != "crypto/aes: invalid key size 9" {
 		t.Error("too_short is only 9 bytes long. Valid key's are 16, 24, 28 bytes long")
@@ -40,7 +40,7 @@ func TestEncryptInvalidKeyLen(t *testing.T) {
 }
 
 func TestDecryptInvalidKeyLen(t *testing.T) {
-	_, e := Decrypt("too_short", "")
+	_, e := decrypt("too_short", "")
 
 	if e.Error() != "crypto/aes: invalid key size 9" {
 		t.Error("too_short is only 9 bytes long. Valid key's are 16, 24, 28 bytes long")

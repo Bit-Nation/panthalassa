@@ -11,7 +11,7 @@ import (
 )
 
 // encrypt string to base64 crypto using AES
-func Encrypt(key string, text string) (string, error) {
+func encrypt(key string, text string) (string, error) {
 	// key := []byte(keyText)
 	plaintext := []byte(text)
 
@@ -36,7 +36,7 @@ func Encrypt(key string, text string) (string, error) {
 }
 
 // decrypt from base64 to decrypted string
-func Decrypt(key string, cryptoText string) (string, error) {
+func decrypt(key string, cryptoText string) (string, error) {
 	cipherText, _ := base64.URLEncoding.DecodeString(cryptoText)
 
 	block, err := aes.NewCipher([]byte(key))
