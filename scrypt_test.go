@@ -51,3 +51,18 @@ func TestScryptCipherText_Export(t *testing.T) {
 	}
 
 }
+
+func TestDecryptScryptCipherText(t *testing.T) {
+	ethKey, err := NewScryptCipherText("password", "i_am_the_text")
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	plainText, err := DecryptScryptCipherText("password", ethKey)
+
+	if plainText != "i_am_the_text" {
+		t.Errorf("Expected decrypted text to be: i_am_the_text - got: %s", plainText)
+	}
+
+}

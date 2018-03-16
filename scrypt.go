@@ -82,3 +82,20 @@ func NewScryptCipherText(pw string, data string) (string, error) {
 	return cipher.Export()
 
 }
+
+func DecryptScryptCipherText(pw string, data string) (string, error) {
+
+	var c ScryptCipherText
+
+	if err := json.Unmarshal([]byte(data), &c); err != nil {
+		return "", err
+	}
+
+	dK, err := scrypt.Key([]byte(pw), []byte(c.ScryptKey.Salt), c.ScryptKey.N, c.ScryptKey.R, c.ScryptKey.P, c.ScryptKey.KeyLen)
+
+	if err != nil {
+		return "", err
+	}
+
+	return decrypt(string(dK), c.CipherText)
+}
