@@ -3,19 +3,17 @@ list:
 deps:
 	go get github.com/whyrusleeping/gx
 	go get github.com/whyrusleeping/gx-go
-	go get golang.org/x/mobile/cmd/gomobile
+	go get github.com/mattn/goveralls
 	gx install
+deps_mobile:
+	go get golang.org/x/mobile/cmd/gomobile
 	gomobile clean
 	gomobile init
-	go get github.com/mattn/goveralls
 ios:
-	make deps
 	gomobile bind -target ios -o build/panthalassa.framework
 android:
-	make deps
 	gomobile bind -target android -o build/panthalassa.aar
 build:
-	make deps
 	go build -o build/panthalassa
 test:
 	go fmt
