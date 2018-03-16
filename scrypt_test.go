@@ -35,3 +35,19 @@ func TestScryptValueKeyCreation(t *testing.T) {
 	}
 
 }
+
+func TestScryptCipherText_Export(t *testing.T) {
+
+	s := ScryptCipherText{}
+
+	encryptedValue, e := s.Export()
+
+	if e != nil {
+		t.Error(e)
+	}
+
+	if encryptedValue != "{\"CipherText\":\"\",\"ScryptKey\":{\"N\":0,\"R\":0,\"P\":0,\"KeyLen\":0,\"Salt\":null}}" {
+		t.Error("Unexpected result")
+	}
+
+}
