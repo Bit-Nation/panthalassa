@@ -16,22 +16,20 @@ type Logger interface {
 type CliLogger struct{}
 
 func (l *CliLogger) Info(msg string) {
-	fmt.Printf("%s - INFO - %s", time.Now().UTC().String(), msg)
+	fmt.Printf("%s - INFO - %s \n", time.Now().UTC().String(), msg)
 }
 
 func (l *CliLogger) Debug(msg string) {
-	fmt.Printf("%s - DEBUG - %s", time.Now().UTC().String(), msg)
+	fmt.Printf("%s - DEBUG - %s \n", time.Now().UTC().String(), msg)
 }
 
 func (l *CliLogger) Error(msg string) {
-	fmt.Printf("%s - ERROR - %s", time.Now().UTC().String(), msg)
+	fmt.Printf("%s - ERROR - %s \n", time.Now().UTC().String(), msg)
 }
 
-func (l *CliLogger) Warm(msg string) {
-	fmt.Printf("%s - Warm - %s", time.Now().UTC().String(), msg)
+func (l *CliLogger) Warn(msg string) {
+	fmt.Printf("%s - Warm - %s \n", time.Now().UTC().String(), msg)
 }
-
-type LoggerCallback = func(msg string)
 
 func NewCliLogger() CliLogger {
 	return CliLogger{}
