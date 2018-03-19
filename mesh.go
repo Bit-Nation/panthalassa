@@ -46,7 +46,7 @@ type Mesh struct {
 	host          host.Host
 	logger        CliLogger
 	started       bool
-	ctx           *context.Context
+	ctx           context.Context
 	floodSub      *floodsub.PubSub
 	rendezvousKey *cid.Cid
 }
@@ -68,11 +68,10 @@ func NewMesh(rendezvousSeed string) (Mesh, error) {
 	}
 
 	//Context
-	ctx := context.Background()
-	m.ctx = &ctx
+	m.ctx = context.Background()
 
 	//Create host
-	h, err := libp2p.New(&ctx, meshConfig)
+	h, err := libp2p.New(m.ctx, meshConfig)
 	m.host = h
 
 	//Return on host error
@@ -81,7 +80,7 @@ func NewMesh(rendezvousSeed string) (Mesh, error) {
 	}
 
 	//Create floodsub
-	floodSub, err := floodsub.NewFloodSub(ctx, h)
+	floodSub, err := floodsub.NewFloodSub(m.ctx, h)
 
 	if err != nil {
 		return Mesh{}, nil
@@ -91,7 +90,7 @@ func NewMesh(rendezvousSeed string) (Mesh, error) {
 
 	//Create dht
 	//@todo use real datastore
-	m.dht = dht.NewDHTClient(ctx, h, datastore.NewMapDatastore())
+	m.dht = dht.NewDHTClient(m.ctx, h, datastore.NewMapDatastore())
 
 	return m, nil
 }
@@ -126,12 +125,33 @@ func (m *Mesh) Start() error {
 	if err := m.dht.Provide(tCtx, m.rendezvousKey, true); err != nil {
 		return err
 	}
-	
+
+	//Continue searching for peer's
+	go func() {
+		for {
+
+			//Find peer's that
+			peers, err := m.dht.FindProviders(tCtx, m.rendezvousKey)
+
+			//Connect to discovered nodes
+			for _, peer := range peers {
+
+				//@todo maybe check here if already connected to peer
+				if err := m.host.Connect(m.ctx, peer); err != nil {
+					panic(err)
+				}
+
+				m.logger.Info(fmt.Sprintf("connected to peer: %s", peer.ID.String()))
+			}
+
+			if err != nil {
+				panic(err)
+			}
+
+			time.Sleep(10 * time.Second)
+		}
+	}()
+
 	return nil
-
-}
-
-//Shutdown the mesh network
-func (m *Mesh) Stop() error {
 
 }
