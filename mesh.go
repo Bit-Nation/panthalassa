@@ -131,12 +131,12 @@ func (m *Mesh) Start() error {
 		for {
 
 			m.logger.Info("Search for peer's")
-			
+
 			//Find other bitnation peer's
 			peers, err := m.dht.FindProviders(tCtx, m.rendezvousKey)
 
 			m.logger.Info(fmt.Sprintf("Found: %d peer's", len(peers)))
-			
+
 			//Connect to discovered nodes
 			for _, peer := range peers {
 
@@ -155,6 +155,21 @@ func (m *Mesh) Start() error {
 			time.Sleep(10 * time.Second)
 		}
 	}()
+
+	return nil
+
+}
+
+//Stop the mesh network
+func (m *Mesh) Stop() error {
+
+	if err := m.host.Close(); err != nil {
+		return err
+	}
+
+	if err := m.dht.Close(); err != nil {
+		return err
+	}
 
 	return nil
 
