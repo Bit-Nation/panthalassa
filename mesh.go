@@ -8,9 +8,10 @@ import (
 	"gx/ipfs/QmPpegoMqhAEqjncrzArm7KVWAkCm78rqL2DPuNjhPrshg/go-datastore"
 	"gx/ipfs/QmQViVWBHbU6HmYjXcdNq7tVASCNgdg64ZGcauuDkLCivW/go-ipfs-addr"
 	"gx/ipfs/QmVSep2WwKcXxMonPASsAJ3nZVjfVMKgMcaSigxKnUWpJv/go-libp2p-kad-dht"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	"gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	"gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	floodsub "gx/ipfs/QmctbcXMMhxTjm5ybWpjMwDmabB39ANuhB5QNn8jpD4JTv/go-libp2p-floodsub"
 	"time"
 )
@@ -29,31 +30,41 @@ var bootstrapPeers = []string{
 
 func meshConfig(cfg *libp2p.Config) error {
 	// Create a multiaddress that listens on a random port on all interfaces
-	addr, err := ma.NewMultiaddr("/ip4/0.0.0.0/tcp/0")
+	addr, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/0")
 	if err != nil {
 		return err
 	}
 
-	cfg.ListenAddrs = []ma.Multiaddr{addr}
+	cfg.ListenAddrs = []multiaddr.Multiaddr{addr}
 	cfg.Peerstore = pstore.NewPeerstore()
 	cfg.Muxer = libp2p.DefaultMuxer()
 	return nil
 }
 
 type Mesh struct {
-	dht      *dht.IpfsDHT
-	host     host.Host
-	logger   CliLogger
-	started  bool
-	ctx      *context.Context
-	floodSub *floodsub.PubSub
+	dht           *dht.IpfsDHT
+	host          host.Host
+	logger        CliLogger
+	started       bool
+	ctx           *context.Context
+	floodSub      *floodsub.PubSub
+	rendezvousKey *cid.Cid
 }
 
-func NewMesh() (Mesh, error) {
+//Create a new instance of the mesh network
+func NewMesh(rendezvousSeed string) (Mesh, error) {
+
+	//Create rendezvous key
+	rK, err := rendezvousKey(rendezvousSeed)
+
+	if err != nil {
+		return Mesh{}, err
+	}
 
 	//Mesh network instance
 	m := Mesh{
-		logger: NewCliLogger(),
+		logger:        NewCliLogger(),
+		rendezvousKey: rK,
 	}
 
 	//Context
@@ -85,8 +96,38 @@ func NewMesh() (Mesh, error) {
 	return m, nil
 }
 
-//Initial start of the mesh network
+//Initial start of the mesh network and connect to bootstrapping nodes
 func (m *Mesh) Start() error {
+
+	//Connect to bootstrapping nodes
+	for _, addr := range bootstrapPeers {
+		iAddr, err := ipfsaddr.ParseString(addr)
+
+		if err != nil {
+			return err
+		}
+
+		pInfo, err := peerstore.InfoFromP2pAddr(iAddr.Multiaddr())
+
+		if err != nil {
+			return err
+		}
+
+		if err := m.host.Connect(m.ctx, *pInfo); err != nil {
+			return err
+		}
+
+		m.logger.Info(fmt.Sprintf("connected to peer: %s", pInfo.ID.String()))
+	}
+
+	//Announce to the network that we are a member of bitnation
+	tCtx, _ := context.WithTimeout(m.ctx, time.Second*10)
+	//@todo why do we need the content timeout?
+	if err := m.dht.Provide(tCtx, m.rendezvousKey, true); err != nil {
+		return err
+	}
+	
+	return nil
 
 }
 
