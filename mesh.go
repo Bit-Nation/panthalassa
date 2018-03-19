@@ -11,8 +11,8 @@ import (
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	"gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	"time"
 	floodsub "gx/ipfs/QmctbcXMMhxTjm5ybWpjMwDmabB39ANuhB5QNn8jpD4JTv/go-libp2p-floodsub"
+	"time"
 )
 
 var bootstrapPeers = []string{
@@ -41,89 +41,56 @@ func meshConfig(cfg *libp2p.Config) error {
 }
 
 type Mesh struct {
-	dht     *dht.IpfsDHT
-	host    host.Host
-	logger  CliLogger
-	started bool
+	dht      *dht.IpfsDHT
+	host     host.Host
+	logger   CliLogger
+	started  bool
+	ctx      *context.Context
+	floodSub *floodsub.PubSub
 }
 
-func NewMesh() Mesh {
-	return Mesh{
+func NewMesh() (Mesh, error) {
+
+	//Mesh network instance
+	m := Mesh{
 		logger: NewCliLogger(),
 	}
+
+	//Context
+	ctx := context.Background()
+	m.ctx = &ctx
+
+	//Create host
+	h, err := libp2p.New(&ctx, meshConfig)
+	m.host = h
+
+	//Return on host error
+	if err != nil {
+		return Mesh{}, nil
+	}
+
+	//Create floodsub
+	floodSub, err := floodsub.NewFloodSub(ctx, h)
+
+	if err != nil {
+		return Mesh{}, nil
+	}
+
+	m.floodSub = floodSub
+
+	//Create dht
+	//@todo use real datastore
+	m.dht = dht.NewDHTClient(ctx, h, datastore.NewMapDatastore())
+
+	return m, nil
 }
 
 //Initial start of the mesh network
 func (m *Mesh) Start() error {
 
-	if m.started == true {
-		return nil
-	}
-
-	ctx := context.Background()
-
-	//Create host
-	h, err := libp2p.New(ctx, meshConfig)
-
-	//Exit on error
-	if err != nil {
-		return err
-	}
-
-	m.host = h
-
-	for _, addr := range bootstrapPeers {
-		
-		iAddr, err := ipfsaddr.ParseString(addr)
-
-		if err != nil {
-			//@todo we might now want to return here since one of the bootstrapping nodes could be offline
-			return err
-		}
-
-		pInfo, err := peerstore.InfoFromP2pAddr(iAddr.Multiaddr())
-
-		if err != nil {
-			//@todo we might now want to return here since one of the bootstrapping nodes could be offline
-			return err
-		}
-
-		tCtx, _ := context.WithTimeout(ctx, time.Second*7)
-		if err := h.Connect(tCtx, *pInfo); err != nil {
-			//@todo we might now want to return here since one of the bootstrapping nodes could be offline
-			return err
-		}
-
-		m.logger.Info(fmt.Sprintf("connected to peer: %s", pInfo.ID.String()))
-
-	}
-	
-	m.dht = dht.NewDHTClient(ctx, h, datastore.NewMapDatastore())
-	m.started = true
-
-	return nil
 }
 
 //Shutdown the mesh network
 func (m *Mesh) Stop() error {
-
-	if m.started == false {
-		m.logger.Info("Please start the mesh first")
-		return nil
-	}
-
-	if e := m.host.Close(); e != nil {
-		m.logger.Debug("Closed the host")
-		return e
-	}
-
-	if e := m.dht.Close(); e != nil {
-		m.logger.Debug("Closed the DHT")
-		return e
-	}
-
-	m.started = false
-
-	return nil
 
 }
