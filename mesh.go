@@ -130,9 +130,13 @@ func (m *Mesh) Start() error {
 	go func() {
 		for {
 
-			//Find peer's that
+			m.logger.Info("Search for peer's")
+			
+			//Find other bitnation peer's
 			peers, err := m.dht.FindProviders(tCtx, m.rendezvousKey)
 
+			m.logger.Info(fmt.Sprintf("Found: %d peer's", len(peers)))
+			
 			//Connect to discovered nodes
 			for _, peer := range peers {
 
