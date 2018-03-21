@@ -49,6 +49,7 @@ type Mesh struct {
 	ctx           context.Context
 	floodSub      *floodsub.PubSub
 	rendezvousKey *cid.Cid
+	close         *chan struct{}
 }
 
 //Create a new instance of the mesh network
@@ -71,7 +72,7 @@ func NewMesh(rendezvousSeed string) (Mesh, error) {
 	m.ctx = context.Background()
 
 	//Create host
-	h, err := libp2p.New(m.ctx, meshConfig)
+	h, err := libp2p.New(m.ctx, libp2p.Defaults)
 	m.host = h
 
 	//Return on host error
@@ -87,6 +88,10 @@ func NewMesh(rendezvousSeed string) (Mesh, error) {
 	}
 
 	m.floodSub = floodSub
+
+	//Create close chan
+	closeChan := make(chan struct{})
+	m.close = &closeChan
 
 	//Create dht
 	//@todo use real datastore
@@ -133,16 +138,20 @@ func (m *Mesh) Start() error {
 			m.logger.Info("Search for peer's")
 
 			//Find other bitnation peer's
-			peers, err := m.dht.FindProviders(tCtx, m.rendezvousKey)
+			peers, err := m.dht.FindProviders(m.ctx, m.rendezvousKey)
 
 			m.logger.Info(fmt.Sprintf("Found: %d peer's", len(peers)))
 
 			//Connect to discovered nodes
 			for _, peer := range peers {
 
+				if peer.ID == m.host.ID() {
+					continue
+				}
+
 				//@todo maybe check here if already connected to peer
 				if err := m.host.Connect(m.ctx, peer); err != nil {
-					panic(err)
+					m.logger.Error(err.Error())
 				}
 
 				m.logger.Info(fmt.Sprintf("connected to peer: %s", peer.ID.String()))
@@ -156,21 +165,26 @@ func (m *Mesh) Start() error {
 		}
 	}()
 
-	return nil
+	//Wait for the close
+	<-*m.close
 
-}
-
-//Stop the mesh network
-func (m *Mesh) Stop() error {
-
+	//Close host
 	if err := m.host.Close(); err != nil {
 		return err
 	}
 
+	//Close DHT
 	if err := m.dht.Close(); err != nil {
 		return err
 	}
 
 	return nil
+
+}
+
+//Stop the mesh network
+func (m *Mesh) Stop() {
+
+	*m.close <- struct{}{}
 
 }
