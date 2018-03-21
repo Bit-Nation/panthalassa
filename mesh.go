@@ -90,35 +90,38 @@ func NewMesh(rendezvousSeed string) (Mesh, error) {
 	m.floodSub = floodSub
 
 	//Create close chan
-	closeChan := make(chan struct{})
-	m.close = &closeChan
+	c := make(chan struct{})
+	m.close = &c
 
 	//Create dht
-	//@todo use real datastore
+	//@todo use real data store
 	m.dht = dht.NewDHTClient(m.ctx, h, datastore.NewMapDatastore())
 
 	return m, nil
 }
 
 //Initial start of the mesh network and connect to bootstrapping nodes
-func (m *Mesh) Start() error {
+func (m *Mesh) Start(cb func(error)) {
 
 	//Connect to bootstrapping nodes
 	for _, addr := range bootstrapPeers {
 		iAddr, err := ipfsaddr.ParseString(addr)
 
 		if err != nil {
-			return err
+			cb(err)
+			return
 		}
 
 		pInfo, err := peerstore.InfoFromP2pAddr(iAddr.Multiaddr())
 
 		if err != nil {
-			return err
+			cb(err)
+			return
 		}
 
 		if err := m.host.Connect(m.ctx, *pInfo); err != nil {
-			return err
+			cb(err)
+			return
 		}
 
 		m.logger.Info(fmt.Sprintf("connected to peer: %s", pInfo.ID.String()))
@@ -128,7 +131,8 @@ func (m *Mesh) Start() error {
 	tCtx, _ := context.WithTimeout(m.ctx, time.Second*10)
 	//@todo why do we need the content timeout?
 	if err := m.dht.Provide(tCtx, m.rendezvousKey, true); err != nil {
-		return err
+		cb(err)
+		return
 	}
 
 	//Continue searching for peer's
@@ -165,20 +169,22 @@ func (m *Mesh) Start() error {
 		}
 	}()
 
-	//Wait for the close
+	cb(nil)
+
+	//Wait for the close. Blocking here.
 	<-*m.close
 
 	//Close host
 	if err := m.host.Close(); err != nil {
-		return err
+		cb(err)
+		return
 	}
 
 	//Close DHT
 	if err := m.dht.Close(); err != nil {
-		return err
+		cb(err)
+		return
 	}
-
-	return nil
 
 }
 
