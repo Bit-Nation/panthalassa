@@ -1,4 +1,4 @@
-package panthalassa
+package mesh
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	floodsub "gx/ipfs/QmctbcXMMhxTjm5ybWpjMwDmabB39ANuhB5QNn8jpD4JTv/go-libp2p-floodsub"
 	"time"
+	"github.com/florianlenz/panthalassa/logger"
 )
 
 var bootstrapPeers = []string{
@@ -44,7 +45,7 @@ func meshConfig(cfg *libp2p.Config) error {
 type Mesh struct {
 	dht           *dht.IpfsDHT
 	host          host.Host
-	logger        CliLogger
+	logger        logger.CliLogger
 	started       bool
 	ctx           context.Context
 	floodSub      *floodsub.PubSub
@@ -64,7 +65,7 @@ func NewMesh(rendezvousSeed string) (Mesh, error) {
 
 	//Mesh network instance
 	m := Mesh{
-		logger:        NewCliLogger(),
+		logger:        logger.NewCliLogger(),
 		rendezvousKey: rK,
 	}
 

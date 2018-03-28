@@ -1,4 +1,4 @@
-package panthalassa
+package crypto
 
 import (
 	"crypto/rand"

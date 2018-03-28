@@ -1,4 +1,4 @@
-package panthalassa
+package logger
 
 import (
 	"fmt"
