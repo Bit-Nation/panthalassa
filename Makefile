@@ -6,6 +6,7 @@ deps:
 	go get github.com/mattn/goveralls
 install:
 	gx install
+	go get ./...
 deps_mobile:
 	go get golang.org/x/mobile/cmd/gomobile
 	gomobile clean
