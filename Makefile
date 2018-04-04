@@ -9,6 +9,10 @@ deps_mobile:
 	go get golang.org/x/mobile/cmd/gomobile
 	gomobile clean
 	gomobile init
+deps_hack:
+	gx-go rw
+deps_hack_revert:
+	gx-go uw
 ios:
 	gomobile bind -target ios -o build/panthalassa.framework
 android:
