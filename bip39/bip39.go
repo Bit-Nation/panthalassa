@@ -3,7 +3,6 @@ package bip39
 import (
 	"crypto/rand"
 	bip39 "github.com/tyler-smith/go-bip39"
-	"fmt"
 )
 
 //@todo add test's (for the imported lib as well)
@@ -12,7 +11,6 @@ func NewMnemonic() (string, error) {
 	if _, err := rand.Read(entropy); err != nil {
 		return "", err
 	}
-	fmt.Println(entropy)
 	m, err := bip39.NewMnemonic(entropy)
 	if err != nil {
 		return "", err
