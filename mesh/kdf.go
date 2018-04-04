@@ -1,8 +1,8 @@
 package mesh
 
 import (
-	mh "github.com/multiformats/go-multihash"
 	cid "github.com/ipfs/go-cid"
+	mh "github.com/multiformats/go-multihash"
 )
 
 //Generate the rendezvous content id

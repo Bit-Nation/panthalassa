@@ -47,6 +47,12 @@
       "hash": "QmeiCcJfDW1GJnWUArudsv5rQsihpi4oyddPhdqo3CfX6i",
       "name": "go-datastore",
       "version": "2.4.1"
+    },
+    {
+      "author": "jbenet",
+      "hash": "QmPpegoMqhAEqjncrzArm7KVWAkCm78rqL2DPuNjhPrshg",
+      "name": "go-datastore",
+      "version": "1.4.1"
     }
   ],
   "gxVersion": "0.12.1",

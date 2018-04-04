@@ -2,19 +2,14 @@ package mesh
 
 import (
 	"context"
-	"fmt"
-	"gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p"
-	host "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
-	"gx/ipfs/QmPpegoMqhAEqjncrzArm7KVWAkCm78rqL2DPuNjhPrshg/go-datastore"
-	"gx/ipfs/QmQViVWBHbU6HmYjXcdNq7tVASCNgdg64ZGcauuDkLCivW/go-ipfs-addr"
-	"gx/ipfs/QmVSep2WwKcXxMonPASsAJ3nZVjfVMKgMcaSigxKnUWpJv/go-libp2p-kad-dht"
-	"gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	"gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	floodsub "gx/ipfs/QmctbcXMMhxTjm5ybWpjMwDmabB39ANuhB5QNn8jpD4JTv/go-libp2p-floodsub"
-	"time"
-	"github.com/florianlenz/panthalassa/logger"
+	cid "github.com/ipfs/go-cid"
+	datastore "github.com/ipfs/go-datastore"
+	floodsub "github.com/libp2p/go-floodsub"
+	libp2p "github.com/libp2p/go-libp2p"
+	host "github.com/libp2p/go-libp2p-host"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
+	pstore "github.com/libp2p/go-libp2p-peerstore"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 var bootstrapPeers = []string{
@@ -31,12 +26,12 @@ var bootstrapPeers = []string{
 
 func meshConfig(cfg *libp2p.Config) error {
 	// Create a multiaddress that listens on a random port on all interfaces
-	addr, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/0")
+	addr, err := ma.NewMultiaddr("/ip4/0.0.0.0/tcp/0")
 	if err != nil {
 		return err
 	}
 
-	cfg.ListenAddrs = []multiaddr.Multiaddr{addr}
+	cfg.ListenAddrs = []ma.Multiaddr{addr}
 	cfg.Peerstore = pstore.NewPeerstore()
 	cfg.Muxer = libp2p.DefaultMuxer()
 	return nil
@@ -45,7 +40,6 @@ func meshConfig(cfg *libp2p.Config) error {
 type Mesh struct {
 	dht           *dht.IpfsDHT
 	host          host.Host
-	logger        logger.CliLogger
 	started       bool
 	ctx           context.Context
 	floodSub      *floodsub.PubSub
@@ -65,7 +59,6 @@ func NewMesh(rendezvousSeed string) (Mesh, error) {
 
 	//Mesh network instance
 	m := Mesh{
-		logger:        logger.NewCliLogger(),
 		rendezvousKey: rK,
 	}
 
@@ -99,94 +92,6 @@ func NewMesh(rendezvousSeed string) (Mesh, error) {
 	m.dht = dht.NewDHTClient(m.ctx, h, datastore.NewMapDatastore())
 
 	return m, nil
-}
-
-//Initial start of the mesh network and connect to bootstrapping nodes
-func (m *Mesh) Start(cb func(error)) {
-
-	//Connect to bootstrapping nodes
-	for _, addr := range bootstrapPeers {
-		iAddr, err := ipfsaddr.ParseString(addr)
-
-		if err != nil {
-			cb(err)
-			return
-		}
-
-		pInfo, err := peerstore.InfoFromP2pAddr(iAddr.Multiaddr())
-
-		if err != nil {
-			cb(err)
-			return
-		}
-
-		if err := m.host.Connect(m.ctx, *pInfo); err != nil {
-			cb(err)
-			return
-		}
-
-		m.logger.Info(fmt.Sprintf("connected to peer: %s", pInfo.ID.String()))
-	}
-
-	//Announce to the network that we are a member of bitnation
-	tCtx, _ := context.WithTimeout(m.ctx, time.Second*10)
-	//@todo why do we need the content timeout?
-	if err := m.dht.Provide(tCtx, m.rendezvousKey, true); err != nil {
-		cb(err)
-		return
-	}
-
-	//Continue searching for peer's
-	go func() {
-		for {
-
-			m.logger.Info("Search for peer's")
-
-			//Find other bitnation peer's
-			peers, err := m.dht.FindProviders(m.ctx, m.rendezvousKey)
-
-			m.logger.Info(fmt.Sprintf("Found: %d peer's", len(peers)))
-
-			//Connect to discovered nodes
-			for _, peer := range peers {
-
-				if peer.ID == m.host.ID() {
-					continue
-				}
-
-				//@todo maybe check here if already connected to peer
-				if err := m.host.Connect(m.ctx, peer); err != nil {
-					m.logger.Error(err.Error())
-				}
-
-				m.logger.Info(fmt.Sprintf("connected to peer: %s", peer.ID.String()))
-			}
-
-			if err != nil {
-				panic(err)
-			}
-
-			time.Sleep(10 * time.Second)
-		}
-	}()
-
-	cb(nil)
-
-	//Wait for the close. Blocking here.
-	<-*m.close
-
-	//Close host
-	if err := m.host.Close(); err != nil {
-		cb(err)
-		return
-	}
-
-	//Close DHT
-	if err := m.dht.Close(); err != nil {
-		cb(err)
-		return
-	}
-
 }
 
 //Stop the mesh network
