@@ -4,6 +4,7 @@ deps:
 	go get github.com/whyrusleeping/gx
 	go get github.com/whyrusleeping/gx-go
 	go get github.com/mattn/goveralls
+install:
 	gx install
 deps_mobile:
 	go get golang.org/x/mobile/cmd/gomobile
