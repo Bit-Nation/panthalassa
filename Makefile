@@ -22,7 +22,7 @@ android:
 build:
 	go build -o build/panthalassa
 test:
-	go fmt
+	go fmt ./...
 	go test ./...
 coveralls:
 	goveralls -repotoken ${COVERALS_TOKEN}
