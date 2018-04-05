@@ -5,20 +5,26 @@ import (
 	bip39 "github.com/tyler-smith/go-bip39"
 )
 
-//@todo add test's (for the imported lib as well)
+//Wordlist from bip30 package
+var WordList = bip39.WordList
+
+func newMnemonic(entropy []byte) (string, error) {
+	return bip39.NewMnemonic(entropy)
+}
+
 func NewMnemonic() (string, error) {
 	entropy := make([]byte, 32)
 	if _, err := rand.Read(entropy); err != nil {
 		return "", err
 	}
-	m, err := bip39.NewMnemonic(entropy)
+	m, err := newMnemonic(entropy)
 	if err != nil {
 		return "", err
 	}
 	return m, nil
 }
 
-//@todo add test's (for the imported lib as well)
+//Generate new seed of mnemonic and password
 func NewSeed(mnemonic string, password string) []byte {
 	return bip39.NewSeed(mnemonic, password)
 }
