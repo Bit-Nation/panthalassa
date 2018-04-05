@@ -3,6 +3,7 @@ package bip39
 import (
 	"encoding/hex"
 	require "github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 )
 
@@ -12,6 +13,7 @@ type testVector struct {
 	hexSeed    string
 }
 
+//Wordlist taken from: https://github.com/trezor/python-mnemonic/blob/master/vectors.json
 var TestVectors = []testVector{
 	{
 		hexEntropy: "00000000000000000000000000000000",
@@ -146,7 +148,7 @@ func TestWordListImportedBip39(t *testing.T) {
 }
 
 //The the private newMnemonic function
-func TestNewMnemonic(t *testing.T) {
+func TestnewMnemonic(t *testing.T) {
 
 	for _, vector := range TestVectors {
 		//Decode hex entropy to byte slice
@@ -176,4 +178,30 @@ func TestNewSeed(t *testing.T) {
 		//Generated seed should be equal to the vector seed
 		require.Equal(t, vector.hexSeed, hex.EncodeToString(byteSeed))
 	}
+}
+
+//Test for NewMnemonic function
+func TestNewMnemonic(t *testing.T) {
+	mnemonic, err := NewMnemonic()
+	require.Nil(t, err)
+	words := strings.Split(mnemonic, " ")
+
+	//Our mnemonic's are 24 words long
+	//therefor the length should be 24 after splitting
+	require.Equal(t, 24, len(words))
+
+	for _, mnemonicWord := range words {
+		wordExist := false
+		for _, word := range WordList {
+
+			if word == mnemonicWord {
+				wordExist = true
+			}
+
+		}
+		if wordExist == false {
+			t.Error("Word does not exist in list: ", mnemonicWord)
+		}
+	}
+
 }
