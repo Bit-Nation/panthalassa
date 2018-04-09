@@ -1,25 +1,54 @@
 package keyManager
 
 import (
-	rk "github.com/Bit-Nation/panthalassa/rootKey"
+	"errors"
+	crypto "github.com/Bit-Nation/panthalassa/crypto"
+	ks "github.com/Bit-Nation/panthalassa/keyStore"
 )
 
 type KeyManager struct {
-	rootKey rk.RootKey
+	keyStore *ks.KeyStore
 }
 
-//Create a new key manager from the encrypted root key
-func NewKeyManager(encryptedRootKey, pw string) (*KeyManager, error) {
+//Open an encrypted key store file
+func Open(encryptedKeyStore, pw string) (*KeyManager, error) {
 
-	rootKey, err := rk.RootKeyFromCipherText(encryptedRootKey, pw)
+	//Decrypt key store
+	jsonKeyStore, err := crypto.DecryptScryptCipherText(pw, encryptedKeyStore)
+	if err != nil {
+		return &KeyManager{}, nil
+	}
+
+	//transform json key store string to KeyStore
+	keyStore, err := ks.FromJson(jsonKeyStore)
 
 	if err != nil {
 		return &KeyManager{}, nil
 	}
 
-	keyManager := KeyManager{
-		rootKey: rootKey,
+	//
+	return &KeyManager{
+		keyStore: keyStore,
+	}, nil
+
+}
+
+//Export the key store
+func (km KeyManager) Export(pw, pwConfirm string) (string, error) {
+
+	//Exit if password's are not equal
+	if pw != pwConfirm {
+		return "", errors.New("password miss match")
 	}
 
-	return &keyManager, nil
+	keyStoreJson, err := km.keyStore.Marshal()
+	if err != nil {
+		return "", err
+	}
+	return string(keyStoreJson), nil
+}
+
+//Get ethereum private key
+func (km KeyManager) GetEthereumPrivateKey() (string, error) {
+	return km.keyStore.GetKey("eth_private_key")
 }
