@@ -53,6 +53,12 @@
       "hash": "QmPpegoMqhAEqjncrzArm7KVWAkCm78rqL2DPuNjhPrshg",
       "name": "go-datastore",
       "version": "1.4.1"
+    },
+    {
+      "author": "florian",
+      "hash": "QmUAFEZi2T9jRwLjgTZxh3Hrcj9z9NpWPccP1AVeQnzCV7",
+      "name": "go-libp2p-bootstrap",
+      "version": "1.0.0"
     }
   ],
   "gxVersion": "0.12.1",
