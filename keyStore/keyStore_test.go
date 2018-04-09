@@ -12,10 +12,10 @@ func TestGetKey(t *testing.T) {
 		},
 	}
 
-	value, err := ks.getKey("key")
+	value, err := ks.GetKey("key")
 	require.Equal(t, "value", value)
 	require.Nil(t, err)
 
-	value, err = ks.getKey("i_do_not_exist_in_the_map")
+	value, err = ks.GetKey("i_do_not_exist_in_the_map")
 	require.Equal(t, "key does not exist", err.Error())
 }
