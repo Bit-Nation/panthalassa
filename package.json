@@ -56,9 +56,9 @@
     },
     {
       "author": "florian",
-      "hash": "QmUAFEZi2T9jRwLjgTZxh3Hrcj9z9NpWPccP1AVeQnzCV7",
+      "hash": "Qmdu32Lzvuof9HXogmHQZ8JJuhaWyADBwrRSmpXjGFX8HM",
       "name": "go-libp2p-bootstrap",
-      "version": "1.0.0"
+      "version": "3.0.2"
     }
   ],
   "gxVersion": "0.12.1",

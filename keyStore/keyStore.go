@@ -3,7 +3,6 @@ package keyStore
 import (
 	jsonUtil "encoding/json"
 	"errors"
-	"fmt"
 	bip32 "github.com/Bit-Nation/panthalassa/bip32"
 	bip39 "github.com/Bit-Nation/panthalassa/bip39"
 )

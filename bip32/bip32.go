@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	bip32 "github.com/tyler-smith/go-bip32"
-	"math"
 	"strconv"
 	"strings"
 )
