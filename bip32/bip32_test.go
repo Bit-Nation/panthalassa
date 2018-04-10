@@ -162,7 +162,7 @@ func TestKeyDerivation(t *testing.T) {
 
 }
 
-func TestK(t *testing.T) {
+func TestKeyDerivationFromBip39(t *testing.T) {
 
 	for _, vector := range testVectors {
 
