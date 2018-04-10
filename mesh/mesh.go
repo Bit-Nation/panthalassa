@@ -4,10 +4,8 @@ import (
 	"context"
 	bootstrap "github.com/florianlenz/go-libp2p-bootstrap"
 	cid "github.com/ipfs/go-cid"
-	datastore "github.com/ipfs/go-datastore"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"time"
 )
 
@@ -31,7 +29,6 @@ func meshConfig(cfg *libp2p.Config) error {
 }
 
 type Mesh struct {
-	dht           *dht.IpfsDHT
 	host          host.Host
 	started       bool
 	ctx           context.Context
@@ -80,10 +77,6 @@ func NewMesh(rendezvousSeed string) (*Mesh, error) {
 		return &Mesh{}, err
 	}
 	m.bootstrap = bs
-
-	//Create dht
-	//@todo use real data store
-	m.dht = dht.NewDHTClient(m.ctx, h, datastore.NewMapDatastore())
 
 	return &m, nil
 }
