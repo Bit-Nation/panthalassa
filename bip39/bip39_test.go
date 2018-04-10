@@ -8,6 +8,7 @@ import (
 )
 
 type testVector struct {
+	path       string
 	hexEntropy string
 	mnemonic   string
 	hexSeed    string

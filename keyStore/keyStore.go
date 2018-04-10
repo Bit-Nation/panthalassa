@@ -16,7 +16,7 @@ var ethPrivateKeyValidation = func(store KeyStore) error {
 	if err != nil {
 		return err
 	}
-	key, err = bip32.Derive("m/100H/10H", *key)
+	key, err = bip32.Derive("m/100H/10H", key)
 	if err != nil {
 		return err
 	}
