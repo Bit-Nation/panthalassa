@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	require "github.com/stretchr/testify/require"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -17,7 +19,7 @@ type testVector struct {
 	shouldFail bool
 }
 
-var TestVectors = []testVector{
+var testVectors = []testVector{
 	{
 		seed:       "000102030405060708090a0b0c0d0e0f",
 		path:       "m",
@@ -110,10 +112,19 @@ var TestVectors = []testVector{
 		shouldFail: false,
 	},
 	{
-		seed:    "4b381541583be4423346c643850da4b320e46a87ae3d2a4e6da11eba819cd4acba45d239319ac14f863b8d5ab5a0d0c64d2e8a1e7d1457df2e5a3c51c73235be",
-		path:    "m/0H",
-		extPub:  "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y",
-		extPriv: "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L",
+		seed:       "4b381541583be4423346c643850da4b320e46a87ae3d2a4e6da11eba819cd4acba45d239319ac14f863b8d5ab5a0d0c64d2e8a1e7d1457df2e5a3c51c73235be",
+		path:       "m/0H",
+		extPub:     "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y",
+		extPriv:    "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L",
+		shouldFail: false,
+	},
+	//unofficial test vector.
+	{
+		seed:       "4b381541583be4423346c643850da4b320e46a87ae3d2a4e6da11eba819cd4acba45d239319ac14f863b8d5ab5a0d0c64d2e8a1e7d1457df2e5a3c51c73235be",
+		path:       "m/0H/0H/0H",
+		extPub:     "xpub6CdTEG9urFvv9votKsVrvuyA42fNWXv6GwG8jefkznaUAUNSX69x7Uy2BXaD7hoNpwFSYgnpcPKS7mbByJFLD7A65msMAwMvFCxYZsgxbHD",
+		extPriv:    "xprv9ye6pkd21tNcwSjRDqxrZn2RVzpt75CEuiLXwGG9ST3VHg3HyYqhZgeYLEKZ4b1TsVvaqTeXTcUfDWtCyZqKhcA6paYxgj87dozaDGdcDyZ",
+		shouldFail: false,
 	},
 }
 
@@ -132,7 +143,7 @@ func TestKeyDerivation(t *testing.T) {
 		"m/0/2147483647H/1/2147483646H/2": 0,
 	}
 
-	for _, vector := range TestVectors {
+	for _, vector := range testVectors {
 		byteSeed, err := hex.DecodeString(vector.seed)
 		require.Nil(t, err)
 		k, err := NewMasterKey(byteSeed)
@@ -146,6 +157,45 @@ func TestKeyDerivation(t *testing.T) {
 		}
 
 		require.Equal(t, vector.extPriv, derivedKey.String())
+
+	}
+
+}
+
+func TestK(t *testing.T) {
+
+	for _, vector := range testVectors {
+
+		byteSeed, err := hex.DecodeString(vector.seed)
+		require.Nil(t, err)
+		key, err := NewMasterKey(byteSeed)
+		require.Nil(t, err)
+
+		if vector.path == "m" {
+			require.Equal(t, vector.extPriv, key.String())
+			continue
+		}
+
+		pathElements := strings.Split(vector.path, "/")
+
+		for _, pathElement := range pathElements[1:] {
+
+			p, err := strconv.Atoi(strings.TrimSuffix(pathElement, "H"))
+			require.Nil(t, err)
+
+			var childN uint32
+			if strings.HasSuffix(pathElement, "H") == true {
+				childN = uint32(2147483648 + p)
+			} else {
+				childN = uint32(p)
+			}
+
+			key, err = key.NewChildKey(childN)
+			require.Nil(t, err)
+
+		}
+
+		require.Equal(t, vector.extPriv, key.String())
 
 	}
 

@@ -31,8 +31,6 @@ func Derive(path string, key *bip32.Key) (*bip32.Key, error) {
 		return key, nil
 	}
 
-	var derivedKey *bip32.Key
-
 	for _, pathElement := range pathElements[1:] {
 		if false == strings.HasSuffix(pathElement, "H") {
 			return &bip32.Key{}, errors.New(fmt.Sprintf("since we only expect hardened key's there should be an H in the path element. got: %s", pathElement))
@@ -43,13 +41,12 @@ func Derive(path string, key *bip32.Key) (*bip32.Key, error) {
 			return &bip32.Key{}, err
 		}
 
-		key, err := key.NewChildKey(uint32(2147483648 + p))
+		key, err = key.NewChildKey(uint32(2147483648 + p))
 		if err != nil {
 			return &bip32.Key{}, err
 		}
-		derivedKey = key
 	}
 
-	return derivedKey, nil
+	return key, nil
 
 }
