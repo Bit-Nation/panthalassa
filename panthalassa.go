@@ -1,23 +1,16 @@
 package panthalassa
 
 import (
-	rootKey "github.com/Bit-Nation/panthalassa/rootKey"
+	"github.com/Bit-Nation/panthalassa/keyManager"
+	"github.com/Bit-Nation/panthalassa/keyStore"
 )
 
-//Create's a new root key
-func NewRootKey(pw string) (string, error) {
-
-	rk, err := rootKey.NewRootKey()
+//Creates an new set of encrypted account key's
+func NewAccountKeys(pw, pwConfirm string) (string, error) {
+	ks, err := keyStore.NewKeyStoreFactory()
 	if err != nil {
 		return "", err
 	}
-
-	exportedRootKey, err := rk.Export(pw)
-
-	if err != nil {
-		return "", err
-	}
-
-	return exportedRootKey, nil
-
+	km := keyManager.CreateFromKeyStore(ks)
+	return km.Export(pw, pwConfirm)
 }

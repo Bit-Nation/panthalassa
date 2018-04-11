@@ -13,17 +13,17 @@ const ScryptP = 1
 const ScryptSaltLength = 50
 
 type ScryptKey struct {
-	N      int
-	R      int
-	P      int
-	KeyLen int
-	Salt   []byte
+	N      int    `json:"n"`
+	R      int    `json:"r"`
+	P      int    `json:"p"`
+	KeyLen int    `json:"key_len"`
+	Salt   []byte `json:"salt"`
 	key    []byte
 }
 
 type ScryptCipherText struct {
-	CipherText string
-	ScryptKey  ScryptKey
+	CipherText string    `json:"cipher_text"`
+	ScryptKey  ScryptKey `json:"scrypt_key"`
 }
 
 //Export's ScryptCipherText as json

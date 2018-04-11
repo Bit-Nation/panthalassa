@@ -14,11 +14,6 @@
       "version": "5.0.14"
     },
     {
-      "hash": "QmVSep2WwKcXxMonPASsAJ3nZVjfVMKgMcaSigxKnUWpJv",
-      "name": "go-libp2p-kad-dht",
-      "version": "3.0.16"
-    },
-    {
       "author": "why",
       "hash": "QmQViVWBHbU6HmYjXcdNq7tVASCNgdg64ZGcauuDkLCivW",
       "name": "go-ipfs-addr",
@@ -53,6 +48,12 @@
       "hash": "QmPpegoMqhAEqjncrzArm7KVWAkCm78rqL2DPuNjhPrshg",
       "name": "go-datastore",
       "version": "1.4.1"
+    },
+    {
+      "author": "florian",
+      "hash": "Qmdu32Lzvuof9HXogmHQZ8JJuhaWyADBwrRSmpXjGFX8HM",
+      "name": "go-libp2p-bootstrap",
+      "version": "3.0.2"
     }
   ],
   "gxVersion": "0.12.1",
