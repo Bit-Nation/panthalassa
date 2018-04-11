@@ -45,10 +45,17 @@ func (km KeyManager) Export(pw, pwConfirm string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(keyStoreJson), nil
+	return crypto.NewScryptCipherText(pw, string(keyStoreJson))
 }
 
 //Get ethereum private key
 func (km KeyManager) GetEthereumPrivateKey() (string, error) {
 	return km.keyStore.GetKey("eth_private_key")
+}
+
+//Create new key manager from key store
+func CreateFromKeyStore(ks *ks.KeyStore) *KeyManager {
+	return &KeyManager{
+		keyStore: ks,
+	}
 }
