@@ -12,7 +12,8 @@
 
 ### Install
 1. Run `make deps` to get the needed dependencies
-1. Run `make install` to install the gx dependencies
+2. Run `make install` to install the gx dependencies
+3. Run `make deps_hack` to rewrite the import paths
 
 ### Build for ios
 - Follow the install section first
