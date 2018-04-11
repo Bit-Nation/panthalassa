@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -42,13 +43,9 @@ func TestScryptCipherText_Export(t *testing.T) {
 
 	encryptedValue, e := s.Export()
 
-	if e != nil {
-		t.Error(e)
-	}
+	require.Nil(t, e)
 
-	if encryptedValue != "{\"CipherText\":\"\",\"ScryptKey\":{\"N\":0,\"R\":0,\"P\":0,\"KeyLen\":0,\"Salt\":null}}" {
-		t.Error("Unexpected result")
-	}
+	require.Equal(t, "{\"cipher_text\":\"\",\"scrypt_key\":{\"n\":0,\"r\":0,\"p\":0,\"key_len\":0,\"salt\":null}}", encryptedValue)
 
 }
 
