@@ -7,5 +7,17 @@
 
 ## Development
 
-1. Clone the project
+1. Clone the project into `$GOPATH/src/github.com/Bit-Nation/panthalassa`
 2. Run `make` to see all available commands
+
+### Install
+1. Run `make deps` to get the needed dependencies
+1. Run `make install` to install the gx dependencies
+
+### Build for ios
+- Follow the install section first
+- Run `make ios` to build for ios
+
+### Build for android
+- Follow the install section first
+- Run `make android` to build for android
