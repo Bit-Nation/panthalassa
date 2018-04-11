@@ -10,6 +10,8 @@ import (
 
 type Key = bip32.Key
 
+var hardenedDerivationStart uint32 = 2147483648
+
 //Create new MasterKey as specified in bip32
 //where child key's can be derived
 func NewMasterKey(seed []byte) (*bip32.Key, error) {
@@ -41,7 +43,7 @@ func Derive(path string, key *bip32.Key) (*bip32.Key, error) {
 			return &bip32.Key{}, err
 		}
 
-		key, err = key.NewChildKey(uint32(2147483648 + p))
+		key, err = key.NewChildKey(uint32(hardenedDerivationStart + uint32(p)))
 		if err != nil {
 			return &bip32.Key{}, err
 		}
