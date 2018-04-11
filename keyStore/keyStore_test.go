@@ -123,3 +123,18 @@ func TestKeyStoreJsonImport(t *testing.T) {
 	require.Equal(t, "couldn't find validation rules", err.Error())
 
 }
+
+func TestNewKeyStoreFactory(t *testing.T) {
+
+	newMnemonic = func() (string, error) {
+		return "abandon amount liar amount expire adjust cage candy arch gather drum buyer", nil
+	}
+
+	ks, err := NewKeyStoreFactory()
+	require.Nil(t, err)
+
+	require.Equal(t, "abandon amount liar amount expire adjust cage candy arch gather drum buyer", ks.mnemonic)
+	require.Equal(t, ks.keys["eth_private_key"], "dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75")
+	require.Equal(t, ks.version, uint8(1))
+
+}

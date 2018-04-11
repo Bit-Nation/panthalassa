@@ -8,6 +8,8 @@ import (
 	bip39 "github.com/Bit-Nation/panthalassa/bip39"
 )
 
+var newMnemonic = bip39.NewMnemonic
+
 //Ethereum private key validation rule
 var ethPrivateKeyValidation = func(store KeyStore) error {
 
@@ -124,6 +126,36 @@ func FromJson(json string) (*KeyStore, error) {
 	return &ks, nil
 }
 
-func NewMnemonic(mnemonic string) {
+//Create's a complete new key store
+func NewKeyStoreFactory() (*KeyStore, error) {
+
+	//Create mnemonic
+	mn, err := newMnemonic()
+	if err != nil {
+		return &KeyStore{}, err
+	}
+
+	k, err := bip32.NewMasterKey(bip39.NewSeed(mn, "coins"))
+	if err != nil {
+		return &KeyStore{}, err
+	}
+
+	//Derive ethereum key
+	ethKey, err := bip32.Derive("m/100H/10H", k)
+	if err != nil {
+		return &KeyStore{}, err
+	}
+
+	ks := KeyStore{
+		mnemonic: mn,
+		keys: map[string]string{
+			"eth_private_key": hex.EncodeToString(ethKey.Key),
+		},
+		version: uint8(1),
+	}
+
+	ks.validate()
+
+	return &ks, nil
 
 }
