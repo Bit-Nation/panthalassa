@@ -1,5 +1,7 @@
 package mesh
 
+/*
+@todo there is an problem with the bootstrapping bundle. Since we don't need the mesh network now we will comment it
 import (
 	"context"
 	bootstrap "github.com/florianlenz/go-libp2p-bootstrap"
@@ -105,3 +107,4 @@ func (m *Mesh) Stop() {
 	*m.close <- struct{}{}
 
 }
+*/
