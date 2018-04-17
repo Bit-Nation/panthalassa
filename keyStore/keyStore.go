@@ -140,7 +140,13 @@ func NewKeyStoreFactory() (*KeyStore, error) {
 		return &KeyStore{}, err
 	}
 
-	k, err := bip32.NewMasterKey(bip39.NewSeed(mn, "coins"))
+	return NewFromMnemonic(mn)
+}
+
+//Create new keyStore from mnemonic
+func NewFromMnemonic(mnemonic string) (*KeyStore, error) {
+
+	k, err := bip32.NewMasterKey(bip39.NewSeed(mnemonic, "coins"))
 	if err != nil {
 		return &KeyStore{}, err
 	}
@@ -152,7 +158,7 @@ func NewKeyStoreFactory() (*KeyStore, error) {
 	}
 
 	ks := KeyStore{
-		mnemonic: mn,
+		mnemonic: mnemonic,
 		keys: map[string]string{
 			"eth_private_key": hex.EncodeToString(ethKey.Key),
 		},

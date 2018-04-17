@@ -38,3 +38,14 @@ func NewAccountKeys(pw, pwConfirm string) (string, error) {
 	km := keyManager.CreateFromKeyStore(ks)
 	return km.Export(pw, pwConfirm)
 }
+
+//Create new account store from mnemonic
+//This can e.g. be used in case you need to recover your account
+func NewAccountKeysFromMnemonic(mnemonic, pw, pwConfirm string) (string, error) {
+	ks, err := keyStore.NewFromMnemonic(mnemonic)
+	if err != nil {
+		return "", err
+	}
+	km := keyManager.CreateFromKeyStore(ks)
+	return km.Export(pw, pwConfirm)
+}
