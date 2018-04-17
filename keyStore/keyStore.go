@@ -87,6 +87,11 @@ func (ks KeyStore) validate() error {
 	return nil
 }
 
+//Get mnemonic
+func (ks KeyStore) GetMnemonic() string {
+	return ks.mnemonic
+}
+
 //Marshal key store
 func (ks KeyStore) Marshal() ([]byte, error) {
 

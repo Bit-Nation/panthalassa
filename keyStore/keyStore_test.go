@@ -138,3 +138,13 @@ func TestNewKeyStoreFactory(t *testing.T) {
 	require.Equal(t, ks.version, uint8(1))
 
 }
+
+func TestGetMnemonic(t *testing.T) {
+
+	ks := KeyStore{
+		mnemonic: "abandon amount liar amount expire adjust cage candy arch gather drum buyer",
+	}
+
+	require.Equal(t, "abandon amount liar amount expire adjust cage candy arch gather drum buyer", ks.GetMnemonic())
+
+}
