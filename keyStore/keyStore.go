@@ -46,9 +46,9 @@ var validationRules = map[uint8][]func(ks KeyStore) error{
 }
 
 type KeyStore struct {
-	mnemonic string            `json:"mnemonic"`
-	keys     map[string]string `json:"keys"`
-	version  uint8             `json:"version"`
+	mnemonic string
+	keys     map[string]string
+	version  uint8
 }
 
 //Only used for json marshalling
