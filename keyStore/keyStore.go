@@ -8,6 +8,19 @@ import (
 	bip39 "github.com/Bit-Nation/panthalassa/bip39"
 )
 
+type KeyStore struct {
+	mnemonic string
+	keys     map[string]string
+	version  uint8
+}
+
+//Only used for json marshalling
+type jsonKeyStore struct {
+	Mnemonic string            `json:"mnemonic"`
+	Keys     map[string]string `json:"keys"`
+	Version  uint8             `json:"version"`
+}
+
 var newMnemonic = bip39.NewMnemonic
 
 //Ethereum private key validation rule
@@ -43,19 +56,6 @@ var validationRules = map[uint8][]func(ks KeyStore) error{
 	1: []func(store KeyStore) error{
 		ethPrivateKeyValidation,
 	},
-}
-
-type KeyStore struct {
-	mnemonic string
-	keys     map[string]string
-	version  uint8
-}
-
-//Only used for json marshalling
-type jsonKeyStore struct {
-	Mnemonic string            `json:"mnemonic"`
-	Keys     map[string]string `json:"keys"`
-	Version  uint8             `json:"version"`
 }
 
 func (ks KeyStore) GetKey(key string) (string, error) {
