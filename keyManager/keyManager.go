@@ -48,11 +48,11 @@ func OpenWithPassword(encryptedAccount, pw string) (*KeyManager, error) {
 
 //Open account with mnemonic.
 //This should only be used as a backup
-func OpenWithMnemonic(account, mnemonic string) (*KeyManager, error) {
+func OpenWithMnemonic(encryptedAccount, mnemonic string) (*KeyManager, error) {
 
 	//unmarshal encrypted account
 	var acc accountKeyStore
-	if err := json.Unmarshal([]byte(account), &acc); err != nil {
+	if err := json.Unmarshal([]byte(encryptedAccount), &acc); err != nil {
 		return &KeyManager{}, err
 	}
 
@@ -62,7 +62,7 @@ func OpenWithMnemonic(account, mnemonic string) (*KeyManager, error) {
 		return &KeyManager{}, err
 	}
 
-	return OpenWithPassword(account, pw)
+	return OpenWithPassword(encryptedAccount, pw)
 
 }
 
