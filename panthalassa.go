@@ -23,7 +23,7 @@ func (p *Panthalassa) Stop() error {
 //Create an new instance of panthalassa
 func NewPanthalassa(keyStore, pw string) (*Panthalassa, error) {
 
-	km, err := keyManager.Open(keyStore, pw)
+	km, err := keyManager.OpenWithPassword(keyStore, pw)
 	if err != nil {
 		return &Panthalassa{}, nil
 	}
