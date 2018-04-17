@@ -20,10 +20,15 @@ func (p *Panthalassa) Stop() error {
 	return nil
 }
 
-//Create an new instance of panthalassa
-func NewPanthalassa(keyStore, pw string) (*Panthalassa, error) {
+//Export account with the given password
+func (p *Panthalassa) Export(pw, pwConfirm string) (string, error) {
+	return p.km.Export(pw, pwConfirm)
+}
 
-	km, err := keyManager.Open(keyStore, pw)
+//Create an new instance of panthalassa
+func NewPanthalassa(encryptedAccount, pw string) (*Panthalassa, error) {
+
+	km, err := keyManager.OpenWithPassword(encryptedAccount, pw)
 	if err != nil {
 		return &Panthalassa{}, nil
 	}
