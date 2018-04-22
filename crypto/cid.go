@@ -7,7 +7,7 @@ import (
 )
 
 //Check if CID is valid
-func isValidCid(id string) bool {
+func IsValidCid(id string) bool {
 
 	_, err := cid.Decode(id)
 

@@ -49,3 +49,20 @@ func NewAccountKeysFromMnemonic(mnemonic, pw, pwConfirm string) (string, error) 
 	km := keyManager.CreateFromKeyStore(ks)
 	return km.Export(pw, pwConfirm)
 }
+
+//Get the CID of a value with
+//sha3 512 as a base64 string
+func CIDSha512(value string) (string, error) {
+	return crypto.CIDSha512(value)
+}
+
+//Get the CID of a value with
+//sha3 256 as a base64 string
+func CIDSha256(value string) (string, error) {
+	return crypto.CIDSha256(value)
+}
+
+//Check if CID is valid
+func IsValidCID(cid string) bool {
+	return crypto.IsValidCid(cid)
+}
