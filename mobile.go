@@ -1,6 +1,9 @@
 package panthalassa
 
-import "errors"
+import (
+	"errors"
+	"github.com/Bit-Nation/panthalassa/keyManager"
+)
 
 var p *panthalassa
 
@@ -20,6 +23,27 @@ func NewPanthalassa(accountStore, pw string) error {
 	p = instance
 
 	return nil
+}
+
+//Open Panthalassa from account store and mnemonic
+func NewPanthalassaFromMnemonic(accountStore, mnemonic string) error {
+
+	if p != nil {
+		return errors.New("you need to call Stop first in order to destroy the old instance")
+	}
+
+	km, err := keyManager.OpenWithMnemonic(accountStore, mnemonic)
+
+	if err != nil {
+		return err
+	}
+
+	p = &panthalassa{
+		km: km,
+	}
+
+	return nil
+
 }
 
 //Stop the current panthalassa instnace
