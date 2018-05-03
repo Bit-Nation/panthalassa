@@ -13,30 +13,30 @@ type Mnemonic struct {
 
 //Create Mnemonic from string
 //@todo should also check if = 24 word's long
-func FromString(mnemonic string) (*Mnemonic, error) {
+func FromString(mnemonic string) (Mnemonic, error) {
 
 	if !bip39.IsMnemonicValid(mnemonic) {
-		return &Mnemonic{}, errors.New("got invalid mnemonic")
+		return Mnemonic{}, errors.New("got invalid mnemonic")
 	}
 
-	return &Mnemonic{
+	return Mnemonic{
 		mnemonic: mnemonic,
 	}, nil
 }
 
 //Mnemonic factory
-func New() (*Mnemonic, error) {
+func New() (Mnemonic, error) {
 
 	//Secure random numbers
 	entropy := make([]byte, 32)
 	if _, err := rand.Read(entropy); err != nil {
-		return &Mnemonic{}, err
+		return Mnemonic{}, err
 	}
 
 	//Mnemonic as word string
 	m, err := bip39.NewMnemonic(entropy)
 	if err != nil {
-		return &Mnemonic{}, err
+		return Mnemonic{}, err
 	}
 
 	return FromString(m)
