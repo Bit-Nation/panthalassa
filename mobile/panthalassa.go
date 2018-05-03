@@ -1,7 +1,7 @@
 package panthalassa
 
 import (
-	"github.com/Bit-Nation/panthalassa/keyManager"
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 )
 
 type panthalassa struct {
@@ -23,17 +23,4 @@ func (p *panthalassa) Stop() error {
 //Export account with the given password
 func (p *panthalassa) Export(pw, pwConfirm string) (string, error) {
 	return p.km.Export(pw, pwConfirm)
-}
-
-//Create an new instance of panthalassa
-func newPanthalassa(encryptedAccount, pw string) (*panthalassa, error) {
-
-	km, err := keyManager.OpenWithPassword(encryptedAccount, pw)
-	if err != nil {
-		return &panthalassa{}, nil
-	}
-
-	return &panthalassa{
-		km: km,
-	}, nil
 }
