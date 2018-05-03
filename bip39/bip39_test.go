@@ -2,9 +2,10 @@ package bip39
 
 import (
 	"encoding/hex"
-	require "github.com/stretchr/testify/require"
-	"strings"
 	"testing"
+
+	require "github.com/stretchr/testify/require"
+	bip39 "github.com/tyler-smith/go-bip39"
 )
 
 type testVector struct {
@@ -143,7 +144,7 @@ var TestVectors = []testVector{
 //contain's all needed words as specified
 //in bip39
 func TestWordListImportedBip39(t *testing.T) {
-	require.Equal(t, EnglishWordList, WordList)
+	require.Equal(t, EnglishWordList, bip39.WordList)
 }
 
 //The the private newMnemonic function
@@ -155,7 +156,7 @@ func TestnewMnemonic(t *testing.T) {
 		//Of course we don't accept error's for the decoding
 		require.Nil(t, err)
 		//Create the mnemonic based on the entropy
-		mnemonic, err := newMnemonic(entropy)
+		mnemonic, err := bip39.NewMnemonic(entropy)
 		//The creation of the mnemonic should succeed
 		require.Nil(t, err)
 		//The created mnemonic should equal the one
@@ -173,49 +174,23 @@ func TestNewSeed(t *testing.T) {
 	password := "TREZOR"
 
 	for _, vector := range TestVectors {
-		byteSeed := newSeed(vector.mnemonic, password)
+		byteSeed := bip39.NewSeed(vector.mnemonic, password)
 		//Generated seed should be equal to the vector seed
 		require.Equal(t, vector.hexSeed, hex.EncodeToString(byteSeed))
 	}
-}
-
-//Test for NewMnemonic function
-func TestNewMnemonic(t *testing.T) {
-	mnemonic, err := NewMnemonic()
-	require.Nil(t, err)
-	words := strings.Split(mnemonic, " ")
-
-	//Our mnemonic's are 24 words long
-	//therefor the length should be 24 after splitting
-	require.Equal(t, 24, len(words))
-
-	for _, mnemonicWord := range words {
-		wordExist := false
-		for _, word := range WordList {
-
-			if word == mnemonicWord {
-				wordExist = true
-			}
-
-		}
-		if wordExist == false {
-			t.Error("Word does not exist in list: ", mnemonicWord)
-		}
-	}
-
 }
 
 func TestValidMnemonic(t *testing.T) {
 
 	//Should be valid since we pass in a valid mnemonic
 	validMn := "panda eyebrow bullet gorilla call smoke muffin taste mesh discover soft ostrich alcohol speed nation flash devote level hobby quick inner drive ghost inside"
-	require.True(t, ValidMnemonic(validMn))
+	require.True(t, bip39.IsMnemonicValid(validMn))
 
 	//Should be invalid since we pass in too less word's
-	require.False(t, ValidMnemonic("bullet gorilla call"))
+	require.False(t, bip39.IsMnemonicValid("bullet gorilla call"))
 
 	//Should be invalid since the word does not exist
 	invalidMn := "panda eyebrow bullet gorilla call smoke muffin taste mesh discover soft ostrich alcohol speed nation flash devote level hobby quick inner drive ghost iiiiinside"
-	require.False(t, ValidMnemonic(invalidMn))
+	require.False(t, bip39.IsMnemonicValid(invalidMn))
 
 }
