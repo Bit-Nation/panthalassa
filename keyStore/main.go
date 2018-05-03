@@ -60,6 +60,11 @@ func (s Store) GetKey(key string) (string, error) {
 	return s.keys[key], nil
 }
 
+//Get the mnemonic
+func (s Store) GetMnemonic() mnemonic.Mnemonic {
+	return s.mnemonic
+}
+
 //Migrate keystore up
 func migrateUp(s Store) (Store, error) {
 

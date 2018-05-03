@@ -3,12 +3,13 @@ package keyManager
 import (
 	"encoding/json"
 	"errors"
-	crypto "github.com/Bit-Nation/panthalassa/crypto"
+
+	scrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
 )
 
 type KeyManager struct {
-	keyStore *ks.KeyStore
+	keyStore ks.Store
 	account  accountKeyStore
 }
 
@@ -28,13 +29,13 @@ func OpenWithPassword(encryptedAccount, pw string) (*KeyManager, error) {
 	}
 
 	//Decrypt key store
-	jsonKeyStore, err := crypto.DecryptScryptCipherText(pw, acc.EncryptedKeyStore)
+	jsonKeyStore, err := scrypt.DecryptScryptCipherText(pw, acc.EncryptedKeyStore)
 	if err != nil {
 		return &KeyManager{}, err
 	}
 
 	//unmarshal key store
-	keyStore, err := ks.FromJson(jsonKeyStore)
+	keyStore, err := ks.UnmarshalStore(jsonKeyStore)
 	if err != nil {
 		return &KeyManager{}, err
 	}
@@ -57,7 +58,7 @@ func OpenWithMnemonic(encryptedAccount, mnemonic string) (*KeyManager, error) {
 	}
 
 	//decrypt password with mnemonic
-	pw, err := crypto.DecryptScryptCipherText(mnemonic, acc.Password)
+	pw, err := scrypt.DecryptScryptCipherText(mnemonic, acc.Password)
 	if err != nil {
 		return &KeyManager{}, err
 	}
@@ -81,13 +82,13 @@ func (km KeyManager) Export(pw, pwConfirm string) (string, error) {
 	}
 
 	//encrypt key store with password
-	encryptedKeyStore, err := crypto.NewScryptCipherText(pw, string(keyStore))
+	encryptedKeyStore, err := scrypt.NewCipherText(pw, string(keyStore))
 	if err != nil {
 		return "", err
 	}
 
 	//encrypt password with mnemonic
-	encryptedPassword, err := crypto.NewScryptCipherText(km.keyStore.GetMnemonic(), pw)
+	encryptedPassword, err := scrypt.NewCipherText(km.keyStore.GetMnemonic().String(), pw)
 
 	//Marshal account
 	acc, err := json.Marshal(accountKeyStore{
@@ -106,7 +107,7 @@ func (km KeyManager) GetEthereumPrivateKey() (string, error) {
 }
 
 //Create new key manager from key store
-func CreateFromKeyStore(ks *ks.KeyStore) *KeyManager {
+func CreateFromKeyStore(ks ks.Store) *KeyManager {
 	return &KeyManager{
 		keyStore: ks,
 	}

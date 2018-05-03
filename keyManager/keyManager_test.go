@@ -2,14 +2,20 @@ package keyManager
 
 import (
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
+	"github.com/Bit-Nation/panthalassa/mnemonic"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 //Test the Create from function
 func TestCreateFromKeyStore(t *testing.T) {
+
+	//mnemonic
+	mn, err := mnemonic.New()
+	require.Nil(t, err)
+
 	//create keyStore
-	ks, err := keyStore.NewKeyStoreFactory()
+	ks, err := keyStore.NewFromMnemonic(mn)
 	require.Nil(t, err)
 
 	km := CreateFromKeyStore(ks)
@@ -20,8 +26,8 @@ func TestCreateFromKeyStore(t *testing.T) {
 func TestExportFunction(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"eth_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
-	ks, err := keyStore.FromJson(jsonKeyStore)
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
 	require.Nil(t, err)
 
 	//create key manager
@@ -45,8 +51,8 @@ func TestExportFunction(t *testing.T) {
 func TestOpenWithMnemonic(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"eth_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
-	ks, err := keyStore.FromJson(jsonKeyStore)
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
 	require.Nil(t, err)
 
 	//create key manager
