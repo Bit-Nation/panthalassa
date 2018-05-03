@@ -25,22 +25,25 @@ func TestEthPrivateKeyValidationFunction(t *testing.T) {
 
 	//Success test
 	ks := KeyStore{
-		mnemonic: "abandon amount liar amount expire adjust cage candy arch gather drum buyer",
+		mnemonic: "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom",
 		keys: map[string]string{
-			"eth_private_key": "dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75",
+			"eth_private_key": "eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c",
 		},
 	}
+
 	err := ethPrivateKeyValidation(ks)
 	require.Equal(t, nil, err, "The error should be nil since we passed in the correct mnemonic")
 
 	//Fail test
 	ks = KeyStore{
-		mnemonic: "abandon amount liar amount expire adjust cage candy arch gather drum word",
+		//We changed the first word which will result in an mismatch
+		mnemonic: "destroy destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom",
 		keys: map[string]string{
-			"eth_private_key": "dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75",
+			"eth_private_key": "eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c",
 		},
 	}
 	err = ethPrivateKeyValidation(ks)
+	require.NotNil(t, err)
 	require.Equal(t, "derivation mismatch - ethereum private key from storage and derived one doesn't match", err.Error())
 
 }
@@ -49,9 +52,9 @@ func TestEthPrivateKeyValidationFunction(t *testing.T) {
 func TestValidateMethodOfKeyStore(t *testing.T) {
 
 	ks := KeyStore{
-		mnemonic: "abandon amount liar amount expire adjust cage candy arch gather drum buyer",
+		mnemonic: "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom",
 		keys: map[string]string{
-			"eth_private_key": "dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75",
+			"eth_private_key": "eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c",
 		},
 		version: 1,
 	}
@@ -69,7 +72,7 @@ func TestValidateMethodOfKeyStore(t *testing.T) {
 	require.Nil(t, err)
 
 	//Test validation of key store if validation set is present but not satisfied
-	ks.mnemonic = "abandon amount liar amount expire adjust cage candy arch gather drum house" //Changed last word to house
+	ks.mnemonic = "destroy destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom" //Changed last word to house
 	err = ks.validate()
 	require.Equal(t, "derivation mismatch - ethereum private key from storage and derived one doesn't match", err.Error())
 }
@@ -77,9 +80,9 @@ func TestValidateMethodOfKeyStore(t *testing.T) {
 func TestJsonMarshalling(t *testing.T) {
 
 	ks := KeyStore{
-		mnemonic: "abandon amount liar amount expire adjust cage candy arch gather drum buyer",
+		mnemonic: "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom",
 		keys: map[string]string{
-			"eth_private_key": "dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75",
+			"eth_private_key": "eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c",
 		},
 		version: 1,
 	}
@@ -98,7 +101,7 @@ func TestJsonMarshalling(t *testing.T) {
 	validationRules = oldValidationRules
 
 	//Test successful json marshal
-	expectedKeyStoreExport := []byte(`{"mnemonic":"abandon amount liar amount expire adjust cage candy arch gather drum buyer","keys":{"eth_private_key":"dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75"},"version":1}`)
+	expectedKeyStoreExport := []byte(`{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"eth_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`)
 	json, err := ks.Marshal()
 	require.Nil(t, err)
 	require.Equal(t, expectedKeyStoreExport, json)
@@ -108,13 +111,13 @@ func TestJsonMarshalling(t *testing.T) {
 func TestKeyStoreJsonImport(t *testing.T) {
 
 	//import a valid json key store
-	jsonKeyStore := `{"mnemonic":"abandon amount liar amount expire adjust cage candy arch gather drum buyer","keys":{"eth_private_key":"dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75"},"version":1}`
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"eth_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
 
 	ks, err := FromJson(jsonKeyStore)
 	require.Nil(t, err)
 
-	require.Equal(t, "abandon amount liar amount expire adjust cage candy arch gather drum buyer", ks.mnemonic)
-	require.Equal(t, ks.keys["eth_private_key"], "dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75")
+	require.Equal(t, "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom", ks.mnemonic)
+	require.Equal(t, ks.keys["eth_private_key"], "eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c")
 	require.Equal(t, ks.version, uint8(1))
 
 	//import invalid json keystore
@@ -127,14 +130,14 @@ func TestKeyStoreJsonImport(t *testing.T) {
 func TestNewKeyStoreFactory(t *testing.T) {
 
 	newMnemonic = func() (string, error) {
-		return "abandon amount liar amount expire adjust cage candy arch gather drum buyer", nil
+		return "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom", nil
 	}
 
 	ks, err := NewKeyStoreFactory()
 	require.Nil(t, err)
 
-	require.Equal(t, "abandon amount liar amount expire adjust cage candy arch gather drum buyer", ks.mnemonic)
-	require.Equal(t, ks.keys["eth_private_key"], "dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75")
+	require.Equal(t, "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom", ks.mnemonic)
+	require.Equal(t, ks.keys["eth_private_key"], "eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c")
 	require.Equal(t, ks.version, uint8(1))
 
 }
@@ -142,9 +145,9 @@ func TestNewKeyStoreFactory(t *testing.T) {
 func TestGetMnemonic(t *testing.T) {
 
 	ks := KeyStore{
-		mnemonic: "abandon amount liar amount expire adjust cage candy arch gather drum buyer",
+		mnemonic: "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom",
 	}
 
-	require.Equal(t, "abandon amount liar amount expire adjust cage candy arch gather drum buyer", ks.GetMnemonic())
+	require.Equal(t, "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom", ks.GetMnemonic())
 
 }

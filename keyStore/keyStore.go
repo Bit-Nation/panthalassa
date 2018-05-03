@@ -27,7 +27,11 @@ var newMnemonic = bip39.NewMnemonic
 var ethPrivateKeyValidation = func(store KeyStore) error {
 
 	//derive seed used for coins
-	seed := bip39.NewSeed(store.mnemonic, "coins")
+	seed, err := bip39.NewSeed(store.mnemonic, "coins")
+	if err != nil {
+		return err
+	}
+
 	//make it the master key
 	key, err := bip32.NewMasterKey(seed)
 	if err != nil {
@@ -146,7 +150,13 @@ func NewKeyStoreFactory() (*KeyStore, error) {
 //Create new keyStore from mnemonic
 func NewFromMnemonic(mnemonic string) (*KeyStore, error) {
 
-	k, err := bip32.NewMasterKey(bip39.NewSeed(mnemonic, "coins"))
+	//Create new seed
+	seed, err := bip39.NewSeed(mnemonic, "coins")
+	if err != nil {
+		return &KeyStore{}, err
+	}
+
+	k, err := bip32.NewMasterKey(seed)
 	if err != nil {
 		return &KeyStore{}, err
 	}

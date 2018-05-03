@@ -20,7 +20,7 @@ func TestCreateFromKeyStore(t *testing.T) {
 func TestExportFunction(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"abandon amount liar amount expire adjust cage candy arch gather drum buyer","keys":{"eth_private_key":"dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75"},"version":1}`
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"eth_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
 	ks, err := keyStore.FromJson(jsonKeyStore)
 	require.Nil(t, err)
 
@@ -45,7 +45,7 @@ func TestExportFunction(t *testing.T) {
 func TestOpenWithMnemonic(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"abandon amount liar amount expire adjust cage candy arch gather drum buyer","keys":{"eth_private_key":"dedbc9eb2b7eea18727f4b2e2d440b93e597cb283f00a3245943481785944d75"},"version":1}`
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"eth_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
 	ks, err := keyStore.FromJson(jsonKeyStore)
 	require.Nil(t, err)
 
@@ -58,7 +58,7 @@ func TestOpenWithMnemonic(t *testing.T) {
 	require.Nil(t, err)
 
 	//Decrypt the exported encrypted key storage
-	km, err = OpenWithMnemonic(cipherText, "abandon amount liar amount expire adjust cage candy arch gather drum buyer")
+	km, err = OpenWithMnemonic(cipherText, "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom")
 	require.Nil(t, err)
 
 	jsonKs, err := km.keyStore.Marshal()
