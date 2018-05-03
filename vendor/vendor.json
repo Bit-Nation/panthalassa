@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "KqYmXUcuGwsvBL6XVsQnXsFb3LI=",
+			"path": "github.com/stretchr/testify/require",
+			"revision": "c679ae2cc0cb27ec3293fea7e254e47386f05d69",
+			"revisionTime": "2018-03-14T08:05:35Z"
+		},
+		{
+			"checksumSHA1": "PqI+XZ2zOVjL/m2tzdKmoZA+uhQ=",
+			"path": "github.com/tyler-smith/go-bip32",
+			"revision": "2c9cfd17756470a0b7c3e4b7954bae7d11035504",
+			"revisionTime": "2017-09-22T07:41:01Z"
+		},
+		{
+			"checksumSHA1": "vW7IiPtoA4hQQ/ScHlbmRktY89U=",
+			"path": "github.com/tyler-smith/go-bip39",
+			"revision": "8e7a99b3e716f36d3b080a9a70f9eb45abe4edcc",
+			"revisionTime": "2016-06-29T16:38:56Z"
+		}
+	],
+	"rootPath": "github.com/Bit-Nation/panthalassa"
+}
