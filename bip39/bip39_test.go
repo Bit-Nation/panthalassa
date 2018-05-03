@@ -173,8 +173,7 @@ func TestNewSeed(t *testing.T) {
 	password := "TREZOR"
 
 	for _, vector := range TestVectors {
-		byteSeed, err := NewSeed(vector.mnemonic, password)
-		require.Nil(t, err)
+		byteSeed := newSeed(vector.mnemonic, password)
 		//Generated seed should be equal to the vector seed
 		require.Equal(t, vector.hexSeed, hex.EncodeToString(byteSeed))
 	}

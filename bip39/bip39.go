@@ -33,7 +33,12 @@ func NewSeed(mnemonic string, password string) ([]byte, error) {
 		return []byte(""), errors.New("got invalid mnemonic")
 	}
 
-	return bip39.NewSeed(mnemonic, password), nil
+	return newSeed(mnemonic, password), nil
+
+}
+
+func newSeed(mnemonic, password string) []byte {
+	return bip39.NewSeed(mnemonic, password)
 }
 
 //Check if an mnemonic is valid or not
