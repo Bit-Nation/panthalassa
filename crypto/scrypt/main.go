@@ -4,7 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/json"
 
-	"golang.org/x/crypto/scrypt"
+	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
+	scrypt "golang.org/x/crypto/scrypt"
 )
 
 const ScryptN = 16384
@@ -12,7 +13,7 @@ const ScryptR = 8
 const ScryptP = 1
 const ScryptSaltLength = 50
 
-type ScryptKey struct {
+type Key struct {
 	N      int    `json:"n"`
 	R      int    `json:"r"`
 	P      int    `json:"p"`
@@ -22,8 +23,8 @@ type ScryptKey struct {
 }
 
 type ScryptCipherText struct {
-	CipherText string    `json:"cipher_text"`
-	ScryptKey  ScryptKey `json:"scrypt_key"`
+	CipherText string `json:"cipher_text"`
+	ScryptKey  Key    `json:"scrypt_key"`
 }
 
 //Export's ScryptCipherText as json
@@ -40,7 +41,7 @@ func (s *ScryptCipherText) Export() (string, error) {
 }
 
 //Derives a key out of a password
-func Scrypt(pw string, keyLen int) (ScryptKey, error) {
+func Scrypt(pw string, keyLen int) (Key, error) {
 
 	salt := make([]byte, ScryptSaltLength)
 
@@ -49,10 +50,10 @@ func Scrypt(pw string, keyLen int) (ScryptKey, error) {
 	key, err := scrypt.Key([]byte(pw), salt, ScryptN, ScryptR, ScryptP, keyLen)
 
 	if err != nil {
-		return ScryptKey{}, err
+		return Key{}, err
 	}
 
-	sV := ScryptKey{
+	sV := Key{
 		N:      ScryptN,
 		R:      ScryptR,
 		P:      ScryptP,
@@ -65,7 +66,7 @@ func Scrypt(pw string, keyLen int) (ScryptKey, error) {
 }
 
 //Create new ScryptCipherText
-func NewScryptCipherText(pw string, data string) (string, error) {
+func NewCipherText(pw string, data string) (string, error) {
 
 	derivedKey, err := Scrypt(pw, 32)
 
@@ -73,7 +74,7 @@ func NewScryptCipherText(pw string, data string) (string, error) {
 		return "", err
 	}
 
-	cipherText, err := encrypt(string(derivedKey.key), data)
+	cipherText, err := aes.Encrypt(string(derivedKey.key), data)
 
 	cipher := ScryptCipherText{
 		CipherText: cipherText,
@@ -98,5 +99,5 @@ func DecryptScryptCipherText(pw string, data string) (string, error) {
 		return "", err
 	}
 
-	return decrypt(string(dK), c.CipherText)
+	return aes.Decrypt(string(dK), c.CipherText)
 }

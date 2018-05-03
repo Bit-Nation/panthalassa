@@ -50,7 +50,7 @@ func TestScryptCipherText_Export(t *testing.T) {
 }
 
 func TestDecryptScryptCipherText(t *testing.T) {
-	ethKey, err := NewScryptCipherText("password", "i_am_the_text")
+	ethKey, err := NewCipherText("password", "i_am_the_text")
 
 	if err != nil {
 		t.Error(err)

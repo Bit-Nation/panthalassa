@@ -11,7 +11,7 @@ import (
 )
 
 // encrypt string to base64 crypto using AES
-func encrypt(key string, text string) (string, error) {
+func Encrypt(key string, text string) (string, error) {
 	// key := []byte(keyText)
 	plaintext := []byte(text)
 
@@ -36,7 +36,7 @@ func encrypt(key string, text string) (string, error) {
 }
 
 // decrypt from base64 to decrypted string
-func decrypt(key string, cryptoText string) (string, error) {
+func Decrypt(key string, cryptoText string) (string, error) {
 	cipherText, _ := base64.URLEncoding.DecodeString(cryptoText)
 
 	block, err := aes.NewCipher([]byte(key))
@@ -56,6 +56,7 @@ func decrypt(key string, cryptoText string) (string, error) {
 	stream := cipher.NewCFBDecrypter(block, iv)
 
 	// XORKeyStream can work in-place if the two arguments are the same.
+	// @todo I heard that XOR streams are not the best. Investigate in this.
 	stream.XORKeyStream(cipherText, cipherText)
 
 	return fmt.Sprintf("%s", cipherText), nil

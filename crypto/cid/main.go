@@ -21,7 +21,7 @@ func IsValidCid(id string) bool {
 
 //Get the CID of a value with
 //sha3 256 as a base64 string
-func CIDSha256(value string) (string, error) {
+func Sha256(value string) (string, error) {
 
 	c, err := cid.NewPrefixV1(cid.Raw, mh.SHA3_256).Sum([]byte(value))
 
@@ -35,7 +35,7 @@ func CIDSha256(value string) (string, error) {
 
 //Get the CID of a value with
 //sha3 512 as a base64 string
-func CIDSha512(value string) (string, error) {
+func Sha512(value string) (string, error) {
 
 	c, err := cid.NewPrefixV1(cid.Raw, mh.SHA3_512).Sum([]byte(value))
 
