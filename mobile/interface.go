@@ -2,13 +2,18 @@ package panthalassa
 
 import (
 	"errors"
-	"github.com/Bit-Nation/panthalassa/keyManager"
+
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 )
 
 var panthalassaInstance *panthalassa
 
+type UpStream interface {
+	Send(data string)
+}
+
 //Create a new panthalassa instance
-func Start(accountStore, password string) error {
+func Start(accountStore, password string, upStream UpStream) error {
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
@@ -23,11 +28,23 @@ func Start(accountStore, password string) error {
 
 	//Create panthalassa instance
 	panthalassaInstance = &panthalassa{
-		km: km,
+		km:       km,
+		upStream: upStream,
 	}
 
 	return nil
 
+}
+
+func Send(data string) error {
+
+	if panthalassaInstance != nil {
+		return errors.New("call stop first in order to create a new panthalassa instance")
+	}
+
+	panthalassaInstance.upStream.Send("send data back")
+
+	return nil
 }
 
 //Create a new panthalassa instance with the mnemonic
