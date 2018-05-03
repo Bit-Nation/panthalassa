@@ -65,6 +65,11 @@ func (s Store) GetMnemonic() mnemonic.Mnemonic {
 	return s.mnemonic
 }
 
+//Did the keystore changed (happen after a migration)
+func (s Store) WasMigrated() bool {
+	return s.changed
+}
+
 //Migrate keystore up
 func migrateUp(s Store) (Store, error) {
 

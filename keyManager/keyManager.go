@@ -106,6 +106,11 @@ func (km KeyManager) GetEthereumPrivateKey() (string, error) {
 	return km.keyStore.GetKey("eth_private_key")
 }
 
+//Did the keystore change (happen after migration)
+func (km KeyManager) WasMigrated() bool {
+	return km.keyStore.WasMigrated()
+}
+
 //Create new key manager from key store
 func CreateFromKeyStore(ks ks.Store) *KeyManager {
 	return &KeyManager{
