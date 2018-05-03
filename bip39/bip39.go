@@ -2,6 +2,7 @@ package bip39
 
 import (
 	"crypto/rand"
+	"errors"
 	bip39 "github.com/tyler-smith/go-bip39"
 	"strings"
 )
@@ -26,8 +27,13 @@ func NewMnemonic() (string, error) {
 }
 
 //Generate new seed of mnemonic and password
-func NewSeed(mnemonic string, password string) []byte {
-	return bip39.NewSeed(mnemonic, password)
+func NewSeed(mnemonic string, password string) ([]byte, error) {
+
+	if !ValidMnemonic(mnemonic) {
+		return []byte(""), errors.New("got invalid mnemonic")
+	}
+
+	return bip39.NewSeed(mnemonic, password), nil
 }
 
 //Check if an mnemonic is valid or not
