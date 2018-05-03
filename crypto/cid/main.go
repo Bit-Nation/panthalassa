@@ -1,4 +1,4 @@
-package crypto
+package cid
 
 import (
 	cid "github.com/ipfs/go-cid"

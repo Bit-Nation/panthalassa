@@ -1,4 +1,4 @@
-package crypto
+package scrypt
 
 import (
 	"github.com/stretchr/testify/require"

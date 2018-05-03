@@ -1,4 +1,4 @@
-package crypto
+package cid
 
 import (
 	"github.com/stretchr/testify/require"
