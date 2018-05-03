@@ -4,6 +4,7 @@ deps:
 	go get github.com/whyrusleeping/gx
 	go get github.com/whyrusleeping/gx-go
 	go get github.com/mattn/goveralls
+	go get -u github.com/kardianos/govendor
 install:
 	gx install
 	go get ./...
