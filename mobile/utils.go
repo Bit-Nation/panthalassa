@@ -8,6 +8,8 @@ import (
 	"github.com/Bit-Nation/panthalassa/keyManager"
 	"github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
+	"github.com/tyler-smith/go-bip39"
+	"strings"
 )
 
 //Encrypt's data
@@ -86,4 +88,16 @@ func CIDSha256(value string) (string, error) {
 //Check if CID is valid
 func IsValidCID(c string) bool {
 	return cid.IsValidCid(c)
+}
+
+//Check if mnemonic is valid
+func IsValidMnemonic(mne string) bool {
+
+	words := strings.Split(mne, " ")
+
+	if len(words) != 24 {
+		return false
+	}
+
+	return bip39.IsMnemonicValid(mne)
 }
