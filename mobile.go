@@ -3,6 +3,7 @@ package panthalassa
 import (
 	"errors"
 	"github.com/Bit-Nation/panthalassa/keyManager"
+	"github.com/Bit-Nation/panthalassa/bip39"
 )
 
 var p *panthalassa
@@ -83,4 +84,9 @@ func Export(pw, pwConfirm string) (string, error) {
 
 	return p.Export(pw, pwConfirm)
 
+}
+
+//Check if the mnemonic is valid
+func ValidMnemonic(mnemonic string) bool {
+	return bip39.ValidMnemonic(mnemonic)
 }
