@@ -66,15 +66,15 @@ func Scrypt(pw string, keyLen int) (Key, error) {
 }
 
 //Create new ScryptCipherText
-func NewCipherText(pw string, data string) (string, error) {
+func NewCipherText(data, key string) (string, error) {
 
-	derivedKey, err := Scrypt(pw, 32)
+	derivedKey, err := Scrypt(key, 32)
 
 	if err != nil {
 		return "", err
 	}
 
-	cipherText, err := aes.Encrypt(string(derivedKey.key), data)
+	cipherText, err := aes.Encrypt(data, string(derivedKey.key))
 
 	cipher := ScryptCipherText{
 		CipherText: cipherText,
@@ -85,7 +85,7 @@ func NewCipherText(pw string, data string) (string, error) {
 
 }
 
-func DecryptScryptCipherText(pw string, data string) (string, error) {
+func DecryptCipherText(data, key string) (string, error) {
 
 	var c ScryptCipherText
 
@@ -93,11 +93,10 @@ func DecryptScryptCipherText(pw string, data string) (string, error) {
 		return "", err
 	}
 
-	dK, err := scrypt.Key([]byte(pw), []byte(c.ScryptKey.Salt), c.ScryptKey.N, c.ScryptKey.R, c.ScryptKey.P, c.ScryptKey.KeyLen)
-
+	dK, err := scrypt.Key([]byte(key), []byte(c.ScryptKey.Salt), c.ScryptKey.N, c.ScryptKey.R, c.ScryptKey.P, c.ScryptKey.KeyLen)
 	if err != nil {
 		return "", err
 	}
 
-	return aes.Decrypt(string(dK), c.CipherText)
+	return aes.Decrypt(c.CipherText, string(dK))
 }
