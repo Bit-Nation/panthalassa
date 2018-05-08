@@ -1,6 +1,7 @@
 package scrypt
 
 import (
+	"errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -49,17 +50,34 @@ func TestScryptCipherText_Export(t *testing.T) {
 
 }
 
-func TestDecryptScryptCipherText(t *testing.T) {
-	ethKey, err := NewCipherText("password", "i_am_the_text")
+func TestSuccessEncryptAndDecrypt(t *testing.T) {
 
-	if err != nil {
-		t.Error(err)
-	}
+	value := "i am the value"
+	key := "password"
 
-	plainText, err := DecryptScryptCipherText("password", ethKey)
+	//create cipher text
+	cipherText, err := NewCipherText(value, key)
+	require.Nil(t, err)
 
-	if plainText != "i_am_the_text" {
-		t.Errorf("Expected decrypted text to be: i_am_the_text - got: %s", plainText)
-	}
+	//decrypt cipher text
+	plainText, err := DecryptCipherText(cipherText, key)
+	require.Nil(t, err)
+	require.Equal(t, value, plainText)
+
+}
+
+func TestFailDecryption(t *testing.T) {
+
+	value := "i am the value"
+	key := "password"
+
+	//create cipher text
+	ethKey, err := NewCipherText(value, key)
+	require.Nil(t, err)
+
+	//decrypt cipher text
+	plainText, err := DecryptCipherText(ethKey, "passwordddd")
+	require.Error(t, errors.New("cipher: message authentication failed"), err)
+	require.Equal(t, "", plainText)
 
 }
