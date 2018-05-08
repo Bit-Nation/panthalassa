@@ -30,7 +30,7 @@ func ScryptEncrypt(data, pw, pwConfirm string) (string, error) {
 //Decrypt scrypt cipher text
 //Need's a string value like the one returned from ScryptEncrypt
 func ScryptDecrypt(data, pw string) (string, error) {
-	return scrypt.DecryptScryptCipherText(data, pw)
+	return scrypt.DecryptCipherText(data, pw)
 }
 
 //Creates an new set of encrypted account key's
