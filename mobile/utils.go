@@ -24,13 +24,13 @@ func ScryptEncrypt(data, pw, pwConfirm string) (string, error) {
 		return "", errors.New("password mismatch")
 	}
 
-	return scrypt.NewCipherText(pw, data)
+	return scrypt.NewCipherText(data, pw)
 }
 
 //Decrypt scrypt cipher text
 //Need's a string value like the one returned from ScryptEncrypt
 func ScryptDecrypt(data, pw string) (string, error) {
-	return scrypt.NewCipherText(pw, data)
+	return scrypt.DecryptScryptCipherText(data, pw)
 }
 
 //Creates an new set of encrypted account key's
