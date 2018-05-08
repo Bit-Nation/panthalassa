@@ -29,7 +29,7 @@ func OpenWithPassword(encryptedAccount, pw string) (*KeyManager, error) {
 	}
 
 	//Decrypt key store
-	jsonKeyStore, err := scrypt.DecryptScryptCipherText(pw, acc.EncryptedKeyStore)
+	jsonKeyStore, err := scrypt.DecryptCipherText(acc.EncryptedKeyStore, pw)
 	if err != nil {
 		return &KeyManager{}, err
 	}
@@ -58,7 +58,7 @@ func OpenWithMnemonic(encryptedAccount, mnemonic string) (*KeyManager, error) {
 	}
 
 	//decrypt password with mnemonic
-	pw, err := scrypt.DecryptScryptCipherText(mnemonic, acc.Password)
+	pw, err := scrypt.DecryptCipherText(acc.Password, mnemonic)
 	if err != nil {
 		return &KeyManager{}, err
 	}
@@ -82,13 +82,13 @@ func (km KeyManager) Export(pw, pwConfirm string) (string, error) {
 	}
 
 	//encrypt key store with password
-	encryptedKeyStore, err := scrypt.NewCipherText(pw, string(keyStore))
+	encryptedKeyStore, err := scrypt.NewCipherText(string(keyStore), pw)
 	if err != nil {
 		return "", err
 	}
 
 	//encrypt password with mnemonic
-	encryptedPassword, err := scrypt.NewCipherText(km.keyStore.GetMnemonic().String(), pw)
+	encryptedPassword, err := scrypt.NewCipherText(pw, km.keyStore.GetMnemonic().String())
 
 	//Marshal account
 	acc, err := json.Marshal(accountKeyStore{
