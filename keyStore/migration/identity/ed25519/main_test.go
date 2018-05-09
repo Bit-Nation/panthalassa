@@ -1,9 +1,9 @@
 package ed25519
 
 import (
+	"github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 	"github.com/Bit-Nation/panthalassa/mnemonic"
 	"github.com/stretchr/testify/require"
-	"github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 	"testing"
 )
 

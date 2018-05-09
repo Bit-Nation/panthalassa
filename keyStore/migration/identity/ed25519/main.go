@@ -5,10 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 
+	idenitiy "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	bip39 "github.com/tyler-smith/go-bip39"
 	ed25519 "golang.org/x/crypto/ed25519"
-	idenitiy "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 )
 
 type Migration struct{}
