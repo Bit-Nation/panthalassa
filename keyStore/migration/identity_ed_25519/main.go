@@ -27,13 +27,13 @@ func (m Migration) Up(mnemonic mnemonic.Mnemonic, keys map[string]string) (map[s
 
 	//Set private key
 	if value, exist := keys[Ed25519PrivateKey]; exist && value != hex.EncodeToString(edPriv) {
-		return keys, errors.New("migration - ed 25519 derivation miss match")
+		return keys, errors.New("migration - ed25519 private key derivation miss match")
 	}
 	keys[Ed25519PrivateKey] = hex.EncodeToString(edPriv)
 
 	//Set public key
 	if value, exist := keys[Ed25519PublicKey]; exist && value != hex.EncodeToString(edPub) {
-		return keys, errors.New("migration - ed 25519 derivation miss match")
+		return keys, errors.New("migration - ed25519 public key derivation miss match")
 	}
 	keys[Ed25519PublicKey] = hex.EncodeToString(edPub)
 
