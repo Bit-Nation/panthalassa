@@ -38,17 +38,6 @@ func Start(accountStore, password string, upStream UpStream) error {
 
 }
 
-func Send(data string) error {
-
-	if panthalassaInstance != nil {
-		return errors.New("call stop first in order to create a new panthalassa instance")
-	}
-
-	panthalassaInstance.upStream.Send("send data back")
-
-	return nil
-}
-
 //Create a new panthalassa instance with the mnemonic
 func StartFromMnemonic(accountStore, mnemonic string) error {
 
@@ -82,14 +71,13 @@ func EthPrivateKey() (string, error) {
 
 }
 
-func SendResponse(resp string) error {
+func SendResponse(id uint32, data string) error {
 
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa")
 	}
 
-	return nil
-
+	return panthalassaInstance.deviceApi.Receive(id, data)
 }
 
 //Export the current account store with given password
