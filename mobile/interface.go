@@ -3,6 +3,7 @@ package panthalassa
 import (
 	"errors"
 
+	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 )
 
@@ -28,8 +29,9 @@ func Start(accountStore, password string, upStream UpStream) error {
 
 	//Create panthalassa instance
 	panthalassaInstance = &panthalassa{
-		km:       km,
-		upStream: upStream,
+		km:        km,
+		upStream:  upStream,
+		deviceApi: deviceApi.New(upStream),
 	}
 
 	return nil

@@ -1,7 +1,6 @@
 package device_api
 
 import (
-	"github.com/ipfs/go-log"
 	"github.com/stretchr/testify/require"
 	"testing"
 
@@ -34,7 +33,6 @@ func (c *testRPCCall) Valid() error {
 }
 
 func Test(t *testing.T) {
-	log.SetDebugLogging()
 
 	//The api call we got from the send function
 	var receivedApiCall apiCall
@@ -66,7 +64,7 @@ func Test(t *testing.T) {
 	go func() {
 		for {
 			res := <-respChan
-			require.Equal(t, "response", res.Closer)
+			require.Equal(t, "response", res.Content)
 			res.Closer <- nil
 		}
 	}()
