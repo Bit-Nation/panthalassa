@@ -6,7 +6,7 @@ import (
 )
 
 type UpStream interface {
-	Send(string string)
+	Send(data string)
 }
 
 type apiCall struct {
