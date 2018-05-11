@@ -1,5 +1,7 @@
 package curve25519
 
+/**
+@todo commented for now since we don't need it currently
 import (
 	"errors"
 
@@ -65,3 +67,5 @@ func (m *Migration) Up(mnemonic mnemonic.Mnemonic, keys map[string]string) (map[
 	return keys, nil
 
 }
+
+*/
