@@ -54,6 +54,12 @@
       "hash": "Qmdu32Lzvuof9HXogmHQZ8JJuhaWyADBwrRSmpXjGFX8HM",
       "name": "go-libp2p-bootstrap",
       "version": "3.0.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG",
+      "name": "go-libp2p-net",
+      "version": "2.0.5"
     }
   ],
   "gxVersion": "0.12.1",
