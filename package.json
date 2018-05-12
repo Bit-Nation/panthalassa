@@ -60,6 +60,11 @@
       "hash": "QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG",
       "name": "go-libp2p-net",
       "version": "2.0.5"
+    },
+    {
+      "hash": "QmTG23dvpBCBjqQwyDxV8CQT6jmS4PSftNr1VqHhE3MLy7",
+      "name": "go-log",
+      "version": "1.4.1"
     }
   ],
   "gxVersion": "0.12.1",
