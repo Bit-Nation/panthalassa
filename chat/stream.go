@@ -5,6 +5,7 @@ import (
 	"context"
 
 	host "github.com/libp2p/go-libp2p-host"
+	net "github.com/libp2p/go-libp2p-net"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	json "github.com/multiformats/go-multicodec/json"
@@ -13,6 +14,11 @@ import (
 type Stream struct {
 	Write chan<- Command
 	Read  <-chan Command
+	s     net.Stream
+}
+
+func (s *Stream) Close() error {
+	return s.s.Close()
 }
 
 func NewStream(h host.Host, chatNode ma.Multiaddr) (*Stream, error) {
@@ -34,7 +40,7 @@ func NewStream(h host.Host, chatNode ma.Multiaddr) (*Stream, error) {
 	//Create stream to chat node
 	s, err := h.NewStream(context.Background(), pi.ID, ProtocolID)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	//Write to stream
@@ -77,6 +83,7 @@ func NewStream(h host.Host, chatNode ma.Multiaddr) (*Stream, error) {
 	return &Stream{
 		Write: writeChan,
 		Read:  readChan,
+		s:     s,
 	}, nil
 
 }
