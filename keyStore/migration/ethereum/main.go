@@ -8,8 +8,8 @@ import (
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 )
 
-var EthereumDerivationPath = "m/100H/10H"
-var EthereumKey = "ethereum_private_key"
+const DerivationPath = "m/100H/10H"
+const KeyStoreKey = "ethereum_private_key"
 
 type Migration struct{}
 
@@ -28,7 +28,7 @@ func (m Migration) Up(mnemonic mnemonic.Mnemonic, keys map[string]string) (map[s
 	}
 
 	//Derive the ethereum private key
-	k, err := bip32.Derive(EthereumDerivationPath, masterKey)
+	k, err := bip32.Derive(DerivationPath, masterKey)
 	if err != nil {
 		return keys, err
 	}
@@ -37,11 +37,11 @@ func (m Migration) Up(mnemonic mnemonic.Mnemonic, keys map[string]string) (map[s
 	privateKey := hex.EncodeToString(k.Key)
 
 	//Exit with error if value is not like we expect it
-	if value, exist := keys[EthereumKey]; exist && value != privateKey {
+	if value, exist := keys[KeyStoreKey]; exist && value != privateKey {
 		return keys, errors.New("private key already exist BUT does not match derived private key")
 	}
 
-	keys[EthereumKey] = privateKey
+	keys[KeyStoreKey] = privateKey
 
 	return keys, nil
 }

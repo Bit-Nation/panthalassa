@@ -6,6 +6,7 @@ import (
 
 	scrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
+	ethereumMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/ethereum"
 )
 
 type KeyManager struct {
@@ -103,7 +104,7 @@ func (km KeyManager) Export(pw, pwConfirm string) (string, error) {
 
 //Get ethereum private key
 func (km KeyManager) GetEthereumPrivateKey() (string, error) {
-	return km.keyStore.GetKey("eth_private_key")
+	return km.keyStore.GetKey(ethereumMigration.KeyStoreKey)
 }
 
 //Did the keystore change (happen after migration)
