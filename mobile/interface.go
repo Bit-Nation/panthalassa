@@ -2,13 +2,19 @@ package panthalassa
 
 import (
 	"errors"
-	"github.com/Bit-Nation/panthalassa/keyManager"
+
+	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 )
 
 var panthalassaInstance *panthalassa
 
+type UpStream interface {
+	Send(data string)
+}
+
 //Create a new panthalassa instance
-func Start(accountStore, password string) error {
+func Start(accountStore, password string, upStream UpStream) error {
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
@@ -23,7 +29,9 @@ func Start(accountStore, password string) error {
 
 	//Create panthalassa instance
 	panthalassaInstance = &panthalassa{
-		km: km,
+		km:        km,
+		upStream:  upStream,
+		deviceApi: deviceApi.New(upStream),
 	}
 
 	return nil
@@ -59,18 +67,25 @@ func EthPrivateKey() (string, error) {
 		return "", errors.New("you have to start panthalassa")
 	}
 
-	return panthalassaInstance.EthereumPrivateKey()
+	return panthalassaInstance.km.GetEthereumPrivateKey()
 
 }
 
-func SendResponse(resp string) error {
+func EthAddress() (string, error) {
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa")
+	}
+
+	return panthalassaInstance.km.GetEthereumAddress()
+}
+
+func SendResponse(id uint32, data string) error {
 
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa")
 	}
 
-	return nil
-
+	return panthalassaInstance.deviceApi.Receive(id, data)
 }
 
 //Export the current account store with given password

@@ -1,49 +1,46 @@
 package aes
 
 import (
+	"errors"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 //Test the encrypt and decrypt function in one batch
-func TestEncryptAndDecrypt(t *testing.T) {
+func TestSuccessEncryptDecrypt(t *testing.T) {
 
 	var secret, value string
 
-	secret = "1111111111111111"
+	secret = "11111111111111111111111111111111"
 	value = "I am the value"
 
-	cipherText, e := Encrypt(secret, value)
+	//Encrypt
+	cipherText, e := Encrypt(value, secret)
+	require.Nil(t, e)
 
-	if e != nil {
-		t.Error(e)
-	}
+	//Decrypt
+	res, err := Decrypt(cipherText, secret)
+	require.Nil(t, err)
 
-	rawValue, e := Decrypt(secret, cipherText)
-
-	if e != nil {
-		t.Error(e)
-	}
-
-	if rawValue != value {
-		t.Errorf("Expected %s and %s to match", rawValue, value)
-	}
+	//Decrypted value must match the given value
+	require.Equal(t, value, res)
 
 }
 
-func TestEncryptInvalidKeyLen(t *testing.T) {
-	_, e := Encrypt("too_short", "")
+func TestFailedDecryption(t *testing.T) {
 
-	if e.Error() != "crypto/aes: invalid key size 9" {
-		t.Error("too_short is only 9 bytes long. Valid key's are 16, 24, 28 bytes long")
-	}
+	var secret, value string
 
-}
+	secret = "11111111111111111111111111111111"
+	value = "I am the value"
 
-func TestDecryptInvalidKeyLen(t *testing.T) {
-	_, e := Decrypt("too_short", "")
+	//Encrypt
+	cipherText, e := Encrypt(value, secret)
+	require.Nil(t, e)
 
-	if e.Error() != "crypto/aes: invalid key size 9" {
-		t.Error("too_short is only 9 bytes long. Valid key's are 16, 24, 28 bytes long")
-	}
+	//Decrypt
+	res, err := Decrypt(cipherText, "11111111111111111111111111111112")
+	require.Equal(t, "", res)
+	require.Error(t, errors.New("cipher: message authentication failed"), err)
 
 }

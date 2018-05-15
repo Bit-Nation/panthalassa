@@ -1,63 +1,94 @@
 package aes
 
+//Taken from this example: https://gist.github.com/cannium/c167a19030f2a3c6adbb5a5174bea3ff
+
 import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/base64"
-	"errors"
-	"fmt"
+	"encoding/hex"
+	"encoding/json"
 	"io"
 )
 
-// encrypt string to base64 crypto using AES
-func Encrypt(key string, text string) (string, error) {
-	// key := []byte(keyText)
-	plaintext := []byte(text)
-
-	block, err := aes.NewCipher([]byte(key))
-	if err != nil {
-		return "", err
-	}
-
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
-	cipherText := make([]byte, aes.BlockSize+len(plaintext))
-	iv := cipherText[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return "", err
-	}
-
-	stream := cipher.NewCFBEncrypter(block, iv)
-	stream.XORKeyStream(cipherText[aes.BlockSize:], plaintext)
-
-	// convert to base64
-	return base64.URLEncoding.EncodeToString(cipherText), nil
+type aesCipherText struct {
+	Iv         string `json:"iv"`
+	CipherText string `json:"cipher_text"`
 }
 
-// decrypt from base64 to decrypted string
-func Decrypt(key string, cryptoText string) (string, error) {
-	cipherText, _ := base64.URLEncoding.DecodeString(cryptoText)
+func (a aesCipherText) Marshal() ([]byte, error) {
+	return json.Marshal(a)
+}
+
+// encrypt string to base64 crypto using AES
+func Encrypt(plainText, key string) (string, error) {
+
+	//Create cipher block
+	block, err := aes.NewCipher([]byte(key))
+	if err != nil {
+		return "", err
+	}
+
+	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
+	nonce := make([]byte, 12)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+
+	aesGcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	cipherText := aesGcm.Seal(nil, nonce, []byte(plainText), nil)
+
+	ct := aesCipherText{
+		Iv:         hex.EncodeToString(nonce),
+		CipherText: hex.EncodeToString(cipherText),
+	}
+
+	marshaled, err := ct.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	return string(marshaled), nil
+}
+
+func Decrypt(cipherText, key string) (string, error) {
+
+	//Unmarshal cipher text
+	var ct aesCipherText
+	if err := json.Unmarshal([]byte(cipherText), &ct); err != nil {
+		return "", err
+	}
+
+	//Decode IV
+	nonce, err := hex.DecodeString(ct.Iv)
+	if err != nil {
+		return "", err
+	}
+
+	//Decode plain cipher text
+	encryptedCipherText, err := hex.DecodeString(ct.CipherText)
+	if err != nil {
+		return "", err
+	}
 
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return "", err
 	}
 
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
-	if len(cipherText) < aes.BlockSize {
-		return "", errors.New("cipherText too short")
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
 	}
 
-	iv := cipherText[:aes.BlockSize]
-	cipherText = cipherText[aes.BlockSize:]
+	plainText, err := aesgcm.Open(nil, nonce, encryptedCipherText, nil)
+	if err != nil {
+		return "", err
+	}
 
-	stream := cipher.NewCFBDecrypter(block, iv)
-
-	// XORKeyStream can work in-place if the two arguments are the same.
-	// @todo I heard that XOR streams are not the best. Investigate in this.
-	stream.XORKeyStream(cipherText, cipherText)
-
-	return fmt.Sprintf("%s", cipherText), nil
+	return string(plainText), nil
 }

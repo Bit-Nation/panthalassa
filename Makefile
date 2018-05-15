@@ -5,6 +5,7 @@ deps:
 	go get github.com/whyrusleeping/gx-go
 	go get github.com/mattn/goveralls
 	go get -u github.com/kardianos/govendor
+	go get github.com/stretchr/testify
 install:
 	gx install
 	go get ./...

@@ -24,7 +24,7 @@ func TestUpSuccess(t *testing.T) {
 	migratedKeys, err := m.Up(mnemo, keys)
 	require.Nil(t, err)
 
-	require.Equal(t, "f84d5d4808521ae7330607cbbd0503959659b927f24db70421fc551e05b50409", migratedKeys[EthereumKey])
+	require.Equal(t, "f84d5d4808521ae7330607cbbd0503959659b927f24db70421fc551e05b50409", migratedKeys[KeyStoreKey])
 
 }
 
@@ -38,7 +38,7 @@ func TestUpFailOnWrongValue(t *testing.T) {
 	m := Migration{}
 
 	keys := map[string]string{
-		EthereumKey: "i_am_not_an_private_key",
+		KeyStoreKey: "i_am_not_an_private_key",
 	}
 
 	//Migrate up

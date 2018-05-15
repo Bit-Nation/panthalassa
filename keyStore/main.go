@@ -79,6 +79,7 @@ func migrateUp(s Store) (Store, error) {
 	for _, m := range migrations {
 
 		//Migrate Up
+		//@todo change to by value
 		newKeys, err := m.Up(s.mnemonic, s.keys)
 		if err != nil {
 			return Store{}, err

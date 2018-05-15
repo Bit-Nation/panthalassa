@@ -1,16 +1,15 @@
 package panthalassa
 
 import (
+	api "github.com/Bit-Nation/panthalassa/api/device"
+	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 )
 
 type panthalassa struct {
-	km *keyManager.KeyManager
-}
-
-//Get ethereum private key of panthalassa instance
-func (p panthalassa) EthereumPrivateKey() (string, error) {
-	return p.km.GetEthereumPrivateKey()
+	km        *keyManager.KeyManager
+	upStream  api.UpStream
+	deviceApi *deviceApi.Api
 }
 
 //Stop the panthalassa instance
