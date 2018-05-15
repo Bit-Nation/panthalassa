@@ -67,8 +67,16 @@ func EthPrivateKey() (string, error) {
 		return "", errors.New("you have to start panthalassa")
 	}
 
-	return panthalassaInstance.EthereumPrivateKey()
+	return panthalassaInstance.km.GetEthereumPrivateKey()
 
+}
+
+func EthAddress() (string, error) {
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa")
+	}
+
+	return panthalassaInstance.km.GetEthereumAddress()
 }
 
 func SendResponse(id uint32, data string) error {

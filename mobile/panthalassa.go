@@ -12,11 +12,6 @@ type panthalassa struct {
 	deviceApi *deviceApi.Api
 }
 
-//Get ethereum private key of panthalassa instance
-func (p panthalassa) EthereumPrivateKey() (string, error) {
-	return p.km.GetEthereumPrivateKey()
-}
-
 //Stop the panthalassa instance
 //this becomes interesting when we start
 //to use the mesh network
