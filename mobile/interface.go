@@ -5,16 +5,19 @@ import (
 
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	mesh "github.com/Bit-Nation/panthalassa/mesh"
+	log "github.com/ipfs/go-log"
 )
 
 var panthalassaInstance *panthalassa
+var logger = log.Logger("panthalassa")
 
 type UpStream interface {
 	Send(data string)
 }
 
 //Create a new panthalassa instance
-func Start(accountStore, password string, upStream UpStream) error {
+func Start(accountStore, password, rendezvousKey string, upStream UpStream) error {
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
@@ -27,11 +30,32 @@ func Start(accountStore, password string, upStream UpStream) error {
 		return err
 	}
 
+	//Mesh network
+	pk, err := km.MeshPrivateKey()
+	if err != nil {
+		return err
+	}
+
+	m, errReporter, err := mesh.New(pk, rendezvousKey)
+	if err != nil {
+		return err
+	}
+	//Report error's from mesh network to current logger
+	go func() {
+		for {
+			select {
+			case err := <-errReporter:
+				logger.Error(err)
+			}
+		}
+	}()
+
 	//Create panthalassa instance
 	panthalassaInstance = &panthalassa{
 		km:        km,
 		upStream:  upStream,
 		deviceApi: deviceApi.New(upStream),
+		mesh:      m,
 	}
 
 	return nil

@@ -4,12 +4,14 @@ import (
 	api "github.com/Bit-Nation/panthalassa/api/device"
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	mesh "github.com/Bit-Nation/panthalassa/mesh"
 )
 
 type panthalassa struct {
 	km        *keyManager.KeyManager
 	upStream  api.UpStream
 	deviceApi *deviceApi.Api
+	mesh      *mesh.Network
 }
 
 //Stop the panthalassa instance
