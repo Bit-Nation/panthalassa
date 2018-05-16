@@ -24,7 +24,7 @@ var bootstrapPeers = []string{
 
 var logger = log.Logger("mesh")
 
-func New(meshPk lp2pCrypto.PrivKey) (*Network, error) {
+func New(meshPk lp2pCrypto.PrivKey, rendezvousKey string) (*Network, <-chan error, error) {
 
 	//Create host
 	h, err := lp2p.New(context.Background(), func(cfg *lp2p.Config) error {
@@ -36,8 +36,14 @@ func New(meshPk lp2pCrypto.PrivKey) (*Network, error) {
 
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	//Create rendezvous key
+	rk := NewRendezvousKey(rendezvousKey)
+
+	//error report channel
+	errReport := make(chan error)
 
 	//Bootstrapping
 	b, err := bootstrap.New(h, bootstrap.Config{
@@ -58,26 +64,31 @@ func New(meshPk lp2pCrypto.PrivKey) (*Network, error) {
 
 	//Create DHT and bootstrap it
 	d := dht.NewDHT(context.Background(), h, ds.NewMapDatastore())
-	go func(dht *dht.IpfsDHT) {
+	go func(dht *dht.IpfsDHT, key RendezvousKey, h host.Host) {
 		logger.Debug("Start DHT bootstrapping")
 		if err := dht.Bootstrap(context.Background()); err != nil {
-			logger.Error(err)
+			errReport <- err
 		}
 		logger.Debug("Finished DHT bootstrapping")
-	}(d)
+
+		//Register service that search for peer's
+		SearchPangeaPeers(h, dht, rk, errReport)
+
+	}(d, rk, h)
 
 	return &Network{
 		host:      h,
 		bootstrap: b,
 		dht:       d,
-	}, nil
+	}, errReport, nil
 
 }
 
 type Network struct {
-	host      host.Host
-	bootstrap *bootstrap.Bootstrap
-	dht       *dht.IpfsDHT
+	host          host.Host
+	bootstrap     *bootstrap.Bootstrap
+	dht           *dht.IpfsDHT
+	rendezvousKey RendezvousKey
 }
 
 func (n *Network) Close() error {

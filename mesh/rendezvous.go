@@ -5,6 +5,10 @@ import (
 	mh "github.com/multiformats/go-multihash"
 )
 
+const (
+	pangea = "pangea"
+)
+
 type RendezvousKey struct {
 	key []byte
 }
