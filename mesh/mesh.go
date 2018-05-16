@@ -5,10 +5,12 @@ import (
 	"time"
 
 	bootstrap "github.com/florianlenz/go-libp2p-bootstrap"
+	ds "github.com/ipfs/go-datastore"
 	log "github.com/ipfs/go-log"
 	lp2p "github.com/libp2p/go-libp2p"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
 )
 
 var bootstrapPeers = []string{
@@ -54,15 +56,28 @@ func New(meshPk lp2pCrypto.PrivKey) (*Network, error) {
 		logger.Debug("Finished bootstrapping")
 	}(b)
 
+	//Create DHT and bootstrap it
+	d := dht.NewDHT(context.Background(), h, ds.NewMapDatastore())
+	go func(dht *dht.IpfsDHT) {
+		logger.Debug("Start DHT bootstrapping")
+		if err := dht.Bootstrap(context.Background()); err != nil {
+			logger.Error(err)
+		}
+		logger.Debug("Finished DHT bootstrapping")
+	}(d)
+
 	return &Network{
-		host: h,
+		host:      h,
+		bootstrap: b,
+		dht:       d,
 	}, nil
 
 }
 
 type Network struct {
 	host      host.Host
-	bootstrap bootstrap.Bootstrap
+	bootstrap *bootstrap.Bootstrap
+	dht       *dht.IpfsDHT
 }
 
 func (n *Network) Close() error {

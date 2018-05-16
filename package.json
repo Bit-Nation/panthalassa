@@ -60,6 +60,11 @@
       "hash": "Qme1knMqwt1hKZbc1BmQFmnm9f36nyQGwXxPGVpVJ9rMK5",
       "name": "go-libp2p-crypto",
       "version": "1.6.2"
+    },
+    {
+      "hash": "QmSBxn1eLMdViZRDGW9rRHRYwtqq5bqUgipqTMPuTim616",
+      "name": "go-libp2p-kad-dht",
+      "version": "4.0.4"
     }
   ],
   "gxVersion": "0.12.1",
