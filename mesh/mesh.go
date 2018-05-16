@@ -22,7 +22,7 @@ var bootstrapPeers = []string{
 
 var logger = log.Logger("mesh")
 
-func New(meshPk *lp2pCrypto.Ed25519PrivateKey) (*Network, error) {
+func New(meshPk lp2pCrypto.PrivKey) (*Network, error) {
 
 	//Create host
 	h, err := lp2p.New(context.Background(), func(cfg *lp2p.Config) error {
