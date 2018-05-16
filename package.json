@@ -65,6 +65,11 @@
       "hash": "QmSBxn1eLMdViZRDGW9rRHRYwtqq5bqUgipqTMPuTim616",
       "name": "go-libp2p-kad-dht",
       "version": "4.0.4"
+    },
+    {
+      "hash": "QmTG23dvpBCBjqQwyDxV8CQT6jmS4PSftNr1VqHhE3MLy7",
+      "name": "go-log",
+      "version": "1.4.1"
     }
   ],
   "gxVersion": "0.12.1",
