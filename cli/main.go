@@ -42,6 +42,8 @@ func main() {
 
 	shell := iShell.New()
 
+	var userDB *jsonDB.Driver
+
 	// register command to start panthalassa
 	shell.AddCmd(&iShell.Cmd{
 		Name: "start",
@@ -90,7 +92,7 @@ func main() {
 			password := c.ReadLine()
 
 			// create account database
-			db, err := jsonDB.New(DBName, nil)
+			userDB, err = jsonDB.New(DBName, nil)
 			if err != nil {
 				c.Err(err)
 				return
@@ -98,7 +100,7 @@ func main() {
 
 			err = panthalassa.Start(selectedAccount.AccountStore, password, DevRendezvousKey, &Store{
 				Account: selectedAccount,
-				DB:      db,
+				DB:      userDB,
 			})
 			if err != nil {
 				c.Err(err)
@@ -115,6 +117,7 @@ func main() {
 		Name: "stop",
 		Help: "stop's the current panthalassa instance",
 		Func: func(c *iShell.Context) {
+			userDB = nil
 			err := panthalassa.Stop()
 			if err != nil {
 				c.Err(err)
@@ -242,6 +245,28 @@ func main() {
 
 			c.Println("safed account store")
 
+		},
+	})
+
+	shell.AddCmd(&iShell.Cmd{
+		Name: "friend:add",
+		Help: "adds a friend to your database",
+		Func: func(c *iShell.Context) {
+
+			if userDB == nil {
+				c.Err(errors.New("you need to start panthalassa first"))
+				return
+			}
+
+			c.Print("Enter the public key of your friend: ")
+			pubKey := c.ReadLine()
+
+			err := userDB.Write("friend", pubKey, pubKey)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+			c.Println("Safed friend with public key: ", pubKey)
 		},
 	})
 
