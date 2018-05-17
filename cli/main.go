@@ -100,7 +100,7 @@ func main() {
 	})
 
 	shell.AddCmd(&ishell.Cmd{
-		Name: "log:debugging",
+		Name: "log:debug",
 		Help: "Enable debug logging",
 		Func: func(c *ishell.Context) {
 			f, err := os.Create(LogFile)
@@ -108,8 +108,24 @@ func main() {
 				c.Err(err)
 				return
 			}
+			log.Configure(log.Output(f), log.LevelDebug)
+			c.Println("Enabled logging (for debug). Output file: ", f.Name())
+		},
+	})
 
-			log.Configure(log.Output(f), log.LevelInfo)
+	shell.AddCmd(&ishell.Cmd{
+		Name: "log:warn",
+		Help: "Enable debug logging",
+		Func: func(c *ishell.Context) {
+			f, err := os.Create(LogFile)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+			log.Configure(log.Output(f))
+			//2 = WARNING
+			log.SetAllLoggers(2)
+			c.Println("Enabled logging (for warning's). Output file: ", f.Name())
 		},
 	})
 
