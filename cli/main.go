@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 
 	km "github.com/Bit-Nation/panthalassa/keyManager"
@@ -20,8 +23,13 @@ const DBName = ".database"
 var logger = log.Logger("hi")
 
 type Account struct {
+	ID           string `json:"id"`
 	Name         string `json:"name"`
 	AccountStore string `json:"account_store"`
+}
+
+func (a Account) String() string {
+	return fmt.Sprintf("%s, (%s)", a.Name, a.ID)
 }
 
 func main() {
@@ -40,22 +48,48 @@ func main() {
 		Help: "start panthalassa",
 		Func: func(c *iShell.Context) {
 
-			mne, err := mnemonic.New()
+			// fetch account's
+			rawAccounts, err := db.ReadAll("account")
 			if err != nil {
 				c.Err(err)
 				return
 			}
 
-			store, err := ks.NewFromMnemonic(mne)
-			if err != nil {
-				c.Err(err)
+			// exit if not enough account's
+			if len(rawAccounts) == 0 {
+				c.Err(errors.New("please create an account first"))
 				return
 			}
 
-			keyManager := km.CreateFromKeyStore(store)
-			keyStoreStr, err := keyManager.Export("pw", "pw")
+			accounts := []string{}
+			myAccounts := map[int]Account{}
 
-			err = panthalassa.Start(keyStoreStr, "pw", DevRendezvousKey, nil)
+			for k, v := range rawAccounts {
+
+				var acc Account
+
+				if err := json.Unmarshal([]byte(v), &acc); err != nil {
+					c.Err(err)
+					continue
+				}
+
+				accounts = append(accounts, acc.String())
+				myAccounts[k] = acc
+			}
+
+			choice := c.MultiChoice(accounts, "Chose your account:")
+
+			selectedAccount, exist := myAccounts[choice]
+			if !exist {
+				c.Err(errors.New("account does not exist"))
+				return
+			}
+
+			//Ask for password to decrypt account
+			c.Print("Please enter your password for this account: ")
+			password := c.ReadLine()
+
+			err = panthalassa.Start(selectedAccount.AccountStore, password, DevRendezvousKey, nil)
 			if err != nil {
 				c.Err(err)
 				return
@@ -104,7 +138,6 @@ func main() {
 				c.Err(err)
 				return
 			}
-			logger.Error("hi")
 
 			c.Println("your ethereum address is:", addr)
 		},
@@ -145,6 +178,8 @@ func main() {
 		Help: "Create a new Account",
 		Func: func(c *iShell.Context) {
 
+			c.ShowPrompt(false)
+
 			//get username
 			c.Println("Account name: ")
 			accountName := c.ReadLine()
@@ -183,9 +218,12 @@ func main() {
 			}
 
 			err = db.Write("account", id.String(), &Account{
+				ID:           id.String(),
 				Name:         accountName,
 				AccountStore: exportedAccount,
 			})
+
+			c.ShowPrompt(true)
 
 			if err != nil {
 				c.Err(err)
