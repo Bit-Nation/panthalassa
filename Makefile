@@ -1,3 +1,5 @@
+.PHONY: cli build test
+
 list:
 	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' | xargs
 deps:
@@ -31,3 +33,5 @@ test_coverage:
 	go test ./... -coverprofile=c.out && go tool cover -html=c.out
 coveralls:
 	goveralls -repotoken ${COVERALS_TOKEN}
+cli:
+	go build -o panthalassa github.com/Bit-Nation/panthalassa/cli
