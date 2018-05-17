@@ -123,6 +123,15 @@ func ExportAccountStore(pw, pwConfirm string) (string, error) {
 
 }
 
+func IdentityPublicKey() (string, error) {
+
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa")
+	}
+
+	return panthalassaInstance.km.IdentityPublicKey()
+}
+
 //Stop panthalassa
 func Stop() error {
 

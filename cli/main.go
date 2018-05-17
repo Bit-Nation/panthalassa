@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
@@ -92,7 +93,7 @@ func main() {
 			password := c.ReadLine()
 
 			// create account database
-			userDB, err = jsonDB.New(DBName, nil)
+			userDB, err = jsonDB.New(filepath.FromSlash(fmt.Sprintf("%s/%s", DBName, selectedAccount.ID)), nil)
 			if err != nil {
 				c.Err(err)
 				return
@@ -108,6 +109,15 @@ func main() {
 			}
 
 			c.Println("Started panthalassa")
+
+			//fetch id key
+			idPubKey, err := panthalassa.IdentityPublicKey()
+			if err != nil {
+				c.Err(err)
+				return
+			}
+
+			c.Println("Your identity is: ", idPubKey)
 
 		},
 	})
