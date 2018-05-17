@@ -8,12 +8,12 @@ import (
 	require "github.com/stretchr/testify/require"
 )
 
-func TestNew(t *testing.T) {
+func TestNewPrivateKey(t *testing.T) {
 
 	priv, pubKey, err := lp2pCrypto.GenerateEd25519Key(rand.Reader)
 	require.Nil(t, err)
 
-	network, err := New(priv)
+	network, _, err := New(priv, "-")
 	hostPubKey, err := network.host.ID().ExtractPublicKey()
 	require.Nil(t, err)
 
