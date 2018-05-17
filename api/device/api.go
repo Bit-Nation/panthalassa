@@ -6,6 +6,7 @@ import (
 )
 
 type UpStream interface {
+	//Send data to client
 	Send(data string)
 }
 
@@ -39,7 +40,8 @@ func New(deviceInterface UpStream) *Api {
 	return &api
 }
 
-func (a *Api) Send(call rpc.JsonRPCCall) (chan Response, error) {
+//Send a call to the api
+func (a *Api) Send(call rpc.JsonRPCCall) (<-chan Response, error) {
 
 	//Validate call
 	if err := call.Valid(); err != nil {
