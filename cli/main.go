@@ -89,7 +89,17 @@ func main() {
 			c.Print("Please enter your password for this account: ")
 			password := c.ReadLine()
 
-			err = panthalassa.Start(selectedAccount.AccountStore, password, DevRendezvousKey, nil)
+			// create account database
+			db, err := jsonDB.New(DBName, nil)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+
+			err = panthalassa.Start(selectedAccount.AccountStore, password, DevRendezvousKey, &Store{
+				Account: selectedAccount,
+				DB:      db,
+			})
 			if err != nil {
 				c.Err(err)
 				return

@@ -1,10 +1,14 @@
 package main
 
-import "fmt"
+import (
+	jsonDB "github.com/nanobox-io/golang-scribble"
+)
 
 type Store struct {
+	Account Account
+	DB      *jsonDB.Driver
 }
 
 func (s *Store) Send(data string) {
-	fmt.Println(data)
+	logger.Info(data)
 }
