@@ -7,6 +7,7 @@ import (
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	require "github.com/stretchr/testify/require"
 )
 
@@ -124,4 +125,56 @@ func TestGetLibP2PPrivateKey(t *testing.T) {
 	preFix, err := hex.DecodeString("08011260")
 	require.Nil(t, err)
 	require.Equal(t, hex.EncodeToString(append(preFix, combinedKey...)), hex.EncodeToString(meshPrivBytes))
+}
+
+func TestGetEthereumPublicKey(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	km := CreateFromKeyStore(ks)
+
+	ethPublicKey, err := km.GetEthereumPublicKey()
+	require.Nil(t, err)
+
+	require.Equal(t, "032b6a023528114bdf34718260a18b520def9705ea2b3c0ec41e160204a5fa8493", ethPublicKey)
+
+}
+
+func TestGetEthereumAddress(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	km := CreateFromKeyStore(ks)
+
+	address, err := km.GetEthereumAddress()
+	require.Nil(t, err)
+
+	require.Equal(t, "0x748A6536dE0a8b1902f808233DD75ec4451cdFC6", address)
+
+}
+
+func TestKeyManager_EthereumSign(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	km := CreateFromKeyStore(ks)
+
+	signature, err := km.EthereumSign([]byte("hi"))
+	require.Nil(t, err)
+
+	pubKeyStr, err := km.GetEthereumPublicKey()
+	rawPubKey, err := hex.DecodeString(pubKeyStr)
+	require.Nil(t, err)
+
+	ethCrypto.VerifySignature(rawPubKey, []byte("hi"), signature)
+
 }

@@ -1,6 +1,7 @@
 package keyManager
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -162,6 +163,56 @@ func (km KeyManager) MeshPrivateKey() (lp2pCrypto.PrivKey, error) {
 
 	return lp2pCrypto.UnmarshalEd25519PrivateKey(append(privBytes, pubBytes...))
 
+}
+
+func (km KeyManager) GetEthereumPublicKey() (string, error) {
+
+	//Fetch ethereum private key
+	privKey, err := km.GetEthereumPrivateKey()
+	if err != nil {
+		return "", err
+	}
+
+	//Parse hex private key
+	priv, err := ethCrypto.HexToECDSA(privKey)
+	if err != nil {
+		return "", err
+	}
+
+	// encode public key
+	pubKey := ethCrypto.CompressPubkey(&priv.PublicKey)
+	return hex.EncodeToString(pubKey), nil
+
+}
+
+//Sign data with identity key
+func (km KeyManager) IdentitySign(data []byte) ([]byte, error) {
+
+	//Fetch mesh private key
+	pk, err := km.MeshPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	return pk.Sign(data)
+
+}
+
+//Sign data with ethereum private key
+func (km KeyManager) EthereumSign(data []byte) ([]byte, error) {
+	//Fetch ethereum private key
+	privKey, err := km.GetEthereumPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	//Parse hex private key
+	priv, err := ethCrypto.HexToECDSA(privKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return priv.Sign(rand.Reader, data, nil)
 }
 
 //Did the keystore change (happen after migration)
