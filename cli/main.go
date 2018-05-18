@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
+	panthalassa "github.com/Bit-Nation/panthalassa"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
-	panthalassa "github.com/Bit-Nation/panthalassa/mobile"
 	log "github.com/ipfs/go-log"
 	jsonDB "github.com/nanobox-io/golang-scribble"
 	uuid "github.com/satori/go.uuid"

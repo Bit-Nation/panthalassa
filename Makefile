@@ -20,9 +20,9 @@ deps_hack:
 deps_hack_revert:
 	gx-go uw
 ios:
-	gomobile bind -target ios -o build/panthalassa.framework -v github.com/Bit-Nation/panthalassa/mobile
+	gomobile bind -target ios -o build/panthalassa.framework -v github.com/Bit-Nation/panthalassa
 android:
-	gomobile bind -target android -o build/panthalassa.aar -v github.com/Bit-Nation/panthalassa/mobile
+	gomobile bind -target android -o build/panthalassa.aar -v github.com/Bit-Nation/panthalassa
 build:
 	go build -o build/panthalassa
 test:
