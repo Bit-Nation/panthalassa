@@ -71,36 +71,33 @@ func New(meshPk lp2pCrypto.PrivKey, rendezvousKey string) (*Network, <-chan erro
 		}
 		logger.Debug("Finished DHT bootstrapping")
 
-		//Register service that search for peer's
-		SearchPangeaPeers(h, dht, rk, errReport)
-
 	}(d, rk, h)
 
 	return &Network{
-		host:      h,
-		bootstrap: b,
-		dht:       d,
+		Host:      h,
+		Bootstrap: b,
+		Dht:       d,
 	}, errReport, nil
 
 }
 
 type Network struct {
-	host          host.Host
-	bootstrap     *bootstrap.Bootstrap
-	dht           *dht.IpfsDHT
-	rendezvousKey RendezvousKey
+	Host          host.Host
+	Bootstrap     *bootstrap.Bootstrap
+	Dht           *dht.IpfsDHT
+	RendezvousKey RendezvousKey
 }
 
 func (n *Network) Close() error {
 
 	var err error
 
-	err = n.host.Close()
+	err = n.Host.Close()
 
 	return err
 }
 
 //Bootstrap manual
 func (n *Network) BootstrapManual(ctx context.Context) error {
-	return n.bootstrap.Bootstrap(ctx)
+	return n.Bootstrap.Bootstrap(ctx)
 }
