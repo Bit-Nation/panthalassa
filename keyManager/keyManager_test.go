@@ -1,6 +1,7 @@
 package keyManager
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"testing"
 
@@ -166,15 +167,22 @@ func TestKeyManager_EthereumSign(t *testing.T) {
 	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
 	require.Nil(t, err)
 
+	// create key manager
 	km := CreateFromKeyStore(ks)
 
-	signature, err := km.EthereumSign([]byte("hi"))
+	// sample hash
+	hash := sha256.Sum256([]byte("hi"))
+
+	// sign data
+	signature, err := km.EthereumSign(hash)
 	require.Nil(t, err)
 
 	pubKeyStr, err := km.GetEthereumPublicKey()
+	require.Nil(t, err)
 	rawPubKey, err := hex.DecodeString(pubKeyStr)
 	require.Nil(t, err)
 
-	ethCrypto.VerifySignature(rawPubKey, []byte("hi"), signature)
+	// should be true since the signature should be valid
+	require.True(t, ethCrypto.VerifySignature(rawPubKey, hash[:], signature[:64]))
 
 }

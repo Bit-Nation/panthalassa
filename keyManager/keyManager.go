@@ -1,7 +1,6 @@
 package keyManager
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -199,7 +198,7 @@ func (km KeyManager) IdentitySign(data []byte) ([]byte, error) {
 }
 
 //Sign data with ethereum private key
-func (km KeyManager) EthereumSign(data []byte) ([]byte, error) {
+func (km KeyManager) EthereumSign(data [32]byte) ([]byte, error) {
 	//Fetch ethereum private key
 	privKey, err := km.GetEthereumPrivateKey()
 	if err != nil {
@@ -212,7 +211,7 @@ func (km KeyManager) EthereumSign(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return priv.Sign(rand.Reader, data, nil)
+	return ethCrypto.Sign(data[:], priv)
 }
 
 //Did the keystore change (happen after migration)
