@@ -21,7 +21,7 @@ const DevRendezvousKey = "akhgp58izorhalsdipfo3uh5orpawoudshfalskduf43topa"
 const LogFile = "log.out"
 const DBName = ".database"
 
-var logger = log.Logger("hi")
+var logger = log.Logger("cli")
 
 type Account struct {
 	ID           string `json:"id"`
@@ -197,6 +197,22 @@ func main() {
 	})
 
 	shell.AddCmd(&iShell.Cmd{
+		Name: "log:info",
+		Help: "Enable info logging",
+		Func: func(c *iShell.Context) {
+			f, err := os.Create(LogFile)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+			log.Configure(log.Output(f))
+			//2 = WARNING
+			log.SetAllLoggers(4)
+			c.Println("Enabled logging (for info's). Output file: ", f.Name())
+		},
+	})
+
+	shell.AddCmd(&iShell.Cmd{
 		Name: "account:new",
 		Help: "Create a new Account",
 		Func: func(c *iShell.Context) {
@@ -259,8 +275,8 @@ func main() {
 	})
 
 	shell.AddCmd(&iShell.Cmd{
-		Name: "friend:add",
-		Help: "adds a friend to your database",
+		Name: "contact:add",
+		Help: "adds a contact to your database",
 		Func: func(c *iShell.Context) {
 
 			if userDB == nil {
