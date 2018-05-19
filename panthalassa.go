@@ -18,7 +18,7 @@ type Panthalassa struct {
 //this becomes interesting when we start
 //to use the mesh network
 func (p *Panthalassa) Stop() error {
-	return nil
+	return p.mesh.Close()
 }
 
 //Export account with the given password

@@ -92,7 +92,15 @@ func (n *Network) Close() error {
 
 	var err error
 
-	err = n.Host.Close()
+	if e := n.Host.Close(); e != nil {
+		logger.Error(err)
+		err = e
+	}
+
+	if e := n.Dht.Close(); e != nil {
+		logger.Error(err)
+		err = e
+	}
 
 	return err
 }
