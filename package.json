@@ -70,6 +70,12 @@
       "hash": "QmTG23dvpBCBjqQwyDxV8CQT6jmS4PSftNr1VqHhE3MLy7",
       "name": "go-log",
       "version": "1.4.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmcJukH2sAFjY3HdBKq35WDzWoL3UUu2gt9wdfqZTUyM74",
+      "name": "go-libp2p-peer",
+      "version": "2.3.2"
     }
   ],
   "gxVersion": "0.12.1",
