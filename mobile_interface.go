@@ -9,7 +9,7 @@ import (
 	log "github.com/ipfs/go-log"
 )
 
-var panthalassaInstance *panthalassa
+var panthalassaInstance *Panthalassa
 var logger = log.Logger("panthalassa")
 
 type UpStream interface {
@@ -51,12 +51,15 @@ func Start(accountStore, password, rendezvousKey string, upStream UpStream) erro
 	}()
 
 	//Create panthalassa instance
-	panthalassaInstance = &panthalassa{
+	panthalassaInstance = &Panthalassa{
 		km:        km,
 		upStream:  upStream,
 		deviceApi: deviceApi.New(upStream),
 		mesh:      m,
 	}
+
+	// register all housekeepers
+	SearchContacts(panthalassaInstance)
 
 	return nil
 
@@ -76,7 +79,7 @@ func StartFromMnemonic(accountStore, mnemonic string) error {
 	}
 
 	//Create panthalassa instance
-	panthalassaInstance = &panthalassa{
+	panthalassaInstance = &Panthalassa{
 		km: km,
 	}
 
