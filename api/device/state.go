@@ -32,6 +32,7 @@ func (s *State) Add(respChan chan Response) uint32 {
 			break
 		}
 	}
+	logger.Debug(fmt.Sprintf("added response channel with id: %d", key))
 	s.requests[key] = respChan
 	s.m.Unlock()
 
@@ -49,7 +50,7 @@ func (s *State) Cut(index uint32) (chan Response, error) {
 	}
 	delete(s.requests, index)
 	s.m.Unlock()
-
+	logger.Debug(fmt.Sprintf("fetched response channel: for id: %d", index))
 	return respChan, nil
 
 }
