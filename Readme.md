@@ -20,6 +20,7 @@ TODO: Fill out this long description.
 - [License](#license)
 
 ## Security
+If you find a bug / vulnerability please DON'T open an issue. Write to `security@bitnation.co` PLEASE use [this](security-bitnation.co.key.pub) PGP key to encrypt your report / email.
 
 ## Background
 
