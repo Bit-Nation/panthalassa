@@ -1,24 +1,50 @@
-# Panthalassa
-> Bitnation's backend - contains the mesh and some utils
+# panthalassa
 
+[![standard-readme compliant](https://img.shields.io/badge/standard--readme-OK-green.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
 [![Build Status](https://semaphoreci.com/api/v1/florianlenz/panthalassa/branches/develop/badge.svg)](https://semaphoreci.com/florianlenz/panthalassa) (Develop)
 [![Build Status](https://semaphoreci.com/api/v1/florianlenz/panthalassa/branches/master/badge.svg)](https://semaphoreci.com/florianlenz/panthalassa) (Master)
 
+> Backend for Pangea
 
-## Development
+TODO: Fill out this long description.
 
-1. Clone the project into `$GOPATH/src/github.com/Bit-Nation/panthalassa`
-2. Run `make` to see all available commands
+## Table of Contents
 
-### Install
-1. Run `make deps` to get the needed dependencies
-2. Run `make install` to install the gx dependencies
-3. Run `make deps_hack` to rewrite the import paths
+- [Security](#security)
+- [Background](#background)
+- [Install](#install)
+- [Usage](#usage)
+- [API](#api)
+- [Maintainers](#maintainers)
+- [Contribute](#contribute)
+- [License](#license)
 
-### Build for ios
-- Follow the install section first
-- Run `make ios` to build for ios
+## Security
 
-### Build for android
-- Follow the install section first
-- Run `make android` to build for android
+## Background
+
+## Install
+
+```
+```
+
+## Usage
+
+```
+```
+
+## API
+
+## Maintainers
+
+[@florianlenz](https://github.com/florianlenz)
+
+## Contribute
+
+PRs accepted.
+
+Small note: If editing the README, please conform to the [standard-readme](https://github.com/RichardLitt/standard-readme) specification.
+
+## License
+
+MIT © 2018 florian@bitnation.co
