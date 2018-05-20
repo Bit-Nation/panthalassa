@@ -23,6 +23,9 @@ TODO: Fill out this long description.
 If you find a bug / vulnerability please DON'T open an issue. Write to `security@bitnation.co` PLEASE use [this](security-bitnation.co.key.pub) PGP key to encrypt your report / email.
 
 ## Background
+[Pangea](https://github.com/Bit-Nation/BITNATION-Pangea-mobile) is the mobile interface to our blockchain jurisdiction. While smart contract's are "onchain" (on a blockchain like a thereum) communication happen's offchain.
+Since current chat system's like whatsapp and telegram are hevaly centralized we are using a p2p system to send messages between peer's so that bitnaiton doesn't become a central point of failure.
+We are using [libp2p](https://github.com/libp2p) for the p2p network which is truly a great project.
 
 ## Install
 
