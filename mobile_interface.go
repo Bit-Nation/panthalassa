@@ -19,14 +19,13 @@ type UpStream interface {
 }
 
 type StartConfig struct {
-	EncryptedKeyManager string   `valid:"required"`
-	RendezvousKey       string   `valid:"required"`
-	Client              UpStream `valid:"required"`
-	SignedProfile       string   `valid:"required"`
+	EncryptedKeyManager string `valid:"required"`
+	RendezvousKey       string `valid:"required"`
+	SignedProfile       string `valid:"required"`
 }
 
 // create a new panthalassa instance
-func start(km *keyManager.KeyManager, config StartConfig) error {
+func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error {
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
@@ -56,8 +55,8 @@ func start(km *keyManager.KeyManager, config StartConfig) error {
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:        km,
-		upStream:  config.Client,
-		deviceApi: deviceApi.New(config.Client),
+		upStream:  client,
+		deviceApi: deviceApi.New(client),
 		mesh:      m,
 	}
 
@@ -69,7 +68,7 @@ func start(km *keyManager.KeyManager, config StartConfig) error {
 }
 
 // start panthalassa
-func Start(config string, password string) error {
+func Start(config string, password string, client UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -89,11 +88,11 @@ func Start(config string, password string) error {
 		return err
 	}
 
-	return start(km, c)
+	return start(km, c, client)
 }
 
 // create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(config string, mnemonic string) error {
+func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -114,7 +113,7 @@ func StartFromMnemonic(config string, mnemonic string) error {
 	}
 
 	// create panthalassa instance
-	return start(km, c)
+	return start(km, c, client)
 
 }
 
