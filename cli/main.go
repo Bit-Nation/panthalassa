@@ -104,11 +104,7 @@ func main() {
 			config := panthalassa.StartConfig{
 				EncryptedKeyManager: selectedAccount.AccountStore,
 				RendezvousKey:       DevRendezvousKey,
-				Client: &Store{
-					Account: selectedAccount,
-					DB:      userDB,
-				},
-				SignedProfile: "",
+				SignedProfile:       selectedAccount.Profile,
 			}
 
 			rawConfig, err := json.Marshal(config)
@@ -117,7 +113,10 @@ func main() {
 				return
 			}
 
-			err = panthalassa.Start(string(rawConfig), password)
+			err = panthalassa.Start(string(rawConfig), password, &Store{
+				Account: selectedAccount,
+				DB:      userDB,
+			})
 			if err != nil {
 				c.Err(err)
 				return
