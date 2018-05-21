@@ -7,6 +7,7 @@ import (
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
 	log "github.com/ipfs/go-log"
+	"github.com/segmentio/objconv/json"
 	valid "gopkg.in/asaskevich/govalidator.v4"
 )
 
@@ -26,12 +27,6 @@ type StartConfig struct {
 
 // create a new panthalassa instance
 func start(km *keyManager.KeyManager, config StartConfig) error {
-
-	// validate config
-	_, err := valid.ValidateStruct(config)
-	if err != nil {
-		return err
-	}
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
@@ -74,32 +69,52 @@ func start(km *keyManager.KeyManager, config StartConfig) error {
 }
 
 // start panthalassa
-func Start(config StartConfig, password string) error {
+func Start(config string, password string) error {
 
-	// open key manager with password
-	km, err := keyManager.OpenWithPassword(config.EncryptedKeyManager, password)
+	// unmarshal config
+	var c StartConfig
+	if err := json.Unmarshal([]byte(config), &c); err != nil {
+		return err
+	}
+
+	// validate config
+	_, err := valid.ValidateStruct(config)
 	if err != nil {
 		return err
 	}
 
-	return start(km, config)
+	// open key manager with password
+	km, err := keyManager.OpenWithPassword(c.EncryptedKeyManager, password)
+	if err != nil {
+		return err
+	}
+
+	return start(km, c)
 }
 
 // create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(config StartConfig, mnemonic string) error {
+func StartFromMnemonic(config string, mnemonic string) error {
 
-	if panthalassaInstance != nil {
-		return errors.New("call stop first in order to create a new panthalassa instance")
+	// unmarshal config
+	var c StartConfig
+	if err := json.Unmarshal([]byte(config), &c); err != nil {
+		return err
+	}
+
+	// validate config
+	_, err := valid.ValidateStruct(config)
+	if err != nil {
+		return err
 	}
 
 	// create key manager
-	km, err := keyManager.OpenWithMnemonic(config.EncryptedKeyManager, mnemonic)
+	km, err := keyManager.OpenWithMnemonic(c.EncryptedKeyManager, mnemonic)
 	if err != nil {
 		return err
 	}
 
 	// create panthalassa instance
-	return start(km, config)
+	return start(km, c)
 
 }
 
