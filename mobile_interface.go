@@ -16,18 +16,12 @@ type UpStream interface {
 	Send(data string)
 }
 
-//Create a new panthalassa instance
-func Start(accountStore, password, rendezvousKey string, upStream UpStream) error {
+// create a new panthalassa instance
+func start(km *keyManager.KeyManager, rendezvousKey string, upStream UpStream) error {
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
 		return errors.New("call stop first in order to create a new panthalassa instance")
-	}
-
-	//Create key manager
-	km, err := keyManager.OpenWithPassword(accountStore, password)
-	if err != nil {
-		return err
 	}
 
 	//Mesh network
@@ -65,8 +59,20 @@ func Start(accountStore, password, rendezvousKey string, upStream UpStream) erro
 
 }
 
-//Create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(accountStore, mnemonic string) error {
+// start panthalassa
+func Start(encKeyManager, password, rendezvousKey string, upStream UpStream) error {
+
+	// open key manager with password
+	km, err := keyManager.OpenWithPassword(encKeyManager, password)
+	if err != nil {
+		return err
+	}
+
+	return start(km, rendezvousKey, upStream)
+}
+
+// create a new panthalassa instance with the mnemonic
+func StartFromMnemonic(accountStore, mnemonic string, rendezvousKey string, upStream UpStream) error {
 
 	if panthalassaInstance != nil {
 		return errors.New("call stop first in order to create a new panthalassa instance")
@@ -79,11 +85,7 @@ func StartFromMnemonic(accountStore, mnemonic string) error {
 	}
 
 	//Create panthalassa instance
-	panthalassaInstance = &Panthalassa{
-		km: km,
-	}
-
-	return nil
+	return start(km, rendezvousKey, upStream)
 
 }
 
