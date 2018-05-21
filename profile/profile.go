@@ -188,3 +188,15 @@ func SignProfile(name, location, image string, km km.KeyManager) (Profile, error
 	return prof, nil
 
 }
+
+// sign's a profile without the need to start panthalassa
+func SignWithKeyManagerStore(name, location, image, keyManagerStore, password string) (Profile, error) {
+
+	keyManager, err := km.OpenWithPassword(keyManagerStore, password)
+	if err != nil {
+		return Profile{}, err
+	}
+
+	return SignProfile(name, location, image, *keyManager)
+
+}

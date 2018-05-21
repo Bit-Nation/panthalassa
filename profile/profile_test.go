@@ -41,3 +41,33 @@ func TestSignProfile(t *testing.T) {
 	require.True(t, valid)
 
 }
+
+func TestSignProfileKeyStore(t *testing.T) {
+
+	// create test mnemonic
+	mne, err := mnemonic.New()
+	require.Nil(t, err)
+
+	// create key store from mnemonic
+	keyStore, err := ks.NewFromMnemonic(mne)
+	require.Nil(t, err)
+
+	// create key manager
+	keyManager := km.CreateFromKeyStore(keyStore)
+
+	// export key manager store
+	keyManagerStore, err := keyManager.Export("pw", "pw")
+	require.Nil(t, err)
+
+	profile, err := SignWithKeyManagerStore("Florian", "Earth", "base64", keyManagerStore, "pw")
+	require.Nil(t, err)
+
+	valid, err := profile.SignaturesValid()
+	require.Nil(t, err)
+	require.True(t, valid)
+
+	require.Equal(t, "Florian", profile.Information.Name)
+	require.Equal(t, "Earth", profile.Information.Location)
+	require.Equal(t, "base64", profile.Information.Image)
+
+}
