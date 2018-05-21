@@ -15,10 +15,11 @@ import (
 
 type KeyManager struct {
 	keyStore ks.Store
-	account  accountKeyStore
+	account  AccountKeyStore
 }
 
-type accountKeyStore struct {
+type AccountKeyStore struct {
+	// the password is encrypted with the mnemonic
 	Password          string `json:"password"`
 	EncryptedKeyStore string `json:"encrypted_key_store"`
 	Version           uint8  `json:"version"`
@@ -28,7 +29,7 @@ type accountKeyStore struct {
 func OpenWithPassword(encryptedAccount, pw string) (*KeyManager, error) {
 
 	//unmarshal encrypted account
-	var acc accountKeyStore
+	var acc AccountKeyStore
 	if err := json.Unmarshal([]byte(encryptedAccount), &acc); err != nil {
 		return &KeyManager{}, err
 	}
@@ -57,7 +58,7 @@ func OpenWithPassword(encryptedAccount, pw string) (*KeyManager, error) {
 func OpenWithMnemonic(encryptedAccount, mnemonic string) (*KeyManager, error) {
 
 	//unmarshal encrypted account
-	var acc accountKeyStore
+	var acc AccountKeyStore
 	if err := json.Unmarshal([]byte(encryptedAccount), &acc); err != nil {
 		return &KeyManager{}, err
 	}
@@ -96,7 +97,7 @@ func (km KeyManager) Export(pw, pwConfirm string) (string, error) {
 	encryptedPassword, err := scrypt.NewCipherText(pw, km.keyStore.GetMnemonic().String())
 
 	//Marshal account
-	acc, err := json.Marshal(accountKeyStore{
+	acc, err := json.Marshal(AccountKeyStore{
 		Password:          encryptedPassword,
 		EncryptedKeyStore: encryptedKeyStore,
 		Version:           1,
