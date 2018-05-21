@@ -7,6 +7,7 @@ import (
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
 	log "github.com/ipfs/go-log"
+	valid "gopkg.in/asaskevich/govalidator.v4"
 )
 
 var panthalassaInstance *Panthalassa
@@ -16,8 +17,21 @@ type UpStream interface {
 	Send(data string)
 }
 
+type StartConfig struct {
+	EncryptedKeyManager string   `valid:"required"`
+	RendezvousKey       string   `valid:"required"`
+	Client              UpStream `valid:"required"`
+	SignedProfile       string   `valid:"required"`
+}
+
 // create a new panthalassa instance
-func start(km *keyManager.KeyManager, rendezvousKey string, upStream UpStream) error {
+func start(km *keyManager.KeyManager, config StartConfig) error {
+
+	// validate config
+	_, err := valid.ValidateStruct(config)
+	if err != nil {
+		return err
+	}
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
@@ -30,7 +44,7 @@ func start(km *keyManager.KeyManager, rendezvousKey string, upStream UpStream) e
 		return err
 	}
 
-	m, errReporter, err := mesh.New(pk, rendezvousKey)
+	m, errReporter, err := mesh.New(pk, config.RendezvousKey)
 	if err != nil {
 		return err
 	}
@@ -47,8 +61,8 @@ func start(km *keyManager.KeyManager, rendezvousKey string, upStream UpStream) e
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:        km,
-		upStream:  upStream,
-		deviceApi: deviceApi.New(upStream),
+		upStream:  config.Client,
+		deviceApi: deviceApi.New(config.Client),
 		mesh:      m,
 	}
 
@@ -60,32 +74,32 @@ func start(km *keyManager.KeyManager, rendezvousKey string, upStream UpStream) e
 }
 
 // start panthalassa
-func Start(encKeyManager, password, rendezvousKey string, upStream UpStream) error {
+func Start(config StartConfig, password string) error {
 
 	// open key manager with password
-	km, err := keyManager.OpenWithPassword(encKeyManager, password)
+	km, err := keyManager.OpenWithPassword(config.EncryptedKeyManager, password)
 	if err != nil {
 		return err
 	}
 
-	return start(km, rendezvousKey, upStream)
+	return start(km, config)
 }
 
 // create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(accountStore, mnemonic string, rendezvousKey string, upStream UpStream) error {
+func StartFromMnemonic(config StartConfig, mnemonic string) error {
 
 	if panthalassaInstance != nil {
 		return errors.New("call stop first in order to create a new panthalassa instance")
 	}
 
-	//Create key manager
-	km, err := keyManager.OpenWithMnemonic(accountStore, mnemonic)
+	// create key manager
+	km, err := keyManager.OpenWithMnemonic(config.EncryptedKeyManager, mnemonic)
 	if err != nil {
 		return err
 	}
 
-	//Create panthalassa instance
-	return start(km, rendezvousKey, upStream)
+	// create panthalassa instance
+	return start(km, config)
 
 }
 

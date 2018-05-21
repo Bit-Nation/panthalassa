@@ -3,6 +3,7 @@ package panthalassa
 import (
 	"encoding/hex"
 
+	"fmt"
 	api "github.com/Bit-Nation/panthalassa/api/device"
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
@@ -31,7 +32,7 @@ func (p *Panthalassa) Export(pw, pwConfirm string) (string, error) {
 }
 
 // add friend to peer store
-func (p *Panthalassa) AddFriend(pubKey string) error {
+func (p *Panthalassa) AddContact(pubKey string) error {
 
 	// decode public key
 	rawPubKey, err := hex.DecodeString(pubKey)
@@ -51,12 +52,14 @@ func (p *Panthalassa) AddFriend(pubKey string) error {
 		return err
 	}
 
-	// add public key to
+	// add public key to peer store
 	err = p.mesh.Host.Peerstore().AddPubKey(id, lp2pPubKey)
 	if err != nil {
 		return err
 	}
 
-	return p.mesh.Host.Peerstore().Put(id, "friend", true)
+	logger.Info(fmt.Sprintf("added contact: %s", pubKey))
+
+	return p.mesh.Host.Peerstore().Put(id, "contact", true)
 
 }
