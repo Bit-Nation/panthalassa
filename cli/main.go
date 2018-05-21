@@ -11,6 +11,7 @@ import (
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
+	profile "github.com/Bit-Nation/panthalassa/profile"
 	log "github.com/ipfs/go-log"
 	jsonDB "github.com/nanobox-io/golang-scribble"
 	uuid "github.com/satori/go.uuid"
@@ -27,6 +28,7 @@ type Account struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
 	AccountStore string `json:"account_store"`
+	Profile      string `json:"profile"`
 }
 
 func (a Account) String() string {
@@ -99,10 +101,23 @@ func main() {
 				return
 			}
 
-			err = panthalassa.Start(selectedAccount.AccountStore, password, DevRendezvousKey, &Store{
-				Account: selectedAccount,
-				DB:      userDB,
-			})
+			config := panthalassa.StartConfig{
+				EncryptedKeyManager: selectedAccount.AccountStore,
+				RendezvousKey:       DevRendezvousKey,
+				Client: &Store{
+					Account: selectedAccount,
+					DB:      userDB,
+				},
+				SignedProfile: "",
+			}
+
+			rawConfig, err := json.Marshal(config)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+
+			err = panthalassa.Start(string(rawConfig), password)
 			if err != nil {
 				c.Err(err)
 				return
@@ -219,13 +234,21 @@ func main() {
 
 			c.ShowPrompt(false)
 
-			//get username
+			// get username
 			c.Println("Account name: ")
 			accountName := c.ReadLine()
 
 			// get password
 			c.Print("Password for account: ")
 			password := c.ReadLine()
+
+			// get location
+			c.Print("Location: ")
+			location := c.ReadLine()
+
+			// get image
+			c.Print("Image")
+			image := c.ReadLine()
 
 			// create mnemonic
 			mne, err := mnemonic.New()
@@ -249,6 +272,18 @@ func main() {
 				return
 			}
 
+			// create profile
+			p, err := profile.SignWithKeyManagerStore(accountName, location, image, exportedAccount, password)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+			rawProfile, err := json.Marshal(p)
+			if err != nil {
+				c.Err(err)
+				return
+			}
+
 			// uuid
 			id, err := uuid.NewV4()
 			if err != nil {
@@ -260,6 +295,7 @@ func main() {
 				ID:           id.String(),
 				Name:         accountName,
 				AccountStore: exportedAccount,
+				Profile:      string(rawProfile),
 			})
 
 			c.ShowPrompt(true)
@@ -284,15 +320,39 @@ func main() {
 				return
 			}
 
-			c.Print("Enter the public key of your friend: ")
+			c.Print("Enter the public key of your contract: ")
 			pubKey := c.ReadLine()
 
-			err := userDB.Write("friend", pubKey, pubKey)
+			err := userDB.Write("contact", pubKey, pubKey)
 			if err != nil {
 				c.Err(err)
 				return
 			}
 			c.Println("Safed friend with public key: ", pubKey)
+		},
+	})
+
+	shell.AddCmd(&iShell.Cmd{
+		Name: "contact:list",
+		Help: "list your contacts",
+		Func: func(c *iShell.Context) {
+
+			if userDB == nil {
+				c.Err(errors.New("you need to start panthalassa first"))
+				return
+			}
+
+			contacts, err := userDB.ReadAll("contact")
+			if err != nil {
+				c.Err(err)
+			}
+
+			c.Println("your contract's: ")
+
+			for _, contact := range contacts {
+				c.Println(contact)
+			}
+
 		},
 	})
 
