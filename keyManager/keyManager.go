@@ -26,11 +26,11 @@ type Store struct {
 }
 
 //Open encrypted keystore with password
-func OpenWithPassword(encryptedAccount, pw string) (*KeyManager, error) {
+func OpenWithPassword(encryptedStore, pw string) (*KeyManager, error) {
 
 	//unmarshal encrypted account
 	var store Store
-	if err := json.Unmarshal([]byte(encryptedAccount), &store); err != nil {
+	if err := json.Unmarshal([]byte(encryptedStore), &store); err != nil {
 		return &KeyManager{}, err
 	}
 
