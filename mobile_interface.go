@@ -77,7 +77,7 @@ func Start(config string, password string, client UpStream) error {
 	}
 
 	// validate config
-	_, err := valid.ValidateStruct(config)
+	_, err := valid.ValidateStruct(c)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
 	}
 
 	// validate config
-	_, err := valid.ValidateStruct(config)
+	_, err := valid.ValidateStruct(c)
 	if err != nil {
 		return err
 	}
