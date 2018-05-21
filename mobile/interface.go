@@ -99,6 +99,18 @@ func ExportAccountStore(pw, pwConfirm string) (string, error) {
 
 }
 
+// get mnemonic
+func GetMnemonic() (string, error) {
+
+	// exit if not started
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa in order to stop it")
+	}
+
+	return panthalassaInstance.km.GetMnemonic().String(), nil
+
+}
+
 //Stop panthalassa
 func Stop() error {
 
