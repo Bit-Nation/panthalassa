@@ -137,6 +137,10 @@ func (km KeyManager) IdentityPublicKey() (string, error) {
 	return km.keyStore.GetKey(identity.Ed25519PublicKey)
 }
 
+func (km KeyManager) GetMnemonic() (string)  {
+	return km.keyStore.GetMnemonic().String()
+}
+
 //Get the Mesh network private key (which is the identity ed25519 private key)
 func (km KeyManager) MeshPrivateKey() (lp2pCrypto.PrivKey, error) {
 
