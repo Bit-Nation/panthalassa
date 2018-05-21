@@ -9,6 +9,7 @@ import (
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
 	ethereumMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/ethereum"
 	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
+	"github.com/Bit-Nation/panthalassa/mnemonic"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 )
@@ -137,8 +138,8 @@ func (km KeyManager) IdentityPublicKey() (string, error) {
 	return km.keyStore.GetKey(identity.Ed25519PublicKey)
 }
 
-func (km KeyManager) GetMnemonic() (string)  {
-	return km.keyStore.GetMnemonic().String()
+func (km KeyManager) GetMnemonic() mnemonic.Mnemonic {
+	return km.keyStore.GetMnemonic()
 }
 
 //Get the Mesh network private key (which is the identity ed25519 private key)

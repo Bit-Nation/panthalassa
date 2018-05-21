@@ -77,6 +77,22 @@ func TestOpenWithMnemonic(t *testing.T) {
 
 }
 
+func TestGetMnemonic(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	//key manager
+	km := CreateFromKeyStore(ks)
+
+	//Get address
+	mne := km.GetMnemonic()
+	require.Equal(t, "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom", mne.String())
+
+}
+
 func TestGetAddressFromPrivateKey(t *testing.T) {
 
 	//create key storage
