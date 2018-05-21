@@ -54,6 +54,7 @@ func (p Profile) SignaturesValid() (bool, error) {
 	dataToVerify := []byte(p.Information.Name)
 	dataToVerify = append(dataToVerify, []byte(p.Information.Location)...)
 	dataToVerify = append(dataToVerify, []byte(p.Information.Image)...)
+	dataToVerify = append(dataToVerify, []byte(p.Information.Timestamp.String())...)
 	dataToVerify = append(dataToVerify, rawIdPubKey...)
 	dataToVerify = append(dataToVerify, rawEthPubKey...)
 	version := make([]byte, 2)
@@ -133,10 +134,14 @@ func SignProfile(name, location, image string, km km.KeyManager) (Profile, error
 		return Profile{}, err
 	}
 
+	// now
+	now := time.Now().UTC()
+
 	// concat profile information
 	dataToSign := []byte(name)
 	dataToSign = append(dataToSign, []byte(location)...)
 	dataToSign = append(dataToSign, []byte(image)...)
+	dataToSign = append(dataToSign, []byte(now.String())...)
 	dataToSign = append(dataToSign, idPubKey...)
 	dataToSign = append(dataToSign, ethPubKey...)
 	version := make([]byte, 2)
@@ -171,7 +176,7 @@ func SignProfile(name, location, image string, km km.KeyManager) (Profile, error
 			Image:          image,
 			IdentityPubKey: idPubKeyStr,
 			EthereumPubKey: ethPubKeyStr,
-			Timestamp:      time.Now().UTC(),
+			Timestamp:      now,
 			Version:        profileVersion,
 		},
 		Signatures: Signatures{
