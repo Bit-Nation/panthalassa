@@ -14,7 +14,7 @@ func TestNewPrivateKey(t *testing.T) {
 	require.Nil(t, err)
 
 	network, _, err := New(priv, "-")
-	hostPubKey, err := network.host.ID().ExtractPublicKey()
+	hostPubKey, err := network.Host.ID().ExtractPublicKey()
 	require.Nil(t, err)
 
 	require.True(t, pubKey.Equals(hostPubKey))
