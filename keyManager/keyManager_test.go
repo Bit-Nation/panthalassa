@@ -1,10 +1,13 @@
 package keyManager
 
 import (
-	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
-	"github.com/Bit-Nation/panthalassa/mnemonic"
-	"github.com/stretchr/testify/require"
+	"encoding/hex"
 	"testing"
+
+	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
+	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
+	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
+	require "github.com/stretchr/testify/require"
 )
 
 //Test the Create from function
@@ -26,7 +29,7 @@ func TestCreateFromKeyStore(t *testing.T) {
 func TestExportFunction(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
 	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
 	require.Nil(t, err)
 
@@ -51,7 +54,7 @@ func TestExportFunction(t *testing.T) {
 func TestOpenWithMnemonic(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
 	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
 	require.Nil(t, err)
 
@@ -74,6 +77,22 @@ func TestOpenWithMnemonic(t *testing.T) {
 
 }
 
+func TestGetMnemonic(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	//key manager
+	km := CreateFromKeyStore(ks)
+
+	//Get address
+	mne := km.GetMnemonic()
+	require.Equal(t, "differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom", mne.String())
+
+}
+
 func TestGetAddressFromPrivateKey(t *testing.T) {
 
 	//create key storage
@@ -89,4 +108,36 @@ func TestGetAddressFromPrivateKey(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, "0x748A6536dE0a8b1902f808233DD75ec4451cdFC6", addr)
 
+}
+
+func TestGetLibP2PPrivateKey(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	//key manager
+	km := CreateFromKeyStore(ks)
+
+	meshPriv, err := km.MeshPrivateKey()
+	require.Nil(t, err)
+
+	edPriv, err := ks.GetKey(identity.Ed25519PrivateKey)
+	require.Nil(t, err)
+	edPrivBytes, err := hex.DecodeString(edPriv)
+	require.Nil(t, err)
+
+	edPub, err := ks.GetKey(identity.Ed25519PublicKey)
+	require.Nil(t, err)
+	edPubBytes, err := hex.DecodeString(edPub)
+	require.Nil(t, err)
+
+	//Check if private key does match
+	meshPrivBytes, err := meshPriv.Bytes()
+	require.Nil(t, err)
+	combinedKey := append(edPrivBytes, edPubBytes...)
+	preFix, err := hex.DecodeString("08011260")
+	require.Nil(t, err)
+	require.Equal(t, hex.EncodeToString(append(preFix, combinedKey...)), hex.EncodeToString(meshPrivBytes))
 }

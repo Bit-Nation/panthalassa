@@ -1,5 +1,37 @@
 package mesh
 
+import (
+	"context"
+	lp2p "github.com/libp2p/go-libp2p"
+	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
+	host "github.com/libp2p/go-libp2p-host"
+)
+
+func New(meshPk *lp2pCrypto.Ed25519PrivateKey) (*Network, error) {
+
+	//Create host
+	h, err := lp2p.New(context.Background(), func(cfg *lp2p.Config) error {
+
+		cfg.PeerKey = meshPk
+		cfg.DisableSecio = false
+
+		return lp2p.Defaults(cfg)
+
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Network{
+		host: h,
+	}, nil
+
+}
+
+type Network struct {
+	host host.Host
+}
+
 /*
 @todo there is an problem with the bootstrapping bundle. Since we don't need the mesh network now we will comment it
 import (

@@ -1,13 +1,17 @@
 package keyManager
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 
 	scrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
 	ethereumMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/ethereum"
+	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
+	"github.com/Bit-Nation/panthalassa/mnemonic"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 )
 
 type KeyManager struct {
@@ -124,6 +128,45 @@ func (km KeyManager) GetEthereumAddress() (string, error) {
 	}
 
 	return ethCrypto.PubkeyToAddress(priv.PublicKey).String(), nil
+}
+
+func (km KeyManager) IdentityPrivateKey() (string, error) {
+	return km.keyStore.GetKey(identity.Ed25519PrivateKey)
+}
+
+func (km KeyManager) IdentityPublicKey() (string, error) {
+	return km.keyStore.GetKey(identity.Ed25519PublicKey)
+}
+
+func (km KeyManager) GetMnemonic() mnemonic.Mnemonic {
+	return km.keyStore.GetMnemonic()
+}
+
+//Get the Mesh network private key (which is the identity ed25519 private key)
+func (km KeyManager) MeshPrivateKey() (lp2pCrypto.PrivKey, error) {
+
+	//Fetch private key
+	priv, err := km.IdentityPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	privBytes, err := hex.DecodeString(priv)
+	if err != nil {
+		return nil, err
+	}
+
+	//Fetch public key
+	pub, err := km.IdentityPublicKey()
+	if err != nil {
+		return nil, err
+	}
+	pubBytes, err := hex.DecodeString(pub)
+	if err != nil {
+		return nil, err
+	}
+
+	return lp2pCrypto.UnmarshalEd25519PrivateKey(append(privBytes, pubBytes...))
+
 }
 
 //Did the keystore change (happen after migration)
