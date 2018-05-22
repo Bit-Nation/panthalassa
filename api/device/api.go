@@ -17,14 +17,23 @@ type UpStream interface {
 	Send(data string)
 }
 
-type apiCall struct {
+type ApiCall struct {
 	Type string `json:"type"`
 	Id   uint32 `json:"id"`
 	Data string `json:"data"`
 }
 
-func (c *apiCall) Marshal() ([]byte, error) {
+func (c *ApiCall) Marshal() ([]byte, error) {
 	return json.Marshal(c)
+}
+
+func UnmarshalApiCall(call string) (ApiCall, error) {
+
+	var apiCall ApiCall
+
+	err := json.Unmarshal([]byte(call), &apiCall)
+
+	return apiCall, err
 }
 
 type rawResponse struct {
@@ -72,7 +81,7 @@ func (a *Api) Send(call rpc.JsonRPCCall) (<-chan Response, error) {
 	}
 
 	//Create internal representation
-	c := apiCall{
+	c := ApiCall{
 		Type: call.Type(),
 		Data: callContent,
 	}

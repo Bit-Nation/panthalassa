@@ -37,7 +37,7 @@ func (c *testRPCCall) Valid() error {
 func TestSuccess(t *testing.T) {
 
 	//The api call we got from the send function
-	var receivedApiCall apiCall
+	var receivedApiCall ApiCall
 
 	// this is the sample response
 	const data = `{"error":"","payload":"my_data"}`
@@ -51,7 +51,7 @@ func TestSuccess(t *testing.T) {
 		// and called in an async way.
 		send: func(data string) {
 			// we set receivedApiCall to the call in order to use it later in the test
-			var call apiCall
+			var call ApiCall
 			require.Nil(t, json.Unmarshal([]byte(data), &call))
 			receivedApiCall = call
 			c <- struct{}{}
