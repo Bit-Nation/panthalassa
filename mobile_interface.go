@@ -38,7 +38,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		return err
 	}
 
-	m, errReporter, err := mesh.New(pk, config.RendezvousKey)
+	m, errReporter, err := mesh.New(pk, panthalassaInstance.deviceApi, config.RendezvousKey)
 	if err != nil {
 		return err
 	}
