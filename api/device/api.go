@@ -38,6 +38,10 @@ type Response struct {
 	Closer  chan error
 }
 
+func (r *Response) Close(err error) {
+	r.Closer <- err
+}
+
 type Api struct {
 	device UpStream
 	state  *State
