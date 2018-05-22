@@ -38,10 +38,14 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		return err
 	}
 
-	m, errReporter, err := mesh.New(pk, panthalassaInstance.deviceApi, config.RendezvousKey, config.SignedProfile)
+	// device api
+	api := deviceApi.New(client)
+
+	m, errReporter, err := mesh.New(pk, api, config.RendezvousKey, config.SignedProfile)
 	if err != nil {
 		return err
 	}
+
 	//Report error's from mesh network to current logger
 	go func() {
 		for {
@@ -56,7 +60,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 	panthalassaInstance = &Panthalassa{
 		km:        km,
 		upStream:  client,
-		deviceApi: deviceApi.New(client),
+		deviceApi: api,
 		mesh:      m,
 	}
 

@@ -2,10 +2,12 @@ package mesh
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	bootstrap "github.com/florianlenz/go-libp2p-bootstrap"
+	ds "github.com/ipfs/go-datastore"
 	log "github.com/ipfs/go-log"
 	lp2p "github.com/libp2p/go-libp2p"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
@@ -63,7 +65,7 @@ func New(meshPk lp2pCrypto.PrivKey, api *deviceApi.Api, rendezvousKey, signedPro
 	}(b)
 
 	//Create DHT and bootstrap it
-	d := dht.NewDHT(context.Background(), h, NewDataStore(api))
+	d := dht.NewDHT(context.Background(), h, ds.NewMapDatastore())
 	go func(dht *dht.IpfsDHT, key RendezvousKey, h host.Host) {
 		logger.Debug("Start DHT bootstrapping")
 		if err := dht.Bootstrap(context.Background()); err != nil {
@@ -82,6 +84,7 @@ func New(meshPk lp2pCrypto.PrivKey, api *deviceApi.Api, rendezvousKey, signedPro
 	if err != nil {
 		return nil, nil, err
 	}
+	logger.Info(fmt.Sprintf("put my profile (%s) with key (%s) in the DHT", signedProfile, cid.String()))
 	d.PutValue(context.Background(), cid.String(), []byte(signedProfile))
 
 	return &Network{
