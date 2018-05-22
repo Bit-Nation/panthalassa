@@ -24,7 +24,7 @@ var bootstrapPeers = []string{
 
 var logger = log.Logger("mesh")
 
-func New(meshPk lp2pCrypto.PrivKey, api *deviceApi.Api, rendezvousKey string) (*Network, <-chan error, error) {
+func New(meshPk lp2pCrypto.PrivKey, api *deviceApi.Api, rendezvousKey, signedProfile string) (*Network, <-chan error, error) {
 
 	//Create host
 	h, err := lp2p.New(context.Background(), func(cfg *lp2p.Config) error {
@@ -72,6 +72,17 @@ func New(meshPk lp2pCrypto.PrivKey, api *deviceApi.Api, rendezvousKey string) (*
 		logger.Debug("Finished DHT bootstrapping")
 
 	}(d, rk, h)
+
+	// put profile in the dht
+	pubKey, err := h.ID().ExtractPublicKey()
+	if err != nil {
+		return nil, nil, err
+	}
+	cid, err := rk.Profile(pubKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	d.PutValue(context.Background(), cid.String(), []byte(signedProfile))
 
 	return &Network{
 		Host:      h,
