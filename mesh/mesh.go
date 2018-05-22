@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	bootstrap "github.com/florianlenz/go-libp2p-bootstrap"
-	ds "github.com/ipfs/go-datastore"
 	log "github.com/ipfs/go-log"
 	lp2p "github.com/libp2p/go-libp2p"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
@@ -24,7 +24,7 @@ var bootstrapPeers = []string{
 
 var logger = log.Logger("mesh")
 
-func New(meshPk lp2pCrypto.PrivKey, rendezvousKey string) (*Network, <-chan error, error) {
+func New(meshPk lp2pCrypto.PrivKey, api *deviceApi.Api, rendezvousKey string) (*Network, <-chan error, error) {
 
 	//Create host
 	h, err := lp2p.New(context.Background(), func(cfg *lp2p.Config) error {
@@ -63,7 +63,7 @@ func New(meshPk lp2pCrypto.PrivKey, rendezvousKey string) (*Network, <-chan erro
 	}(b)
 
 	//Create DHT and bootstrap it
-	d := dht.NewDHT(context.Background(), h, ds.NewMapDatastore())
+	d := dht.NewDHT(context.Background(), h, NewDataStore(api))
 	go func(dht *dht.IpfsDHT, key RendezvousKey, h host.Host) {
 		logger.Debug("Start DHT bootstrapping")
 		if err := dht.Bootstrap(context.Background()); err != nil {

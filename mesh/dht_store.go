@@ -14,6 +14,12 @@ type DataStore struct {
 	deviceApi *api.Api
 }
 
+func NewDataStore(api *api.Api) ds.Batching {
+	return &DataStore{
+		deviceApi: api,
+	}
+}
+
 func (d *DataStore) Put(key ds.Key, value interface{}) error {
 	logger.Info(fmt.Sprintf("put key: %s and value: %s in datastore", key.String(), value))
 
@@ -143,5 +149,10 @@ func (d *DataStore) Query(q dsq.Query) (dsq.Results, error) {
 
 	panic("not implemented")
 
+	return nil, nil
+}
+
+func (d *DataStore) Batch() (ds.Batch, error) {
+	panic("batch is not implemented")
 	return nil, nil
 }
