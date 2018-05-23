@@ -30,109 +30,109 @@ func (c *SignTransactionRpcCall) Valid() error {
 	return nil
 }
 
-type SignTransaction struct {
-	Api *deviceApi.Api
-}
-
 // a sign call requires
 // @todo there is need for validating the parameter length. E.g the data should not be longer than x char's etc
-func (s *SignTransaction) SignTransaction(call otto.FunctionCall) otto.Value {
+func SignTransaction(api *deviceApi.Api) OttoFunction {
 
-	toSign := call.Argument(0).Object()
-	callback := call.Argument(1)
+	return func(call otto.FunctionCall) otto.Value {
 
-	if toSign == nil {
-		v, _ := otto.ToValue("missing transaction data")
-		return v
-	}
+		toSign := call.Argument(0).Object()
+		callback := call.Argument(1)
 
-	if !callback.IsDefined() {
-		v, _ := otto.ToValue("missing callback")
-		return v
-	}
+		if toSign == nil {
+			v, _ := otto.ToValue("missing transaction data")
+			return v
+		}
 
-	// reason for this transaction
-	reason, err := toSign.Get("reason")
-	if err != nil {
-		callback.Call(callback, err)
-	}
-	if !reason.IsString() {
-		callback.Call(callback, "reason has to be a string")
-		return otto.Value{}
-	}
+		if !callback.IsDefined() {
+			v, _ := otto.ToValue("missing callback")
+			return v
+		}
 
-	// "to" of transaction
-	to, err := toSign.Get("to")
-	if err != nil {
-		callback.Call(callback, err)
-		return otto.Value{}
-	}
-	if !to.IsString() {
-		callback.Call(callback, "to has to be a valid ethereum address")
-		return otto.Value{}
-	}
-	if !ethCommon.IsHexAddress(to.String()) {
-		callback.Call(callback, "to has to be a valid ethereum address")
-		return otto.Value{}
-	}
+		// reason for this transaction
+		reason, err := toSign.Get("reason")
+		if err != nil {
+			callback.Call(callback, err)
+		}
+		if !reason.IsString() {
+			callback.Call(callback, "reason has to be a string")
+			return otto.Value{}
+		}
 
-	// "value" of transaction
-	value, err := toSign.Get("value")
-	if err != nil {
-		callback.Call(callback, err)
-		return otto.Value{}
-	}
-	if !value.IsString() {
-		callback.Call(callback, "value must be a string")
-		return otto.Value{}
-	}
+		// "to" of transaction
+		to, err := toSign.Get("to")
+		if err != nil {
+			callback.Call(callback, err)
+			return otto.Value{}
+		}
+		if !to.IsString() {
+			callback.Call(callback, "to has to be a valid ethereum address")
+			return otto.Value{}
+		}
+		if !ethCommon.IsHexAddress(to.String()) {
+			callback.Call(callback, "to has to be a valid ethereum address")
+			return otto.Value{}
+		}
 
-	// "data" of transaction
-	data, err := toSign.Get("data")
-	if err != nil {
-		callback.Call(callback, err)
-		return otto.Value{}
-	}
-	if !data.IsString() {
-		callback.Call(callback, "data must be a string")
-		return otto.Value{}
-	}
+		// "value" of transaction
+		value, err := toSign.Get("value")
+		if err != nil {
+			callback.Call(callback, err)
+			return otto.Value{}
+		}
+		if !value.IsString() {
+			callback.Call(callback, "value must be a string")
+			return otto.Value{}
+		}
 
-	respChan, err := s.Api.Send(&SignTransactionRpcCall{
-		Reason:  reason.String(),
-		TxTo:    to.String(),
-		TxValue: value.String(),
-		TxData:  value.String(),
-	})
+		// "data" of transaction
+		data, err := toSign.Get("data")
+		if err != nil {
+			callback.Call(callback, err)
+			return otto.Value{}
+		}
+		if !data.IsString() {
+			callback.Call(callback, "data must be a string")
+			return otto.Value{}
+		}
 
-	if err != nil {
-		callback.Call(callback, "failed ot send transaction to device")
-		return otto.Value{}
-	}
+		respChan, err := api.Send(&SignTransactionRpcCall{
+			Reason:  reason.String(),
+			TxTo:    to.String(),
+			TxValue: value.String(),
+			TxData:  value.String(),
+		})
 
-	resp := <-respChan
+		if err != nil {
+			callback.Call(callback, "failed ot send transaction to device")
+			return otto.Value{}
+		}
 
-	if resp.Error != nil {
-		logger.Error("sign transaction request failed with error: ", resp.Error)
-		resp.Close(nil)
-		callback.Call(callback, "received error for sign request. please connect a debugger to see the problem")
-		return otto.Value{}
-	}
+		resp := <-respChan
 
-	r := struct {
-		SignedTransaction string
-	}{}
+		if resp.Error != nil {
+			logger.Error("sign transaction request failed with error: ", resp.Error)
+			resp.Close(nil)
+			callback.Call(callback, "received error for sign request. please connect a debugger to see the problem")
+			return otto.Value{}
+		}
 
-	if err := json.Unmarshal([]byte(resp.Payload), &r); err != nil {
-		logger.Error("Failed to unmarshal response for sign transaction request: ", err)
+		r := struct {
+			SignedTransaction string
+		}{}
+
+		if err := json.Unmarshal([]byte(resp.Payload), &r); err != nil {
+			logger.Error("Failed to unmarshal response for sign transaction request: ", err)
+			resp.Close(err)
+			callback.Call(callback, "failed to unmarshal sign transaction request")
+			return otto.Value{}
+		}
+
+		_, err = callback.Call(callback, nil, r.SignedTransaction)
 		resp.Close(err)
-		callback.Call(callback, "failed to unmarshal sign transaction request")
+
 		return otto.Value{}
+
 	}
-
-	_, err = callback.Call(callback, nil, r.SignedTransaction)
-	resp.Close(err)
-
-	return otto.Value{}
 
 }
