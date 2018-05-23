@@ -51,15 +51,31 @@
     },
     {
       "author": "florian",
-      "hash": "Qmdu32Lzvuof9HXogmHQZ8JJuhaWyADBwrRSmpXjGFX8HM",
+      "hash": "QmcnHgaijwsnjb4vBjVcePRXLtw25mxuQ6X5qjobWD6zb1",
       "name": "go-libp2p-bootstrap",
-      "version": "3.0.2"
+      "version": "4.0.0"
     },
     {
       "author": "whyrusleeping",
-      "hash": "QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo",
+      "hash": "Qme1knMqwt1hKZbc1BmQFmnm9f36nyQGwXxPGVpVJ9rMK5",
       "name": "go-libp2p-crypto",
-      "version": "1.5.0"
+      "version": "1.6.2"
+    },
+    {
+      "hash": "QmSBxn1eLMdViZRDGW9rRHRYwtqq5bqUgipqTMPuTim616",
+      "name": "go-libp2p-kad-dht",
+      "version": "4.0.4"
+    },
+    {
+      "hash": "QmTG23dvpBCBjqQwyDxV8CQT6jmS4PSftNr1VqHhE3MLy7",
+      "name": "go-log",
+      "version": "1.4.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmcJukH2sAFjY3HdBKq35WDzWoL3UUu2gt9wdfqZTUyM74",
+      "name": "go-libp2p-peer",
+      "version": "2.3.2"
     }
   ],
   "gxVersion": "0.12.1",

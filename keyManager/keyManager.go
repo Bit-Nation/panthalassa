@@ -16,26 +16,27 @@ import (
 
 type KeyManager struct {
 	keyStore ks.Store
-	account  accountKeyStore
+	account  Store
 }
 
-type accountKeyStore struct {
+type Store struct {
+	// the password is encrypted with the mnemonic
 	Password          string `json:"password"`
 	EncryptedKeyStore string `json:"encrypted_key_store"`
 	Version           uint8  `json:"version"`
 }
 
 //Open encrypted keystore with password
-func OpenWithPassword(encryptedAccount, pw string) (*KeyManager, error) {
+func OpenWithPassword(encryptedStore, pw string) (*KeyManager, error) {
 
 	//unmarshal encrypted account
-	var acc accountKeyStore
-	if err := json.Unmarshal([]byte(encryptedAccount), &acc); err != nil {
+	var store Store
+	if err := json.Unmarshal([]byte(encryptedStore), &store); err != nil {
 		return &KeyManager{}, err
 	}
 
 	//Decrypt key store
-	jsonKeyStore, err := scrypt.DecryptCipherText(acc.EncryptedKeyStore, pw)
+	jsonKeyStore, err := scrypt.DecryptCipherText(store.EncryptedKeyStore, pw)
 	if err != nil {
 		return &KeyManager{}, err
 	}
@@ -48,7 +49,7 @@ func OpenWithPassword(encryptedAccount, pw string) (*KeyManager, error) {
 
 	return &KeyManager{
 		keyStore: keyStore,
-		account:  acc,
+		account:  store,
 	}, nil
 
 }
@@ -58,7 +59,7 @@ func OpenWithPassword(encryptedAccount, pw string) (*KeyManager, error) {
 func OpenWithMnemonic(encryptedAccount, mnemonic string) (*KeyManager, error) {
 
 	//unmarshal encrypted account
-	var acc accountKeyStore
+	var acc Store
 	if err := json.Unmarshal([]byte(encryptedAccount), &acc); err != nil {
 		return &KeyManager{}, err
 	}
@@ -97,7 +98,7 @@ func (km KeyManager) Export(pw, pwConfirm string) (string, error) {
 	encryptedPassword, err := scrypt.NewCipherText(pw, km.keyStore.GetMnemonic().String())
 
 	//Marshal account
-	acc, err := json.Marshal(accountKeyStore{
+	acc, err := json.Marshal(Store{
 		Password:          encryptedPassword,
 		EncryptedKeyStore: encryptedKeyStore,
 		Version:           1,
@@ -167,6 +168,56 @@ func (km KeyManager) MeshPrivateKey() (lp2pCrypto.PrivKey, error) {
 
 	return lp2pCrypto.UnmarshalEd25519PrivateKey(append(privBytes, pubBytes...))
 
+}
+
+func (km KeyManager) GetEthereumPublicKey() (string, error) {
+
+	//Fetch ethereum private key
+	privKey, err := km.GetEthereumPrivateKey()
+	if err != nil {
+		return "", err
+	}
+
+	//Parse hex private key
+	priv, err := ethCrypto.HexToECDSA(privKey)
+	if err != nil {
+		return "", err
+	}
+
+	// encode public key
+	pubKey := ethCrypto.CompressPubkey(&priv.PublicKey)
+	return hex.EncodeToString(pubKey), nil
+
+}
+
+//Sign data with identity key
+func (km KeyManager) IdentitySign(data []byte) ([]byte, error) {
+
+	//Fetch mesh private key
+	pk, err := km.MeshPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	return pk.Sign(data)
+
+}
+
+//Sign data with ethereum private key
+func (km KeyManager) EthereumSign(data [32]byte) ([]byte, error) {
+	//Fetch ethereum private key
+	privKey, err := km.GetEthereumPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	//Parse hex private key
+	priv, err := ethCrypto.HexToECDSA(privKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return ethCrypto.Sign(data[:], priv)
 }
 
 //Did the keystore change (happen after migration)
