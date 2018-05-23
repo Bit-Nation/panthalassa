@@ -2,12 +2,31 @@ package mesh
 
 import (
 	"context"
+	"fmt"
+	"time"
+
+	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
+	bootstrap "github.com/florianlenz/go-libp2p-bootstrap"
+	ds "github.com/ipfs/go-datastore"
+	log "github.com/ipfs/go-log"
 	lp2p "github.com/libp2p/go-libp2p"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
 )
 
-func New(meshPk *lp2pCrypto.Ed25519PrivateKey) (*Network, error) {
+var bootstrapPeers = []string{
+	"/ip4/104.131.131.82/tcp/4001/ipfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",
+	"/ip4/104.236.76.40/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64",
+	"/ip4/104.236.176.52/tcp/4001/ipfs/QmSoLnSGccFuZQJzRadHn95W2CrSFmZuTdDWP8HXaHca9z",
+	"/ip4/104.236.179.241/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM",
+	"/ip4/162.243.248.213/tcp/4001/ipfs/QmSoLueR4xBeUbY9WZ9xGUUxunbKWcrNFTDAadQJmocnWm",
+	"/ip4/128.199.219.111/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu",
+}
+
+var logger = log.Logger("mesh")
+
+func New(meshPk lp2pCrypto.PrivKey, api *deviceApi.Api, rendezvousKey, signedProfile string) (*Network, <-chan error, error) {
 
 	//Create host
 	h, err := lp2p.New(context.Background(), func(cfg *lp2p.Config) error {
@@ -19,124 +38,88 @@ func New(meshPk *lp2pCrypto.Ed25519PrivateKey) (*Network, error) {
 
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
+	//Create rendezvous key
+	rk := NewRendezvousKey(rendezvousKey)
+
+	//error report channel
+	errReport := make(chan error)
+
+	//Bootstrapping
+	b, err := bootstrap.New(h, bootstrap.Config{
+		BootstrapPeers:    bootstrapPeers,
+		MinPeers:          5,
+		BootstrapInterval: time.Second * 5,
+		HardBootstrap:     time.Second * 120,
+	})
+
+	//start bootstrapping
+	go func(b *bootstrap.Bootstrap) {
+		logger.Debug("Start bootstrapping")
+		if err := b.Start(context.Background()); err != nil {
+			logger.Error(err)
+		}
+		logger.Debug("Finished bootstrapping")
+	}(b)
+
+	//Create DHT and bootstrap it
+	d := dht.NewDHT(context.Background(), h, ds.NewMapDatastore())
+	go func(dht *dht.IpfsDHT, key RendezvousKey, h host.Host) {
+		logger.Debug("Start DHT bootstrapping")
+		if err := dht.Bootstrap(context.Background()); err != nil {
+			errReport <- err
+		}
+		logger.Debug("Finished DHT bootstrapping")
+
+	}(d, rk, h)
+
+	// put profile in the dht
+	pubKey, err := h.ID().ExtractPublicKey()
+	if err != nil {
+		return nil, nil, err
+	}
+	cid, err := rk.Profile(pubKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	logger.Info(fmt.Sprintf("put my profile (%s) with key (%s) in the DHT", signedProfile, cid.String()))
+	d.PutValue(context.Background(), cid.String(), []byte(signedProfile))
+
 	return &Network{
-		host: h,
-	}, nil
+		Host:      h,
+		Bootstrap: b,
+		Dht:       d,
+	}, errReport, nil
 
 }
 
 type Network struct {
-	host host.Host
+	Host          host.Host
+	Bootstrap     *bootstrap.Bootstrap
+	Dht           *dht.IpfsDHT
+	RendezvousKey RendezvousKey
 }
 
-/*
-@todo there is an problem with the bootstrapping bundle. Since we don't need the mesh network now we will comment it
-import (
-	"context"
-	bootstrap "github.com/florianlenz/go-libp2p-bootstrap"
-	cid "github.com/ipfs/go-cid"
-	libp2p "github.com/libp2p/go-libp2p"
-	host "github.com/libp2p/go-libp2p-host"
-	"time"
-)
+func (n *Network) Close() error {
 
-var bootstrapPeers = []string{
-	"/ip4/104.131.131.82/tcp/4001/ipfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",
-	"/ip4/104.236.76.40/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64",
-	"/ip4/104.236.176.52/tcp/4001/ipfs/QmSoLnSGccFuZQJzRadHn95W2CrSFmZuTdDWP8HXaHca9z",
-	"/ip4/104.236.179.241/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM",
-	"/ip4/162.243.248.213/tcp/4001/ipfs/QmSoLueR4xBeUbY9WZ9xGUUxunbKWcrNFTDAadQJmocnWm",
-	"/ip4/128.199.219.111/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu",
-	"/ip4/178.62.158.247/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd",
-	"/ip4/178.62.61.185/tcp/4001/ipfs/QmSoLMeWqB7YGVLJN3pNLQpmmEk35v6wYtsMGLzSr5QBU3",
-	"/ip4/104.236.151.122/tcp/4001/ipfs/QmSoLju6m7xTh3DuokvT3886QRYqxAzb1kShaanJgW36yx",
-}
+	var err error
 
-//configuration for mesh network
-func meshConfig(cfg *libp2p.Config) error {
-
-	libp2p.Defaults(cfg)
-	return nil
-}
-
-type Mesh struct {
-	host          host.Host
-	started       bool
-	ctx           context.Context
-	rendezvousKey *cid.Cid
-	bootstrap     *bootstrap.Bootstrap
-	close         *chan struct{}
-}
-
-//Create a new instance of the mesh network
-func NewMesh(rendezvousSeed string) (*Mesh, error) {
-
-	//Create rendezvous key
-	rK, err := rendezvousKey(rendezvousSeed)
-	if err != nil {
-		return &Mesh{}, err
+	if e := n.Host.Close(); e != nil {
+		logger.Error(err)
+		err = e
 	}
 
-	//Mesh network instance
-	m := Mesh{
-		rendezvousKey: rK,
+	if e := n.Dht.Close(); e != nil {
+		logger.Error(err)
+		err = e
 	}
 
-	//Context
-	m.ctx = context.Background()
-
-	//Create host
-	h, err := libp2p.New(m.ctx, libp2p.Defaults)
-	m.host = h
-	if err != nil {
-		return &Mesh{}, nil
-	}
-
-	//Create close chan
-	c := make(chan struct{})
-	m.close = &c
-
-	//Add bootstrap to host
-	cfg := bootstrap.Config{
-		BootstrapPeers:    bootstrapPeers,
-		MinPeers:          6,
-		BootstrapInterval: time.Second * 5,
-		HardBootstrap:     time.Second * 100,
-	}
-	err, bs := bootstrap.NewBootstrap(h, cfg)
-	if err != nil {
-		return &Mesh{}, err
-	}
-	m.bootstrap = bs
-
-	return &m, nil
+	return err
 }
 
-//Start mesh network
-func (m *Mesh) Start(cb func(err error)) {
-
-	//Bootstrap start
-	if err := m.bootstrap.Start(); err != nil {
-		cb(err)
-		return
-	}
-
-	cb(nil)
-
-	//Hang till closed
-	<-*m.close
+//Bootstrap manual
+func (n *Network) BootstrapManual(ctx context.Context) error {
+	return n.Bootstrap.Bootstrap(ctx)
 }
-
-//Stop the mesh network
-func (m *Mesh) Stop() {
-
-	//Stop mesh network
-	m.bootstrap.Stop()
-
-	*m.close <- struct{}{}
-
-}
-*/
