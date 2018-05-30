@@ -38,7 +38,7 @@ func (s *State) Add(respChan chan Response) (string, error) {
 			break
 		}
 	}
-	logger.Debug(fmt.Sprintf("added response channel with id: %d", id))
+	logger.Debug(fmt.Sprintf("added response channel with id: %s", id))
 	s.requests[id] = respChan
 	s.m.Unlock()
 
@@ -52,11 +52,11 @@ func (s *State) Cut(id string) (chan Response, error) {
 	s.m.Lock()
 	respChan, exist := s.requests[id]
 	if !exist {
-		return nil, errors.New(fmt.Sprintf("a request channel for id (%d) does not exist", id))
+		return nil, errors.New(fmt.Sprintf("a request channel for id (%s) does not exist", id))
 	}
 	delete(s.requests, id)
 	s.m.Unlock()
-	logger.Debug(fmt.Sprintf("fetched response channel: for id: %d", id))
+	logger.Debug(fmt.Sprintf("fetched response channel: for id: %s", id))
 	return respChan, nil
 
 }

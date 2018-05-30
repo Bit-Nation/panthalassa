@@ -109,13 +109,15 @@ func (a *Api) Send(call rpc.JsonRPCCall) (<-chan Response, error) {
 // @todo at the moment the fetched response channel will never close in case there we return earlier with an error
 func (a *Api) Receive(id string, data string) error {
 
-	logger.Debug(fmt.Sprintf("Got response for request (%d) - with data: %s", id, data))
+	logger.Debug(fmt.Sprintf("Got response for request (%s) - with data: %s", id, data))
 
 	// get the response channel
 	resp, err := a.state.Cut(id)
+
 	if err != nil {
-		resp <- Response{
-			Error: err,
+		// only try to send a response if a channel exist
+		if resp != nil {
+			resp <- Response{Error: err}
 		}
 		return err
 	}

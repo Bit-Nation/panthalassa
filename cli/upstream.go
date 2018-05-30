@@ -10,7 +10,7 @@ import (
 
 type apiCall struct {
 	Type string `json:"type"`
-	ID   uint32 `json:"id"`
+	ID   string `json:"id"`
 	Data string `json:"data"`
 }
 
@@ -36,7 +36,7 @@ type Store struct {
 	DB      *jsonDB.Driver
 }
 
-func (s Store) SendResponse(id uint32, r response) {
+func (s Store) SendResponse(id string, r response) {
 
 	data, err := json.Marshal(r)
 	if err != nil {
