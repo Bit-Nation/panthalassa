@@ -12,7 +12,8 @@ func TestState(t *testing.T) {
 	testChan := make(chan Response)
 
 	//Register test channel
-	id := s.Add(testChan)
+	id, err := s.Add(testChan)
+	require.Nil(t, err)
 
 	//Check if successfully registered
 	s.m.Lock()
@@ -26,6 +27,6 @@ func TestState(t *testing.T) {
 
 	//Cutting a already received channel should as well result in an error
 	registeredChan, err = s.Cut(id)
-	require.EqualError(t, err, "a request channel for id (4039455774) does not exist")
+	require.EqualError(t, err, "a request channel for id ("+id+") does not exist")
 
 }

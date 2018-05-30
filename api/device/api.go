@@ -19,7 +19,7 @@ type UpStream interface {
 
 type ApiCall struct {
 	Type string `json:"type"`
-	Id   uint32 `json:"id"`
+	Id   string `json:"id"`
 	Data string `json:"data"`
 }
 
@@ -86,7 +86,10 @@ func (a *Api) Send(call rpc.JsonRPCCall) (<-chan Response, error) {
 		Data: callContent,
 	}
 	respChan := make(chan Response, 1)
-	c.Id = a.state.Add(respChan)
+	c.Id, err = a.state.Add(respChan)
+	if err != nil {
+		return nil, err
+	}
 
 	//Marshal the call data
 	callData, err := c.Marshal()
@@ -102,7 +105,7 @@ func (a *Api) Send(call rpc.JsonRPCCall) (<-chan Response, error) {
 }
 
 // @todo at the moment the fetched response channel will never close in case there we return earlier with an error
-func (a *Api) Receive(id uint32, data string) error {
+func (a *Api) Receive(id string, data string) error {
 
 	logger.Debug(fmt.Sprintf("Got response for request (%d) - with data: %s", id, data))
 

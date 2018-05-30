@@ -137,7 +137,7 @@ func EthAddress() (string, error) {
 	return panthalassaInstance.km.GetEthereumAddress()
 }
 
-func SendResponse(id uint32, data string) error {
+func SendResponse(id string, data string) error {
 
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa")
