@@ -98,6 +98,8 @@ func (a *Api) Send(call rpc.JsonRPCCall) (<-chan Response, error) {
 	}
 
 	//Send json rpc call to device
+	// @todo maybe it's worth making this sync and let the caller decide
+	// @todo if they want to wait till the data has been send
 	go a.device.Send(string(callData))
 
 	return respChan, nil
@@ -112,6 +114,9 @@ func (a *Api) Receive(id string, data string) error {
 	// get the response channel
 	resp, err := a.state.Cut(id)
 	if err != nil {
+		resp <- Response{
+			Error: err,
+		}
 		return err
 	}
 
@@ -121,12 +126,18 @@ func (a *Api) Receive(id string, data string) error {
 	// decode raw response
 	var rr rawResponse
 	if err := json.Unmarshal([]byte(data), &rr); err != nil {
+		resp <- Response{
+			Error: err,
+		}
 		return err
 	}
 
 	// validate raw response
 	_, err = valid.ValidateStruct(rr)
 	if err != nil {
+		resp <- Response{
+			Error: err,
+		}
 		return err
 	}
 
