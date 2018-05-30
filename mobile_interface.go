@@ -64,9 +64,6 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		mesh:      m,
 	}
 
-	// register all housekeepers
-	SearchContacts(panthalassaInstance)
-
 	return nil
 
 }
