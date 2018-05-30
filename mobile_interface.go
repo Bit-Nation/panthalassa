@@ -6,6 +6,7 @@ import (
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
+	"github.com/Bit-Nation/panthalassa/profile"
 	log "github.com/ipfs/go-log"
 	"github.com/segmentio/objconv/json"
 	valid "gopkg.in/asaskevich/govalidator.v4"
@@ -173,6 +174,26 @@ func GetMnemonic() (string, error) {
 	}
 
 	return panthalassaInstance.km.GetMnemonic().String(), nil
+}
+
+func SignProfile(name, location, image string) (string, error) {
+
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa")
+	}
+
+	p, err := profile.SignProfile(name, location, image, *panthalassaInstance.km)
+	if err != nil {
+		return "", err
+	}
+
+	rawProfile, err := p.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	return string(rawProfile), nil
+
 }
 
 //Stop panthalassa

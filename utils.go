@@ -2,14 +2,15 @@ package panthalassa
 
 import (
 	"errors"
+	"strings"
 
 	cid "github.com/Bit-Nation/panthalassa/crypto/cid"
 	scrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
-	"github.com/Bit-Nation/panthalassa/keyManager"
-	"github.com/Bit-Nation/panthalassa/keyStore"
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
-	"github.com/tyler-smith/go-bip39"
-	"strings"
+	"github.com/Bit-Nation/panthalassa/profile"
+	bip39 "github.com/tyler-smith/go-bip39"
 )
 
 //Encrypt's data
@@ -100,4 +101,27 @@ func IsValidMnemonic(mne string) bool {
 	}
 
 	return bip39.IsMnemonicValid(mne)
+}
+
+// sign profile
+func SignProfileStandAlone(name, location, image, keyManagerStore, password string) (string, error) {
+
+	p, err := profile.SignWithKeyManagerStore(name, location, image, keyManagerStore, password)
+
+	if err != nil {
+		return "", nil
+	}
+
+	_, err = p.SignaturesValid()
+	if err != nil {
+		return "", err
+	}
+
+	rawProfile, err := p.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	return string(rawProfile), nil
+
 }

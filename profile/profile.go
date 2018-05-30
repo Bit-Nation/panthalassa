@@ -35,6 +35,12 @@ type Profile struct {
 	Signatures  Signatures  `json:"signatures"`
 }
 
+func (p *Profile) Marshal() ([]byte, error) {
+
+	return json.Marshal(p)
+
+}
+
 // check if signatures of profile are correct
 func (p Profile) SignaturesValid() (bool, error) {
 
