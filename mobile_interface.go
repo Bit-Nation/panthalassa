@@ -166,6 +166,15 @@ func IdentityPublicKey() (string, error) {
 	return panthalassaInstance.km.IdentityPublicKey()
 }
 
+func GetMnemonic() (string, error) {
+
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa")
+	}
+
+	return panthalassaInstance.km.GetMnemonic().String(), nil
+}
+
 //Stop panthalassa
 func Stop() error {
 

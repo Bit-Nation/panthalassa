@@ -109,10 +109,10 @@ func TestApi_SendWithMissingRequest(t *testing.T) {
 
 	//Create api
 	api := New(&upStream)
-	
+
 	// send a response to the api with an id that doesn't exist
 	err := api.Receive("ahdsf3rpoiasdökfj", "")
-	
+
 	require.EqualError(t, err, "a request channel for id ("+"ahdsf3rpoiasdökfj"+") does not exist")
 
 }
