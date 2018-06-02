@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"golang.org/x/crypto/ed25519"
 	"time"
 
 	km "github.com/Bit-Nation/panthalassa/keyManager"
@@ -38,6 +39,23 @@ type Profile struct {
 func (p *Profile) Marshal() ([]byte, error) {
 
 	return json.Marshal(p)
+
+}
+
+func (p *Profile) GetIdentityKey() (ed25519.PublicKey, error) {
+
+	pubStr := p.Information.IdentityPubKey
+	rawPub, err := hex.DecodeString(pubStr)
+
+	if err != nil {
+		return ed25519.PublicKey{}, err
+	}
+
+	if len(rawPub) != 32 {
+		return ed25519.PublicKey{}, errors.New("public key must have 32 bytes")
+	}
+
+	return rawPub, nil
 
 }
 
