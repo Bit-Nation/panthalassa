@@ -2,10 +2,7 @@ package chat
 
 import (
 	"encoding/hex"
-	"encoding/json"
-	"time"
 
-	"github.com/Bit-Nation/panthalassa/profile"
 	x3dh "github.com/Bit-Nation/x3dh"
 	"golang.org/x/crypto/ed25519"
 )
