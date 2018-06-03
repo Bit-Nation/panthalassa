@@ -1,14 +1,14 @@
 package panthalassa
 
 import (
+	"encoding/json"
 	"errors"
 
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
-	"github.com/Bit-Nation/panthalassa/profile"
+	profile "github.com/Bit-Nation/panthalassa/profile"
 	log "github.com/ipfs/go-log"
-	"github.com/segmentio/objconv/json"
 	valid "gopkg.in/asaskevich/govalidator.v4"
 )
 
@@ -23,10 +23,13 @@ type StartConfig struct {
 	EncryptedKeyManager string `valid:"required"`
 	RendezvousKey       string `valid:"required"`
 	SignedProfile       string `valid:"required"`
+	ChatHTTPEndpoint    string `valid:"required"`
+	ChatWSEndpoint      string `valid:"required"`
+	ChatAccessToken     string `valid:"required"`
 }
 
 // create a new panthalassa instance
-func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error {
+func start(km *keyManager.KeyManager, chatKeyStore PangeaKeyStoreDBInterface, config StartConfig, client UpStream) error {
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
@@ -70,7 +73,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 }
 
 // start panthalassa
-func Start(config string, password string, client UpStream) error {
+func Start(config string, password string, chatKeyStore PangeaKeyStoreDBInterface, client UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -90,11 +93,11 @@ func Start(config string, password string, client UpStream) error {
 		return err
 	}
 
-	return start(km, c, client)
+	return start(km, chatKeyStore, c, client)
 }
 
 // create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
+func StartFromMnemonic(config string, mnemonic string, chatKeyStore PangeaKeyStoreDBInterface, client UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -115,7 +118,7 @@ func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
 	}
 
 	// create panthalassa instance
-	return start(km, c, client)
+	return start(km, chatKeyStore, c, client)
 
 }
 
