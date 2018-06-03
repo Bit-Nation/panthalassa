@@ -38,7 +38,7 @@ func (c *Chat) encryptMessage(secret x3dh.SharedSecret, data []byte) (doubleratc
 	// create double rachet session
 	s, err := doubleratchet.New(secBytes, doubleratchetKeyPair{
 		kp: chatIdKey,
-	}, doubleratchet.WithKeysStorage(c.keyStore))
+	}, doubleratchet.WithKeysStorage(c.doubleRachetKeyStore))
 	if err != nil {
 		return doubleratchet.Message{}, err
 	}
@@ -68,7 +68,7 @@ func (c *Chat) DecryptMessage(secret x3dh.SharedSecret, profile profile.Profile,
 	s, err := doubleratchet.NewWithRemoteKey(
 		secBytes,
 		remotePub,
-		doubleratchet.WithKeysStorage(c.keyStore),
+		doubleratchet.WithKeysStorage(c.doubleRachetKeyStore),
 	)
 	if err != nil {
 		return "", err
