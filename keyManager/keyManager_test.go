@@ -31,7 +31,7 @@ func TestCreateFromKeyStore(t *testing.T) {
 func TestExportFunction(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"chat_identity_curve25519_private_key":"70bcdb281ab3cc1dc75199c33a0edec43fcfe1d70ee2fd11e4821c38a688186c","chat_identity_curve25519_public_key":"1b276c51c849b244a7c40814769c9ea71caad17516aabc1270c8bd2bc096ef45","ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
 	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
 	require.Nil(t, err)
 
@@ -56,7 +56,7 @@ func TestExportFunction(t *testing.T) {
 func TestOpenWithMnemonic(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"chat_identity_curve25519_private_key":"70bcdb281ab3cc1dc75199c33a0edec43fcfe1d70ee2fd11e4821c38a688186c","chat_identity_curve25519_public_key":"1b276c51c849b244a7c40814769c9ea71caad17516aabc1270c8bd2bc096ef45","ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
 	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
 	require.Nil(t, err)
 
