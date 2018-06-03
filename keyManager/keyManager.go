@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 
+	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	scrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
+	chatMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/chat"
+	encryptionKeyMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/encryption_key"
 	ethereumMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/ethereum"
 	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 	"github.com/Bit-Nation/panthalassa/mnemonic"
+	x3dh "github.com/Bit-Nation/x3dh"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 )
@@ -223,6 +227,64 @@ func (km KeyManager) EthereumSign(data [32]byte) ([]byte, error) {
 //Did the keystore change (happen after migration)
 func (km KeyManager) WasMigrated() bool {
 	return km.keyStore.WasMigrated()
+}
+
+func (km KeyManager) encryptionKey() (string, error) {
+	return km.keyStore.GetKey(encryptionKeyMigration.BIP39Password)
+}
+
+func (km KeyManager) AESDecrypt(cipherText string) (string, error) {
+	encryptionKey, err := km.encryptionKey()
+
+	if err != nil {
+		return "", err
+	}
+
+	return aes.Decrypt(cipherText, encryptionKey)
+}
+
+func (km KeyManager) AESEncrypt(plainText string) (string, error) {
+	encryptionKey, err := km.encryptionKey()
+
+	if err != nil {
+		return "", err
+	}
+
+	return aes.Encrypt(plainText, encryptionKey)
+}
+
+func (km KeyManager) ChatIdKeyPair() (x3dh.KeyPair, error) {
+
+	strPriv, err := km.keyStore.GetKey(chatMigration.MigrationPrivPrefix)
+	if err != nil {
+		return x3dh.KeyPair{}, err
+	}
+	rawPriv, err := hex.DecodeString(strPriv)
+	if err != nil {
+		return x3dh.KeyPair{}, err
+	}
+
+	strPub, err := km.keyStore.GetKey(chatMigration.MigrationPubPrefix)
+	if err != nil {
+		return x3dh.KeyPair{}, err
+	}
+	rawPub, err := hex.DecodeString(strPub)
+	if err != nil {
+		return x3dh.KeyPair{}, err
+	}
+
+	var (
+		priv [32]byte
+		pub  [32]byte
+	)
+
+	copy(priv[:], rawPriv[:32])
+	copy(pub[:], rawPub[:32])
+
+	return x3dh.KeyPair{
+		PrivateKey: priv,
+		PublicKey:  pub,
+	}, nil
 }
 
 //Create new key manager from key store
