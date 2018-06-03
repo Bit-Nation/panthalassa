@@ -1,13 +1,13 @@
 package chat
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"time"
 
 	"crypto/sha256"
 	"github.com/Bit-Nation/panthalassa/keyManager"
 	"github.com/tiabc/doubleratchet"
+	"golang.org/x/crypto/ed25519"
 )
 
 type Message struct {
@@ -15,7 +15,8 @@ type Message struct {
 	SendAt               time.Time             `json:"timestamp"`
 	AdditionalData       map[string]string     `json:"additional_data"`
 	DoubleratchetMessage doubleratchet.Message `json:"doubleratchet_message"`
-	Signature            string                `json:"signature"`
+	Signature            []byte                `json:"signature"`
+	IDPubKey             ed25519.PublicKey     `json:"id_public_key"`
 }
 
 // hash the message data. Exclude signature
@@ -36,15 +37,19 @@ func (m *Message) hashData() []byte {
 
 }
 
+// marshal message
 func (m *Message) Marshal() ([]byte, error) {
 	return json.Marshal(m)
 }
 
 // sign the message with your identity key
 func (m *Message) Sign(km *keyManager.KeyManager) error {
-
 	sig, err := km.IdentitySign(m.hashData())
-	m.Signature = hex.EncodeToString(sig)
+	m.Signature = sig
 	return err
+}
 
+// verify signature of message
+func (m *Message) VerifySignature() bool {
+	return ed25519.Verify(m.IDPubKey, m.hashData(), m.Signature)
 }
