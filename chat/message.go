@@ -1,13 +1,13 @@
 package chat
 
 import (
-	"time"
-	"encoding/json"
 	"encoding/hex"
-	
-	"github.com/tiabc/doubleratchet"
-	"github.com/Bit-Nation/panthalassa/keyManager"
+	"encoding/json"
+	"time"
+
 	"crypto/sha256"
+	"github.com/Bit-Nation/panthalassa/keyManager"
+	"github.com/tiabc/doubleratchet"
 )
 
 type Message struct {
@@ -15,7 +15,7 @@ type Message struct {
 	SendAt               time.Time             `json:"timestamp"`
 	AdditionalData       map[string]string     `json:"additional_data"`
 	DoubleratchetMessage doubleratchet.Message `json:"doubleratchet_message"`
-	Signature            string					`json:"signature"`
+	Signature            string                `json:"signature"`
 }
 
 // hash the message data. Exclude signature
@@ -23,7 +23,7 @@ func (m *Message) hashData() []byte {
 
 	b := []byte(m.Type)
 	b = append(b, []byte(m.SendAt.String())...)
-	
+
 	for k, v := range m.AdditionalData {
 		b = append(b, []byte(k)...)
 		b = append(b, []byte(v)...)
@@ -31,9 +31,9 @@ func (m *Message) hashData() []byte {
 
 	b = append(b, m.DoubleratchetMessage.Header.Encode()...)
 	b = append(b, m.DoubleratchetMessage.Ciphertext...)
-	
+
 	return sha256.New().Sum(b)
-	
+
 }
 
 func (m *Message) Marshal() ([]byte, error) {
@@ -46,5 +46,5 @@ func (m *Message) Sign(km *keyManager.KeyManager) error {
 	sig, err := km.IdentitySign(m.hashData())
 	m.Signature = hex.EncodeToString(sig)
 	return err
-	
+
 }
