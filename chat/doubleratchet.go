@@ -2,7 +2,7 @@ package chat
 
 import (
 	"encoding/json"
-	
+
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	x3dh "github.com/Bit-Nation/x3dh"
 	doubleratchet "github.com/tiabc/doubleratchet"
@@ -13,6 +13,7 @@ import (
 type doubleratchetKeyPair struct {
 	kp x3dh.KeyPair
 }
+
 func (p doubleratchetKeyPair) PrivateKey() doubleratchet.Key {
 	var byt [32]byte = p.kp.PrivateKey
 	return byt

@@ -25,13 +25,13 @@ func (c *Chat) SendHumanMessage(msg string, profile profile.Profile, sec x3dh.Sh
 		SendAt:               time.Now(),
 		DoubleratchetMessage: encryptedMessage,
 	}
-	
+
 	// sign message
 	err = m.Sign(c.km)
 	if err != nil {
 		return Message{}, err
 	}
-	
+
 	// publish the message
 	err = c.publishMessage(m)
 
