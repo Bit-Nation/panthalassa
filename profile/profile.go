@@ -217,6 +217,7 @@ func SignProfile(name, location, image string, km km.KeyManager) (Profile, error
 			IdentityPubKey: idPubKeyStr,
 			EthereumPubKey: ethPubKeyStr,
 			Timestamp:      now,
+			ChatIDKey:      chatPub,
 			Version:        profileVersion,
 		},
 		Signatures: Signatures{
