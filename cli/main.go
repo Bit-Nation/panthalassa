@@ -113,9 +113,7 @@ func main() {
 				return
 			}
 
-			keyStore := NewKeyStore()
-
-			err = panthalassa.Start(string(rawConfig), password, &keyStore, &Store{
+			err = panthalassa.Start(string(rawConfig), password, &Store{
 				Account: selectedAccount,
 				DB:      userDB,
 			})

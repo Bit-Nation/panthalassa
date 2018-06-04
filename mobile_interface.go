@@ -24,13 +24,10 @@ type StartConfig struct {
 	EncryptedKeyManager string `valid:"required"`
 	RendezvousKey       string `valid:"required"`
 	SignedProfile       string `valid:"required"`
-	ChatHTTPEndpoint    string `valid:"required"`
-	ChatWSEndpoint      string `valid:"required"`
-	ChatAccessToken     string `valid:"required"`
 }
 
 // create a new panthalassa instance
-func start(km *keyManager.KeyManager, chatKeyStore PangeaKeyStoreDBInterface, config StartConfig, client UpStream) error {
+func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error {
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
@@ -86,7 +83,7 @@ func start(km *keyManager.KeyManager, chatKeyStore PangeaKeyStoreDBInterface, co
 }
 
 // start panthalassa
-func Start(config string, password string, chatKeyStore PangeaKeyStoreDBInterface, client UpStream) error {
+func Start(config string, password string, client UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -106,11 +103,11 @@ func Start(config string, password string, chatKeyStore PangeaKeyStoreDBInterfac
 		return err
 	}
 
-	return start(km, chatKeyStore, c, client)
+	return start(km, c, client)
 }
 
 // create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(config string, mnemonic string, chatKeyStore PangeaKeyStoreDBInterface, client UpStream) error {
+func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -131,7 +128,7 @@ func StartFromMnemonic(config string, mnemonic string, chatKeyStore PangeaKeySto
 	}
 
 	// create panthalassa instance
-	return start(km, chatKeyStore, c, client)
+	return start(km, c, client)
 
 }
 
