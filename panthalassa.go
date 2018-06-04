@@ -6,6 +6,7 @@ import (
 	"fmt"
 	api "github.com/Bit-Nation/panthalassa/api/device"
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
+	chat "github.com/Bit-Nation/panthalassa/chat"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
@@ -17,6 +18,7 @@ type Panthalassa struct {
 	upStream  api.UpStream
 	deviceApi *deviceApi.Api
 	mesh      *mesh.Network
+	chat      *chat.Chat
 }
 
 //Stop the panthalassa instance

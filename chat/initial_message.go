@@ -43,8 +43,5 @@ func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, preKeyBundle LocalPreK
 		return Message{}, x3dh.InitializedProtocol{}, err
 	}
 
-	// publish message to the network
-	err = c.publishMessage(m)
-
 	return m, ip, err
 }

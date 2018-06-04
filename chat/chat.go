@@ -4,22 +4,21 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 
 	client "github.com/Bit-Nation/panthalassa/client"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
-	ws "github.com/gorilla/websocket"
+	doubleratchet "github.com/tiabc/doubleratchet"
 )
 
 const ProtocolName = "pangea-chat"
 
 type Chat struct {
-	client               *client.Client
-	doubleRachetKeyStore *PangeaDoubleRachedKeyStore
+	client               client.Client
+	doubleRachetKeyStore doubleratchet.KeysStorage
 	x3dh                 x3dh.X3dh
 	km                   *keyManager.KeyManager
-	ws                   *ws.Conn
-	conf                 Config
 }
 
 type Config struct {
@@ -32,25 +31,17 @@ type Config struct {
 }
 
 // create a new chat
-func New(chatIdentityKey x3dh.KeyPair, km *keyManager.KeyManager, dRKeyStore *PangeaDoubleRachedKeyStore, client *client.Client, conf Config) (Chat, error) {
+func New(chatIdentityKey x3dh.KeyPair, km *keyManager.KeyManager, dRKeyStore doubleratchet.KeysStorage, client client.Client) (Chat, error) {
 
 	c := x3dh.NewCurve25519(rand.Reader)
 
 	x := x3dh.New(&c, sha512.New(), ProtocolName, chatIdentityKey)
-
-	// create websocket connection
-	wsConn, _, err := ws.DefaultDialer.Dial(conf.WSUrl, nil)
-	if err != nil {
-		return Chat{}, err
-	}
 
 	return Chat{
 		client:               client,
 		doubleRachetKeyStore: dRKeyStore,
 		x3dh:                 x,
 		km:                   km,
-		ws:                   wsConn,
-		conf:                 conf,
 	}, nil
 
 }
@@ -93,20 +84,27 @@ func (c *Chat) NewPreKeyBundle() (LocalPreKeyBundle, error) {
 
 }
 
-// publish a message
-func (c *Chat) publishMessage(m Message) error {
-
-	// marshal message
-	rawMsg, err := m.Marshal()
-	if err != nil {
-		return err
-	}
-
-	// send message
-	return c.ws.WriteMessage(ws.TextMessage, rawMsg)
-
-}
-
 func (c *Chat) CreateSharedSecret(b LocalPreKeyBundle) (x3dh.InitializedProtocol, error) {
 	return c.x3dh.CalculateSecret(&b)
+}
+
+// export X3DH secret
+func EncryptX3DHSecret(b x3dh.SharedSecret, km *keyManager.KeyManager) (string, error) {
+	secretStr := hex.EncodeToString(b[:])
+	return km.AESEncrypt(secretStr)
+}
+
+// decrypt x3dh secret
+func DecryptX3DHSecret(secret string, km *keyManager.KeyManager) (x3dh.SharedSecret, error) {
+	sec, err := km.AESDecrypt(secret)
+	if err != nil {
+		return x3dh.SharedSecret{}, err
+	}
+	rawSecret, err := hex.DecodeString(sec)
+	if len(rawSecret) != 32 {
+		return x3dh.SharedSecret{}, errors.New("x3dh shared secret must have 32 bytes")
+	}
+	sh := [32]byte{}
+	copy(sh[:], rawSecret[:])
+	return sh, nil
 }

@@ -12,7 +12,7 @@ type Info struct {
 }
 
 // send a message to a chat partner
-func (c *Chat) SendHumanMessage(msg string, profile profile.Profile, sec x3dh.SharedSecret) (Message, error) {
+func (c *Chat) CreateHumanMessage(msg string, profile profile.Profile, sec x3dh.SharedSecret) (Message, error) {
 
 	// create doublerachet cipher text
 	encryptedMessage, err := c.encryptMessage(sec, []byte(msg))
@@ -31,9 +31,6 @@ func (c *Chat) SendHumanMessage(msg string, profile profile.Profile, sec x3dh.Sh
 	if err != nil {
 		return Message{}, err
 	}
-
-	// publish the message
-	err = c.publishMessage(m)
 
 	return m, err
 

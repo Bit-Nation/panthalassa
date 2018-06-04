@@ -3,6 +3,7 @@ package chat
 import (
 	"crypto/sha256"
 
+	"encoding/json"
 	"github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
 	ed25519 "golang.org/x/crypto/ed25519"
@@ -52,5 +53,23 @@ func (b *LocalPreKeyBundle) Sign(km keyManager.KeyManager) error {
 	b.BSignature, err = km.IdentitySign(b.hashBundle())
 
 	return err
+
+}
+
+// marshal the pre key bundle
+func (b *LocalPreKeyBundle) Marshal() ([]byte, error) {
+	return json.Marshal(b)
+}
+
+// unmarshal pre key bundle
+func UnmarshalPreKeyBundle(preKeyBundle []byte) (LocalPreKeyBundle, error) {
+
+	var b LocalPreKeyBundle
+	err := json.Unmarshal(preKeyBundle, &b)
+	if err != nil {
+		return LocalPreKeyBundle{}, nil
+	}
+
+	return b, nil
 
 }

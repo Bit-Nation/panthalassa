@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
+	"github.com/Bit-Nation/panthalassa/chat"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
 	profile "github.com/Bit-Nation/panthalassa/profile"
@@ -60,12 +61,24 @@ func start(km *keyManager.KeyManager, chatKeyStore PangeaKeyStoreDBInterface, co
 		}
 	}()
 
+	chatKeyPair, err := km.ChatIdKeyPair()
+	if err != nil {
+		return err
+	}
+
+	// @Todo implement the key store and the client
+	c, err := chat.New(chatKeyPair, km, nil, nil)
+	if err != nil {
+		return err
+	}
+
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:        km,
 		upStream:  client,
 		deviceApi: api,
 		mesh:      m,
+		chat:      &c,
 	}
 
 	return nil
