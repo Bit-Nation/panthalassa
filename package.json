@@ -51,9 +51,9 @@
     },
     {
       "author": "florian",
-      "hash": "QmcnHgaijwsnjb4vBjVcePRXLtw25mxuQ6X5qjobWD6zb1",
+      "hash": "QmQVFBtJk8WXP7dVuAdcom5o7vRZF9pNBN5ZghuLvz5rLy",
       "name": "go-libp2p-bootstrap",
-      "version": "4.0.0"
+      "version": "1.0.0"
     },
     {
       "author": "whyrusleeping",
