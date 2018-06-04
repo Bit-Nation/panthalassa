@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
-	scrypt "gx/ipfs/QmaPHkZLbQQbvcyavn8q1GFHg6o6yeceyHFSJ3Pjf3p3TQ/go-crypto/scrypt"
+	scrypt "golang.org/x/crypto/scrypt"
 )
 
 const n = 16384

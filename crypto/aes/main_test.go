@@ -2,8 +2,9 @@ package aes
 
 import (
 	"errors"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	require "github.com/stretchr/testify/require"
 )
 
 //Test the encrypt and decrypt function in one batch
