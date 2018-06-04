@@ -218,3 +218,15 @@ func Stop() error {
 
 	return nil
 }
+
+// fetch the identity public key of the
+func GetIdentityPublicKey() (string, error) {
+
+	//Exit if not started
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa first")
+	}
+
+	return panthalassaInstance.km.IdentityPublicKey()
+
+}
