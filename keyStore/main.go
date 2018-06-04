@@ -6,6 +6,8 @@ import (
 	"reflect"
 
 	migration "github.com/Bit-Nation/panthalassa/keyStore/migration"
+	chatMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/chat"
+	encryptionKeyMigr "github.com/Bit-Nation/panthalassa/keyStore/migration/encryption_key"
 	ethereumMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/ethereum"
 	ed25519Migration "github.com/Bit-Nation/panthalassa/keyStore/migration/identity/ed25519"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
@@ -15,6 +17,8 @@ import (
 var migrations = []migration.Migration{
 	ethereumMigration.Migration{},
 	ed25519Migration.Migration{},
+	chatMigration.Migration{},
+	encryptionKeyMigr.Migration{},
 }
 
 type Store struct {

@@ -9,20 +9,23 @@ import (
 	"time"
 
 	km "github.com/Bit-Nation/panthalassa/keyManager"
+	x3dh "github.com/Bit-Nation/x3dh"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 const profileVersion = 1
 
 type Information struct {
-	Name           string    `json:"name"`
-	Location       string    `json:"location"`
-	Image          string    `json:"image"`
-	IdentityPubKey string    `json:"identity_pub_key"`
-	EthereumPubKey string    `json:"ethereum_pub_Key"`
-	Timestamp      time.Time `json:"timestamp"`
-	Version        uint16    `json:"version"`
+	Name           string         `json:"name"`
+	Location       string         `json:"location"`
+	Image          string         `json:"image"`
+	IdentityPubKey string         `json:"identity_pub_key"`
+	EthereumPubKey string         `json:"ethereum_pub_Key"`
+	ChatIDKey      x3dh.PublicKey `json:"chat_id_key"`
+	Timestamp      time.Time      `json:"timestamp"`
+	Version        uint16         `json:"version"`
 }
 
 type Signatures struct {
@@ -39,6 +42,28 @@ func (p *Profile) Marshal() ([]byte, error) {
 
 	return json.Marshal(p)
 
+}
+
+func (p *Profile) GetIdentityKey() (ed25519.PublicKey, error) {
+
+	pubStr := p.Information.IdentityPubKey
+	rawPub, err := hex.DecodeString(pubStr)
+
+	if err != nil {
+		return ed25519.PublicKey{}, err
+	}
+
+	if len(rawPub) != 32 {
+		return ed25519.PublicKey{}, errors.New("public key must have 32 bytes")
+	}
+
+	return rawPub, nil
+
+}
+
+// fetch chat public key
+func (p Profile) GetChatIDPublicKey() x3dh.PublicKey {
+	return p.Information.ChatIDKey
 }
 
 // check if signatures of profile are correct
@@ -63,6 +88,7 @@ func (p Profile) SignaturesValid() (bool, error) {
 	dataToVerify = append(dataToVerify, []byte(p.Information.Timestamp.String())...)
 	dataToVerify = append(dataToVerify, rawIdPubKey...)
 	dataToVerify = append(dataToVerify, rawEthPubKey...)
+	dataToVerify = append(dataToVerify, p.Information.ChatIDKey[:]...)
 	version := make([]byte, 2)
 	binary.LittleEndian.PutUint16(version, p.Information.Version)
 	dataToVerify = append(dataToVerify, version...)
@@ -143,6 +169,13 @@ func SignProfile(name, location, image string, km km.KeyManager) (Profile, error
 	// now
 	now := time.Now().UTC()
 
+	// chat id public key
+	pair, err := km.ChatIdKeyPair()
+	if err != nil {
+		return Profile{}, err
+	}
+	chatPub := pair.PublicKey
+
 	// concat profile information
 	dataToSign := []byte(name)
 	dataToSign = append(dataToSign, []byte(location)...)
@@ -150,6 +183,7 @@ func SignProfile(name, location, image string, km km.KeyManager) (Profile, error
 	dataToSign = append(dataToSign, []byte(now.String())...)
 	dataToSign = append(dataToSign, idPubKey...)
 	dataToSign = append(dataToSign, ethPubKey...)
+	dataToSign = append(dataToSign, chatPub[:]...)
 	version := make([]byte, 2)
 	binary.LittleEndian.PutUint16(version, profileVersion)
 	dataToSign = append(dataToSign, version...)
@@ -183,6 +217,7 @@ func SignProfile(name, location, image string, km km.KeyManager) (Profile, error
 			IdentityPubKey: idPubKeyStr,
 			EthereumPubKey: ethPubKeyStr,
 			Timestamp:      now,
+			ChatIDKey:      chatPub,
 			Version:        profileVersion,
 		},
 		Signatures: Signatures{

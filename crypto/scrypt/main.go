@@ -3,15 +3,17 @@ package scrypt
 import (
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	scrypt "golang.org/x/crypto/scrypt"
 )
 
-const ScryptN = 16384
-const ScryptR = 8
-const ScryptP = 1
-const ScryptSaltLength = 50
+const n = 16384
+const r = 8
+const p = 1
+const saltLength = 50
+const keyLength = 32
 
 type Key struct {
 	N      int    `json:"n"`
@@ -19,16 +21,16 @@ type Key struct {
 	P      int    `json:"p"`
 	KeyLen int    `json:"key_len"`
 	Salt   []byte `json:"salt"`
-	key    []byte
+	key    aes.Secret
 }
 
-type ScryptCipherText struct {
+type CipherText struct {
 	CipherText string `json:"cipher_text"`
 	ScryptKey  Key    `json:"scrypt_key"`
 }
 
-//Export's ScryptCipherText as json
-func (s *ScryptCipherText) Export() (string, error) {
+// exports CipherText as json
+func (s *CipherText) Export() (string, error) {
 
 	jsonData, err := json.Marshal(s)
 
@@ -40,43 +42,47 @@ func (s *ScryptCipherText) Export() (string, error) {
 
 }
 
-//Derives a key out of a password
-func Scrypt(pw string, keyLen int) (Key, error) {
+// derives a key out of a password
+func makeScryptKey(pw string) (Key, error) {
 
-	salt := make([]byte, ScryptSaltLength)
+	salt := make([]byte, saltLength)
 
 	rand.Read(salt)
 
-	key, err := scrypt.Key([]byte(pw), salt, ScryptN, ScryptR, ScryptP, keyLen)
-
+	key, err := scrypt.Key([]byte(pw), salt, n, r, p, keyLength)
 	if err != nil {
 		return Key{}, err
 	}
+	if len(key) != 32 {
+		return Key{}, errors.New("key must be of length 32 in order to be used with AES")
+	}
+
+	var aesSecret aes.Secret
+	copy(aesSecret[:], key[:])
 
 	sV := Key{
-		N:      ScryptN,
-		R:      ScryptR,
-		P:      ScryptP,
-		KeyLen: keyLen,
+		N:      n,
+		R:      r,
+		P:      p,
+		KeyLen: keyLength,
 		Salt:   salt,
-		key:    key,
+		key:    aesSecret,
 	}
 
 	return sV, nil
 }
 
 //Create new ScryptCipherText
-func NewCipherText(data, key string) (string, error) {
+func NewCipherText(data string, password string) (string, error) {
 
-	derivedKey, err := Scrypt(key, 32)
-
+	derivedKey, err := makeScryptKey(password)
 	if err != nil {
 		return "", err
 	}
 
-	cipherText, err := aes.Encrypt(data, string(derivedKey.key))
+	cipherText, err := aes.Encrypt(data, derivedKey.key)
 
-	cipher := ScryptCipherText{
+	cipher := CipherText{
 		CipherText: cipherText,
 		ScryptKey:  derivedKey,
 	}
@@ -85,18 +91,21 @@ func NewCipherText(data, key string) (string, error) {
 
 }
 
-func DecryptCipherText(data, key string) (string, error) {
+func DecryptCipherText(data, password string) (string, error) {
 
-	var c ScryptCipherText
+	var c CipherText
 
 	if err := json.Unmarshal([]byte(data), &c); err != nil {
 		return "", err
 	}
 
-	dK, err := scrypt.Key([]byte(key), []byte(c.ScryptKey.Salt), c.ScryptKey.N, c.ScryptKey.R, c.ScryptKey.P, c.ScryptKey.KeyLen)
+	key, err := scrypt.Key([]byte(password), []byte(c.ScryptKey.Salt), c.ScryptKey.N, c.ScryptKey.R, c.ScryptKey.P, c.ScryptKey.KeyLen)
 	if err != nil {
 		return "", err
 	}
 
-	return aes.Decrypt(c.CipherText, string(dK))
+	var AESSecret aes.Secret
+	copy(AESSecret[:], key[:32])
+
+	return aes.Decrypt(c.CipherText, AESSecret)
 }

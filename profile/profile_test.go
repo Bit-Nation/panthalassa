@@ -1,6 +1,8 @@
 package profile
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"testing"
 
 	km "github.com/Bit-Nation/panthalassa/keyManager"
@@ -69,5 +71,25 @@ func TestSignProfileKeyStore(t *testing.T) {
 	require.Equal(t, "Florian", profile.Information.Name)
 	require.Equal(t, "Earth", profile.Information.Location)
 	require.Equal(t, "base64", profile.Information.Image)
+
+}
+
+// check that identity public key is correctly encoded and decoded
+func TestProfile_GetIdentityKey(t *testing.T) {
+
+	pubKey := [32]byte{}
+	_, err := rand.Read(pubKey[:])
+	require.Nil(t, err)
+
+	p := Profile{
+		Information: Information{
+			IdentityPubKey: hex.EncodeToString(pubKey[:]),
+		},
+	}
+
+	key, err := p.GetIdentityKey()
+	require.Nil(t, err)
+
+	require.Equal(t, hex.EncodeToString(pubKey[:]), hex.EncodeToString(key))
 
 }

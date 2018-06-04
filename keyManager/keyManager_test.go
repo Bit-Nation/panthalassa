@@ -3,8 +3,10 @@ package keyManager
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"golang.org/x/crypto/ed25519"
 	"testing"
 
+	"fmt"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
@@ -31,7 +33,7 @@ func TestCreateFromKeyStore(t *testing.T) {
 func TestExportFunction(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"chat_identity_curve25519_private_key":"70bcdb281ab3cc1dc75199c33a0edec43fcfe1d70ee2fd11e4821c38a688186c","chat_identity_curve25519_public_key":"1b276c51c849b244a7c40814769c9ea71caad17516aabc1270c8bd2bc096ef45","ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","encryption_key":"7dc02d78d98fff23d1f4500e4c8742fb26ad233db2d421d5bcb44306a2bb69e2","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
 	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
 	require.Nil(t, err)
 
@@ -56,7 +58,7 @@ func TestExportFunction(t *testing.T) {
 func TestOpenWithMnemonic(t *testing.T) {
 
 	//create key storage
-	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"chat_identity_curve25519_private_key":"70bcdb281ab3cc1dc75199c33a0edec43fcfe1d70ee2fd11e4821c38a688186c","chat_identity_curve25519_public_key":"1b276c51c849b244a7c40814769c9ea71caad17516aabc1270c8bd2bc096ef45","ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","encryption_key":"7dc02d78d98fff23d1f4500e4c8742fb26ad233db2d421d5bcb44306a2bb69e2","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
 	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
 	require.Nil(t, err)
 
@@ -200,5 +202,66 @@ func TestKeyManager_EthereumSign(t *testing.T) {
 
 	// should be true since the signature should be valid
 	require.True(t, ethCrypto.VerifySignature(rawPubKey, hash[:], signature[:64]))
+
+}
+
+func TestKeyManager_IdentitySign(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	// create key manager
+	km := CreateFromKeyStore(ks)
+
+	// sign data
+	signedData, err := km.IdentitySign([]byte("hi"))
+	require.Nil(t, err)
+
+	// fetch public key
+	idPubStr, err := km.IdentityPublicKey()
+	require.Nil(t, err)
+	pub, err := hex.DecodeString(idPubStr)
+	require.Nil(t, err)
+
+	// signature should be valid
+	require.True(t, ed25519.Verify(pub, []byte("hi"), signedData))
+
+}
+
+func TestKeyManager_AESEncryptDecrypt(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	// create key manager
+	km := CreateFromKeyStore(ks)
+
+	// encrypt the cipher text
+	cipherText, err := km.AESEncrypt("hi")
+
+	// decrypt the cipher text
+	plain, err := km.AESDecrypt(cipherText)
+	require.Nil(t, err)
+	require.Equal(t, "hi", plain)
+}
+
+func TestKeyManager_ChatIdKeyPair(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	// create key manager
+	km := CreateFromKeyStore(ks)
+
+	keyPair, err := km.ChatIdKeyPair()
+	require.Nil(t, err)
+
+	fmt.Println(keyPair)
 
 }
