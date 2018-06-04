@@ -12,10 +12,11 @@ import (
 	encryptionKeyMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/encryption_key"
 	ethereumMigration "github.com/Bit-Nation/panthalassa/keyStore/migration/ethereum"
 	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
-	"github.com/Bit-Nation/panthalassa/mnemonic"
+	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	x3dh "github.com/Bit-Nation/x3dh"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 type KeyManager struct {
@@ -197,13 +198,17 @@ func (km KeyManager) GetEthereumPublicKey() (string, error) {
 //Sign data with identity key
 func (km KeyManager) IdentitySign(data []byte) ([]byte, error) {
 
-	//Fetch mesh private key
-	pk, err := km.MeshPrivateKey()
+	//Fetch identity private key
+	idPrivKeyStr, err := km.IdentityPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	idPriv, err := hex.DecodeString(idPrivKeyStr)
 	if err != nil {
 		return nil, err
 	}
 
-	return pk.Sign(data)
+	return ed25519.Sign(idPriv, data), nil
 
 }
 
@@ -229,28 +234,46 @@ func (km KeyManager) WasMigrated() bool {
 	return km.keyStore.WasMigrated()
 }
 
-func (km KeyManager) encryptionKey() (string, error) {
-	return km.keyStore.GetKey(encryptionKeyMigration.BIP39Password)
+// fetch the aes encryption key from storage
+func (km KeyManager) aesSecret() (aes.Secret, error) {
+	AESSecretStr, err := km.keyStore.GetKey(encryptionKeyMigration.BIP39Password)
+	if err != nil {
+		return aes.Secret{}, err
+	}
+
+	AESSecretRaw, err := hex.DecodeString(AESSecretStr)
+	if err != nil {
+		return aes.Secret{}, err
+	}
+
+	if len(AESSecretRaw) != 32 {
+		return aes.Secret{}, errors.New("aes secret must have a length of 32")
+	}
+
+	var AESSecret aes.Secret
+	copy(AESSecret[:], AESSecretRaw[:])
+
+	return AESSecret, nil
 }
 
+// decrypt a value with AES
 func (km KeyManager) AESDecrypt(cipherText string) (string, error) {
-	encryptionKey, err := km.encryptionKey()
-
+	aesSecret, err := km.aesSecret()
 	if err != nil {
 		return "", err
 	}
 
-	return aes.Decrypt(cipherText, encryptionKey)
+	return aes.Decrypt(cipherText, aesSecret)
 }
 
+// encrypt a value with aes
 func (km KeyManager) AESEncrypt(plainText string) (string, error) {
-	encryptionKey, err := km.encryptionKey()
-
+	aesSecret, err := km.aesSecret()
 	if err != nil {
 		return "", err
 	}
 
-	return aes.Encrypt(plainText, encryptionKey)
+	return aes.Encrypt(plainText, aesSecret)
 }
 
 func (km KeyManager) ChatIdKeyPair() (x3dh.KeyPair, error) {
@@ -277,6 +300,14 @@ func (km KeyManager) ChatIdKeyPair() (x3dh.KeyPair, error) {
 		priv [32]byte
 		pub  [32]byte
 	)
+
+	if len(rawPub) != 32 {
+		return x3dh.KeyPair{}, errors.New("chat public key must have a length of 32 bytes")
+	}
+
+	if len(priv) != 32 {
+		return x3dh.KeyPair{}, errors.New("chat private key must have a length of 32 bytes")
+	}
 
 	copy(priv[:], rawPriv[:32])
 	copy(pub[:], rawPub[:32])
