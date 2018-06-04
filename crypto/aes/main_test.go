@@ -9,10 +9,13 @@ import (
 //Test the encrypt and decrypt function in one batch
 func TestSuccessEncryptDecrypt(t *testing.T) {
 
-	var secret, value string
-
-	secret = "11111111111111111111111111111111"
-	value = "I am the value"
+	secret := Secret{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	}
+	value := "I am the value"
 
 	//Encrypt
 	cipherText, e := Encrypt(value, secret)
@@ -29,17 +32,23 @@ func TestSuccessEncryptDecrypt(t *testing.T) {
 
 func TestFailedDecryption(t *testing.T) {
 
-	var secret, value string
+	secret := Secret{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	}
+	value := "I am the plain text"
 
-	secret = "11111111111111111111111111111111"
-	value = "I am the value"
-
-	//Encrypt
+	// encrypt
 	cipherText, e := Encrypt(value, secret)
 	require.Nil(t, e)
 
-	//Decrypt
-	res, err := Decrypt(cipherText, "11111111111111111111111111111112")
+	// change last byte to fail on decryption
+	secret[31] = 0x01
+
+	// decrypt
+	res, err := Decrypt(cipherText, secret)
 	require.Equal(t, "", res)
 	require.Error(t, errors.New("cipher: message authentication failed"), err)
 

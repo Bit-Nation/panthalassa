@@ -20,11 +20,13 @@ func (a aesCipherText) Marshal() ([]byte, error) {
 	return json.Marshal(a)
 }
 
+type Secret [32]byte
+
 // encrypt string to base64 crypto using AES
-func Encrypt(plainText, key string) (string, error) {
+func Encrypt(plainText string, key Secret) (string, error) {
 
 	//Create cipher block
-	block, err := aes.NewCipher([]byte(key))
+	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return "", err
 	}
@@ -55,7 +57,7 @@ func Encrypt(plainText, key string) (string, error) {
 	return string(marshaled), nil
 }
 
-func Decrypt(cipherText, key string) (string, error) {
+func Decrypt(cipherText string, secret Secret) (string, error) {
 
 	//Unmarshal cipher text
 	var ct aesCipherText
@@ -75,7 +77,7 @@ func Decrypt(cipherText, key string) (string, error) {
 		return "", err
 	}
 
-	block, err := aes.NewCipher([]byte(key))
+	block, err := aes.NewCipher(secret[:])
 	if err != nil {
 		return "", err
 	}
