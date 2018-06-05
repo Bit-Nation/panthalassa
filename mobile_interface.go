@@ -64,7 +64,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 	}
 
 	// @Todo implement the key store and the client
-	c, err := chat.New(chatKeyPair, km, nil, nil)
+	c, err := chat.New(chatKeyPair, km, nil)
 	if err != nil {
 		return err
 	}
