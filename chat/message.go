@@ -1,13 +1,14 @@
 package chat
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"time"
 
-	"crypto/sha256"
 	"github.com/Bit-Nation/panthalassa/keyManager"
 	"github.com/tiabc/doubleratchet"
 	"golang.org/x/crypto/ed25519"
+	"sort"
 )
 
 type Message struct {
@@ -20,20 +21,44 @@ type Message struct {
 }
 
 // hash the message data. Exclude signature
-func (m *Message) hashData() []byte {
+func (m *Message) hashData() ([]byte, error) {
 
-	b := []byte(m.Type)
-	b = append(b, []byte(m.SendAt.String())...)
+	h := sha256.New()
 
-	for k, v := range m.AdditionalData {
-		b = append(b, []byte(k)...)
-		b = append(b, []byte(v)...)
+	_, err := h.Write([]byte(m.Type))
+	if err != nil {
+		return nil, err
 	}
 
-	b = append(b, m.DoubleratchetMessage.Header.Encode()...)
-	b = append(b, m.DoubleratchetMessage.Ciphertext...)
+	_, err = h.Write([]byte(m.SendAt.String()))
+	if err != nil {
+		return nil, err
+	}
 
-	return sha256.New().Sum(b)
+	items := []string{}
+
+	for k, v := range m.AdditionalData {
+		items = append(items, k)
+		items = append(items, v)
+	}
+
+	sort.Strings(items)
+
+	for _, v := range items {
+		h.Write([]byte(v))
+	}
+
+	_, err = h.Write(m.DoubleratchetMessage.Header.Encode())
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = h.Write(m.DoubleratchetMessage.Ciphertext)
+	if err != nil {
+		return nil, err
+	}
+
+	return h.Sum(nil), nil
 
 }
 
@@ -44,12 +69,21 @@ func (m *Message) Marshal() ([]byte, error) {
 
 // sign the message with your identity key
 func (m *Message) Sign(km *keyManager.KeyManager) error {
-	sig, err := km.IdentitySign(m.hashData())
+	h, err := m.hashData()
+	if err != nil {
+		return err
+	}
+	sig, err := km.IdentitySign(h)
 	m.Signature = sig
 	return err
 }
 
 // verify signature of message
-func (m *Message) VerifySignature() bool {
-	return ed25519.Verify(m.IDPubKey, m.hashData(), m.Signature)
+func (m *Message) VerifySignature() (bool, error) {
+	h, err := m.hashData()
+	if err != nil {
+		return false, err
+	}
+
+	return ed25519.Verify(m.IDPubKey, h, m.Signature), nil
 }
