@@ -77,4 +77,8 @@ func TestChat_HandleInitialMessage(t *testing.T) {
 
 	require.Equal(t, initializedProtocol.SharedSecret, sharedSecret)
 
+	// decrypt the message
+	plainMsg, err := chatBob.DecryptMessage(sharedSecret, msgFromAlice)
+	require.Nil(t, err)
+	require.Equal(t, "hi", plainMsg)
 }
