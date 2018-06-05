@@ -21,9 +21,8 @@ type UpStream interface {
 }
 
 type StartConfig struct {
-	EncryptedKeyManager string `valid:"required"`
-	RendezvousKey       string `valid:"required"`
-	SignedProfile       string `valid:"required"`
+	EncryptedKeyManager string `valid:"required",json:"encrypted_key_manager"`
+	SignedProfile       string `valid:"required",json:"signed_profile"`
 }
 
 // create a new panthalassa instance
@@ -43,7 +42,8 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 	// device api
 	api := deviceApi.New(client)
 
-	m, errReporter, err := mesh.New(pk, api, config.RendezvousKey, config.SignedProfile)
+	// we don't need the rendevouz key for now
+	m, errReporter, err := mesh.New(pk, api, "", config.SignedProfile)
 	if err != nil {
 		return err
 	}
