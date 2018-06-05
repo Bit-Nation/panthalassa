@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 
-	client "github.com/Bit-Nation/panthalassa/client"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
 	doubleratchet "github.com/tiabc/doubleratchet"
@@ -15,7 +14,6 @@ import (
 const ProtocolName = "pangea-chat"
 
 type Chat struct {
-	client               client.Client
 	doubleRachetKeyStore doubleratchet.KeysStorage
 	x3dh                 x3dh.X3dh
 	km                   *keyManager.KeyManager
@@ -31,14 +29,13 @@ type Config struct {
 }
 
 // create a new chat
-func New(chatIdentityKey x3dh.KeyPair, km *keyManager.KeyManager, dRKeyStore doubleratchet.KeysStorage, client client.Client) (Chat, error) {
+func New(chatIdentityKey x3dh.KeyPair, km *keyManager.KeyManager, dRKeyStore doubleratchet.KeysStorage) (Chat, error) {
 
 	c := x3dh.NewCurve25519(rand.Reader)
 
 	x := x3dh.New(&c, sha512.New(), ProtocolName, chatIdentityKey)
 
 	return Chat{
-		client:               client,
 		doubleRachetKeyStore: dRKeyStore,
 		x3dh:                 x,
 		km:                   km,
