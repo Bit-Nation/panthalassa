@@ -16,17 +16,44 @@ func NewPreKeyBundle() (string, error) {
 		return "", errors.New("please start panthalassa first")
 	}
 
+	// create new per key bundle
 	bundle, err := panthalassaInstance.chat.NewPreKeyBundle()
 	if err != nil {
 		return "", err
 	}
 
-	bundleRaw, err := bundle.Marshal()
+	// marshal public part
+	publicPart, err := bundle.PublicPart.Marshal()
 	if err != nil {
 		return "", err
 	}
 
-	return string(bundleRaw), nil
+	// marshal private part and encrypt
+	privatePart, err := bundle.PrivatePart.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	// encrypt private part
+	privtePartCipherText, err := panthalassaInstance.km.AESEncrypt(string(privatePart))
+	if err != nil {
+		return "", err
+	}
+
+	// marshal pre key bundle
+	preKeyBundle, err := json.Marshal(struct {
+		PublicPart  string `json:"public_part"`
+		PrivatePart string `json:"private_part"`
+	}{
+		PublicPart:  string(publicPart),
+		PrivatePart: privtePartCipherText,
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(preKeyBundle), nil
 
 }
 
@@ -110,7 +137,7 @@ func CreateHumanMessage(rawMsg, rawProfile, secret string) (string, error) {
 }
 
 // decrypt a chat message
-func DecryptMessage(encryptedMessage, rawProfile, secret string) (string, error) {
+func DecryptMessage(message, rawProfile, secret string) (string, error) {
 
 	if panthalassaInstance == nil {
 		return "", errors.New("please start panthalassa first")
@@ -128,6 +155,40 @@ func DecryptMessage(encryptedMessage, rawProfile, secret string) (string, error)
 		return "", err
 	}
 
-	return panthalassaInstance.chat.DecryptMessage(sharedSecret, prof, encryptedMessage)
+	// unmarshal message
+	var m chat.Message
+	if err := json.Unmarshal([]byte(message), &m); err != nil {
+		return "", err
+	}
+
+	return panthalassaInstance.chat.DecryptMessage(sharedSecret, prof, m)
+
+}
+
+// return a encrypted shared secret used by the double rachet
+func HandleInitialMessage(message, preKeyBundlePrivatePart string) (string, error) {
+
+	if panthalassaInstance == nil {
+		return "", errors.New("please start panthalassa first")
+	}
+
+	// unmarshal message
+	var m chat.Message
+	if err := json.Unmarshal([]byte(message), &m); err != nil {
+		return "", err
+	}
+
+	// unmarshal pre key bundle private part
+	var p chat.PreKeyBundlePrivate
+	if err := json.Unmarshal([]byte(preKeyBundlePrivatePart), &p); err != nil {
+		return "", err
+	}
+
+	sec, err := panthalassaInstance.chat.HandleInitialMessage(m, p)
+	if err != nil {
+		return "", err
+	}
+
+	return chat.EncryptX3DHSecret(sec, panthalassaInstance.km)
 
 }

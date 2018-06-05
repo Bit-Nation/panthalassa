@@ -103,7 +103,6 @@ func main() {
 
 			config := panthalassa.StartConfig{
 				EncryptedKeyManager: selectedAccount.AccountStore,
-				RendezvousKey:       DevRendezvousKey,
 				SignedProfile:       selectedAccount.Profile,
 			}
 
