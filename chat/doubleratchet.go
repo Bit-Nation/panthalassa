@@ -49,17 +49,10 @@ func (c *Chat) encryptMessage(secret x3dh.SharedSecret, data []byte) (doubleratc
 }
 
 // decrypt a message
-func (c *Chat) DecryptMessage(secret x3dh.SharedSecret, profile profile.Profile, msg string) (string, error) {
+func (c *Chat) DecryptMessage(secret x3dh.SharedSecret, profile profile.Profile, msg Message) (string, error) {
 
 	// chat partner chat id public key
 	chatIdKey := profile.GetChatIDPublicKey()
-
-	// unmarshal the message
-	m := doubleratchet.Message{}
-	err := json.Unmarshal([]byte(msg), m)
-	if err != nil {
-		return "", err
-	}
 
 	var secBytes [32]byte = secret
 	var remotePub [32]byte = chatIdKey
@@ -75,7 +68,7 @@ func (c *Chat) DecryptMessage(secret x3dh.SharedSecret, profile profile.Profile,
 	}
 
 	// decrypt
-	dec, err := s.RatchetDecrypt(m, nil)
+	dec, err := s.RatchetDecrypt(msg.DoubleratchetMessage, nil)
 
 	return string(dec), err
 }
