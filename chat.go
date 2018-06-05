@@ -137,16 +137,10 @@ func CreateHumanMessage(rawMsg, rawProfile, secret string) (string, error) {
 }
 
 // decrypt a chat message
-func DecryptMessage(message, rawProfile, secret string) (string, error) {
+func DecryptMessage(message, secret string) (string, error) {
 
 	if panthalassaInstance == nil {
 		return "", errors.New("please start panthalassa first")
-	}
-
-	// unmarshal profile
-	prof, err := profile.Unmarshal(rawProfile)
-	if err != nil {
-		return "", err
 	}
 
 	// shared secret
@@ -161,7 +155,7 @@ func DecryptMessage(message, rawProfile, secret string) (string, error) {
 		return "", err
 	}
 
-	return panthalassaInstance.chat.DecryptMessage(sharedSecret, prof, m)
+	return panthalassaInstance.chat.DecryptMessage(sharedSecret, m)
 
 }
 
