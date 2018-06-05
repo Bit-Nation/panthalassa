@@ -1,8 +1,6 @@
 package chat
 
 import (
-	"encoding/json"
-
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	x3dh "github.com/Bit-Nation/x3dh"
 	doubleratchet "github.com/tiabc/doubleratchet"
