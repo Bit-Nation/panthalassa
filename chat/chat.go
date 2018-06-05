@@ -47,18 +47,22 @@ func New(chatIdentityKey x3dh.KeyPair, km *keyManager.KeyManager, dRKeyStore dou
 }
 
 // create a new pre key bundle
-func (c *Chat) NewPreKeyBundle() (LocalPreKeyBundle, error) {
+func (c *Chat) NewPreKeyBundle() (PanthalassaPreKeyBundle, error) {
 
-	sigedPreKey := c.client.FetchSignedPreKey()
+	// @todo usually this should be kept for longer time. Need to change that later on.
+	signedPreKey, err := c.x3dh.NewKeyPair()
+	if err != nil {
+		return PanthalassaPreKeyBundle{}, nil
+	}
 
 	oneTimePreKey, err := c.x3dh.NewKeyPair()
 	if err != nil {
-		return LocalPreKeyBundle{}, err
+		return PanthalassaPreKeyBundle{}, err
 	}
 
 	chatIdKey, err := c.km.ChatIdKeyPair()
 	if err != nil {
-		return LocalPreKeyBundle{}, err
+		return PanthalassaPreKeyBundle{}, err
 	}
 
 	idPubKeyStr, err := c.km.IdentityPublicKey()
@@ -66,26 +70,28 @@ func (c *Chat) NewPreKeyBundle() (LocalPreKeyBundle, error) {
 	//unmarshal public key
 	decodedPubIdKey, err := hex.DecodeString(idPubKeyStr)
 	if err != nil {
-		return LocalPreKeyBundle{}, err
+		return PanthalassaPreKeyBundle{}, err
 	}
 
-	preKeyB := LocalPreKeyBundle{
-		BChatIdentityKey: chatIdKey.PublicKey,
-		BSignedPreKey:    sigedPreKey.PublicKey,
-		BOneTimePreKey:   oneTimePreKey.PublicKey,
-		BIdentityKey:     decodedPubIdKey,
+	preKeyB := PanthalassaPreKeyBundle{
+		PublicPart: PreKeyBundlePublic{
+			BChatIdentityKey: chatIdKey.PublicKey,
+			BSignedPreKey:    signedPreKey.PublicKey,
+			BOneTimePreKey:   oneTimePreKey.PublicKey,
+			BIdentityKey:     decodedPubIdKey,
+		},
+		PrivatePart: PreKeyBundlePrivate{
+			OneTimePreKey: oneTimePreKey.PrivateKey,
+			SignedPreKey:  signedPreKey.PrivateKey,
+		},
 	}
 
-	if err := preKeyB.Sign(*c.km); err != nil {
-		return LocalPreKeyBundle{}, err
+	if err := preKeyB.PublicPart.Sign(*c.km); err != nil {
+		return PanthalassaPreKeyBundle{}, err
 	}
 
 	return preKeyB, nil
 
-}
-
-func (c *Chat) CreateSharedSecret(b LocalPreKeyBundle) (x3dh.InitializedProtocol, error) {
-	return c.x3dh.CalculateSecret(&b)
 }
 
 // export X3DH secret
