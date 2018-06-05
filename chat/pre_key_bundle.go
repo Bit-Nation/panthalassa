@@ -2,15 +2,14 @@ package chat
 
 import (
 	"crypto/sha256"
-
 	"encoding/json"
-	"github.com/Bit-Nation/panthalassa/keyManager"
+
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-// this is a local representation of the pre key bundle
-type LocalPreKeyBundle struct {
+type PreKeyBundlePublic struct {
 	BChatIdentityKey x3dh.PublicKey    `json:"chat_identity_key"`
 	BSignedPreKey    x3dh.PublicKey    `json:"signed_pre_key"`
 	BOneTimePreKey   x3dh.PublicKey    `json:"one_time_pre_key"`
@@ -18,8 +17,24 @@ type LocalPreKeyBundle struct {
 	BSignature       []byte            `json:"identity_key_signature"`
 }
 
+type PreKeyBundlePrivate struct {
+	OneTimePreKey x3dh.PrivateKey `json:"one_time_pre_key"`
+	SignedPreKey  x3dh.PrivateKey `json:"signed_one_time_pre_key"`
+}
+
+// marshal private part of pre key bundle
+func (b *PreKeyBundlePrivate) Marshal() ([]byte, error) {
+	return json.Marshal(b)
+}
+
+// this is a local representation of the pre key bundle
+type PanthalassaPreKeyBundle struct {
+	PublicPart  PreKeyBundlePublic  `json:"public_part"`
+	PrivatePart PreKeyBundlePrivate `json:"private_part"`
+}
+
 // concat profile
-func (b *LocalPreKeyBundle) hashBundle() []byte {
+func (b *PreKeyBundlePublic) hashBundle() []byte {
 
 	// concat profile information
 	c := append(b.BChatIdentityKey[:], b.BSignedPreKey[:]...)
@@ -30,24 +45,28 @@ func (b *LocalPreKeyBundle) hashBundle() []byte {
 
 }
 
-func (b *LocalPreKeyBundle) IdentityKey() x3dh.PublicKey {
+func (b *PreKeyBundlePublic) Marshal() ([]byte, error) {
+	return json.Marshal(b)
+}
+
+func (b *PreKeyBundlePublic) IdentityKey() x3dh.PublicKey {
 	return b.BChatIdentityKey
 }
 
-func (b *LocalPreKeyBundle) SignedPreKey() x3dh.PublicKey {
+func (b *PreKeyBundlePublic) SignedPreKey() x3dh.PublicKey {
 	return b.BSignedPreKey
 }
 
-func (b *LocalPreKeyBundle) OneTimePreKey() *x3dh.PublicKey {
+func (b *PreKeyBundlePublic) OneTimePreKey() *x3dh.PublicKey {
 	return &b.BOneTimePreKey
 }
 
-func (b *LocalPreKeyBundle) ValidSignature() bool {
+func (b *PreKeyBundlePublic) ValidSignature() bool {
 	return ed25519.Verify(b.BIdentityKey, b.hashBundle(), b.BSignature)
 }
 
 // sign profile with given private key
-func (b *LocalPreKeyBundle) Sign(km keyManager.KeyManager) error {
+func (b *PreKeyBundlePublic) Sign(km keyManager.KeyManager) error {
 
 	var err error
 	b.BSignature, err = km.IdentitySign(b.hashBundle())
@@ -57,17 +76,17 @@ func (b *LocalPreKeyBundle) Sign(km keyManager.KeyManager) error {
 }
 
 // marshal the pre key bundle
-func (b *LocalPreKeyBundle) Marshal() ([]byte, error) {
+func (b *PanthalassaPreKeyBundle) Marshal() ([]byte, error) {
 	return json.Marshal(b)
 }
 
 // unmarshal pre key bundle
-func UnmarshalPreKeyBundle(preKeyBundle []byte) (LocalPreKeyBundle, error) {
+func UnmarshalPreKeyBundle(preKeyBundle []byte) (PanthalassaPreKeyBundle, error) {
 
-	var b LocalPreKeyBundle
+	var b PanthalassaPreKeyBundle
 	err := json.Unmarshal(preKeyBundle, &b)
 	if err != nil {
-		return LocalPreKeyBundle{}, nil
+		return PanthalassaPreKeyBundle{}, nil
 	}
 
 	return b, nil
