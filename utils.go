@@ -68,7 +68,7 @@ func SignProfileStandAlone(name, location, image, keyManagerStore, password stri
 	p, err := profile.SignWithKeyManagerStore(name, location, image, keyManagerStore, password)
 
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	_, err = p.SignaturesValid()
