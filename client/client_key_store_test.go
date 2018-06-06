@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"encoding/hex"
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
@@ -24,7 +25,7 @@ func (u *UpStreamTestImpl) Send(data string) {
 func mustBeEqual(expected interface{}, got interface{}) {
 
 	if expected != got {
-		panic(fmt.Sprintf("Expected: %s to equal: %s", expected, got))
+		panic(fmt.Sprintf("Expected: %v to equal: %v", expected, got))
 	}
 
 }
@@ -154,5 +155,72 @@ func TestDoubleRatchetKeyStore_GetError(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}, key)
+
+}
+
+func TestDoubleRatchetKeyStore_PutSuccess(t *testing.T) {
+
+	c := make(chan string)
+
+	km := keyManagerFactory()
+
+	// fake client
+	api := deviceApi.New(&UpStreamTestImpl{
+		f: func(data string) {
+			c <- data
+		},
+	})
+
+	pubKey := dr.Key{
+		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	}
+
+	msgKey := dr.Key{
+		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+	}
+
+	// answer request of fake client
+	go func() {
+		for {
+			select {
+			case data := <-c:
+
+				rpcCall := deviceApi.ApiCall{}
+				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
+					panic(err)
+				}
+
+				// check type
+				mustBeEqual("DR:KEY_STORE:PUT", rpcCall.Type)
+
+				var c DRKeyStorePutCall
+				requireNil(json.Unmarshal([]byte(rpcCall.Data), &c))
+
+				mustBeEqual("0100000000000000000000000000000000000000000000000000000000000000", c.IndexKey)
+				mustBeEqual(uint(30), c.MsgNumber)
+
+				plainKey, err := km.AESDecrypt(c.DoubleRatchetKey)
+				requireNil(err)
+
+				mustBeEqual(hex.EncodeToString(msgKey[:]), hex.EncodeToString(plainKey))
+
+				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":""}`))
+
+			}
+		}
+	}()
+
+	drk := DoubleRatchetKeyStore{
+		api: api,
+		km:  keyManagerFactory(),
+	}
+
+	drk.Put(pubKey, 30, msgKey)
 
 }

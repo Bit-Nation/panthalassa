@@ -16,7 +16,6 @@ Data:
 - `msg_num` (uint)
 
 Response:
-Let the key be an empty string if there is no key found for the request.
 
 ```
 {
@@ -24,5 +23,24 @@ Let the key be an empty string if there is no key found for the request.
     payload: "{
         key: ""
     }"
+}
+```
+
+#### DR:KEY_STORE:PUT
+> Safe a key to the double ratchet key store
+
+Type: `DR:KEY_STORE:PUT`
+
+Data:
+- `index_key` (string) hex string
+- `msg_number` (uint) number of the message
+- `msg_key` (string) encrypted message key
+
+Response:
+
+```
+{
+    error: "",
+    payload: ""
 }
 ```

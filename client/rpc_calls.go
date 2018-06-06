@@ -73,3 +73,25 @@ func UnmarshalDRKeyStoreGetResponse(payload string, km *keyManager.KeyManager) (
 	return r, nil
 
 }
+
+type DRKeyStorePutCall struct {
+	IndexKey         string         `json:"index_key"`
+	MsgNumber        uint           `json:"msg_number"`
+	DoubleRatchetKey aes.CipherText `json:"msg_key"`
+}
+
+func (c *DRKeyStorePutCall) Type() string {
+	return "DR:KEY_STORE:PUT"
+}
+
+func (c *DRKeyStorePutCall) Data() (string, error) {
+	data, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (c *DRKeyStorePutCall) Valid() error {
+	return nil
+}

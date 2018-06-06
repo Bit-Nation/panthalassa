@@ -2,10 +2,14 @@ package client
 
 import (
 	"encoding/hex"
+
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	log "github.com/ipfs/go-log"
 	dr "github.com/tiabc/doubleratchet"
 )
+
+var logger = log.Logger("client - double ratchet key")
 
 type DoubleRatchetKeyStore struct {
 	api *deviceApi.Api
@@ -41,7 +45,33 @@ func (s *DoubleRatchetKeyStore) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) 
 
 }
 
+// save message key (double ratchet key)
 func (s *DoubleRatchetKeyStore) Put(k dr.Key, msgNum uint, mk dr.Key) {
+
+	// encrypt message key
+	ct, err := s.km.AESEncrypt(mk[:])
+	if err != nil {
+		logger.Error(err)
+	}
+
+	// send request to device api
+	respChan, err := s.api.Send(&DRKeyStorePutCall{
+		IndexKey:         hex.EncodeToString(k[:]),
+		MsgNumber:        msgNum,
+		DoubleRatchetKey: ct,
+	})
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	// wait for response and close it since we don't need it somewhere else
+	resp := <-respChan
+	resp.Close(nil)
+
+	if resp.Error != nil {
+		logger.Error(resp.Error)
+	}
 
 }
 
