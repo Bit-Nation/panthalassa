@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/Bit-Nation/panthalassa/api/device/rpc"
 	log "github.com/ipfs/go-log"
-	valid "gopkg.in/asaskevich/govalidator.v4"
 )
 
 var logger = log.Logger("device_api")
@@ -37,8 +36,8 @@ func UnmarshalApiCall(call string) (ApiCall, error) {
 }
 
 type rawResponse struct {
-	Error   string `json:"error",valid:"string,optional"`
-	Payload string `json:"payload",valid:"string,optional"`
+	Error   string `json:"error"`
+	Payload string `json:"payload"`
 }
 
 type Response struct {
@@ -128,15 +127,6 @@ func (a *Api) Receive(id string, data string) error {
 	// decode raw response
 	var rr rawResponse
 	if err := json.Unmarshal([]byte(data), &rr); err != nil {
-		resp <- Response{
-			Error: err,
-		}
-		return err
-	}
-
-	// validate raw response
-	_, err = valid.ValidateStruct(rr)
-	if err != nil {
 		resp <- Response{
 			Error: err,
 		}

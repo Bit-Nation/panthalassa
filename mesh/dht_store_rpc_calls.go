@@ -28,7 +28,7 @@ func (c *DHTPutCall) Valid() error {
 }
 
 type DHTGetCall struct {
-	Key string `json:"key",valid:"required"`
+	Key string `json:"key"`
 }
 
 func (c *DHTGetCall) Type() string {
@@ -50,7 +50,7 @@ func (c *DHTGetCall) Valid() error {
 }
 
 type DHTHasCall struct {
-	Key string `json:"key",valid:"required"`
+	Key string `json:"key"`
 }
 
 func (d *DHTHasCall) Type() string {
@@ -73,7 +73,7 @@ func (d *DHTHasCall) Valid() error {
 }
 
 type DHTDeleteCall struct {
-	Key string `json:"key",valid:"required"`
+	Key string `json:"key"`
 }
 
 func (d *DHTDeleteCall) Type() string {

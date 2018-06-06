@@ -5,12 +5,11 @@ import (
 	"errors"
 
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
-	"github.com/Bit-Nation/panthalassa/chat"
+	chat "github.com/Bit-Nation/panthalassa/chat"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	log "github.com/ipfs/go-log"
-	valid "gopkg.in/asaskevich/govalidator.v4"
 )
 
 var panthalassaInstance *Panthalassa
@@ -21,8 +20,8 @@ type UpStream interface {
 }
 
 type StartConfig struct {
-	EncryptedKeyManager string `valid:"required",json:"encrypted_key_manager"`
-	SignedProfile       string `valid:"required",json:"signed_profile"`
+	EncryptedKeyManager string `json:"encrypted_key_manager"`
+	SignedProfile       string `json:"signed_profile"`
 }
 
 // create a new panthalassa instance
@@ -91,12 +90,6 @@ func Start(config string, password string, client UpStream) error {
 		return err
 	}
 
-	// validate config
-	_, err := valid.ValidateStruct(c)
-	if err != nil {
-		return err
-	}
-
 	// open key manager with password
 	km, err := keyManager.OpenWithPassword(c.EncryptedKeyManager, password)
 	if err != nil {
@@ -112,12 +105,6 @@ func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
 	// unmarshal config
 	var c StartConfig
 	if err := json.Unmarshal([]byte(config), &c); err != nil {
-		return err
-	}
-
-	// validate config
-	_, err := valid.ValidateStruct(c)
-	if err != nil {
 		return err
 	}
 
