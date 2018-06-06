@@ -26,9 +26,9 @@ type KeyManager struct {
 
 type Store struct {
 	// the password is encrypted with the mnemonic
-	Password          string `json:"password"`
-	EncryptedKeyStore string `json:"encrypted_key_store"`
-	Version           uint8  `json:"version"`
+	Password          scrypt.CipherText `json:"password"`
+	EncryptedKeyStore scrypt.CipherText `json:"encrypted_key_store"`
+	Version           uint8             `json:"version"`
 }
 
 //Open encrypted keystore with password
@@ -41,13 +41,13 @@ func OpenWithPassword(encryptedStore, pw string) (*KeyManager, error) {
 	}
 
 	//Decrypt key store
-	jsonKeyStore, err := scrypt.DecryptCipherText(store.EncryptedKeyStore, pw)
+	jsonKeyStore, err := scrypt.DecryptCipherText(store.EncryptedKeyStore, []byte(pw))
 	if err != nil {
 		return &KeyManager{}, err
 	}
 
 	//unmarshal key store
-	keyStore, err := ks.UnmarshalStore(jsonKeyStore)
+	keyStore, err := ks.UnmarshalStore(string(jsonKeyStore))
 	if err != nil {
 		return &KeyManager{}, err
 	}
@@ -70,12 +70,12 @@ func OpenWithMnemonic(encryptedAccount, mnemonic string) (*KeyManager, error) {
 	}
 
 	//decrypt password with mnemonic
-	pw, err := scrypt.DecryptCipherText(acc.Password, mnemonic)
+	pw, err := scrypt.DecryptCipherText(acc.Password, []byte(mnemonic))
 	if err != nil {
 		return &KeyManager{}, err
 	}
 
-	return OpenWithPassword(encryptedAccount, pw)
+	return OpenWithPassword(encryptedAccount, string(pw))
 
 }
 
@@ -94,13 +94,13 @@ func (km KeyManager) Export(pw, pwConfirm string) (string, error) {
 	}
 
 	//encrypt key store with password
-	encryptedKeyStore, err := scrypt.NewCipherText(string(keyStore), pw)
+	encryptedKeyStore, err := scrypt.NewCipherText(keyStore, []byte(pw))
 	if err != nil {
 		return "", err
 	}
 
 	//encrypt password with mnemonic
-	encryptedPassword, err := scrypt.NewCipherText(pw, km.keyStore.GetMnemonic().String())
+	encryptedPassword, err := scrypt.NewCipherText([]byte(pw), []byte(km.keyStore.GetMnemonic().String()))
 
 	//Marshal account
 	acc, err := json.Marshal(Store{
@@ -257,20 +257,20 @@ func (km KeyManager) aesSecret() (aes.Secret, error) {
 }
 
 // decrypt a value with AES
-func (km KeyManager) AESDecrypt(cipherText string) (string, error) {
+func (km KeyManager) AESDecrypt(cipherText aes.CipherText) (aes.PlainText, error) {
 	aesSecret, err := km.aesSecret()
 	if err != nil {
-		return "", err
+		return aes.PlainText{}, err
 	}
 
 	return aes.Decrypt(cipherText, aesSecret)
 }
 
 // encrypt a value with aes
-func (km KeyManager) AESEncrypt(plainText string) (string, error) {
+func (km KeyManager) AESEncrypt(plainText aes.PlainText) (aes.CipherText, error) {
 	aesSecret, err := km.aesSecret()
 	if err != nil {
-		return "", err
+		return aes.CipherText{}, err
 	}
 
 	return aes.Encrypt(plainText, aesSecret)

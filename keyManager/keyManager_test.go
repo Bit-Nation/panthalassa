@@ -6,7 +6,6 @@ import (
 	"golang.org/x/crypto/ed25519"
 	"testing"
 
-	"fmt"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
@@ -241,27 +240,10 @@ func TestKeyManager_AESEncryptDecrypt(t *testing.T) {
 	km := CreateFromKeyStore(ks)
 
 	// encrypt the cipher text
-	cipherText, err := km.AESEncrypt("hi")
+	cipherText, err := km.AESEncrypt([]byte("hi"))
 
 	// decrypt the cipher text
 	plain, err := km.AESDecrypt(cipherText)
 	require.Nil(t, err)
-	require.Equal(t, "hi", plain)
-}
-
-func TestKeyManager_ChatIdKeyPair(t *testing.T) {
-
-	//create key storage
-	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
-	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
-	require.Nil(t, err)
-
-	// create key manager
-	km := CreateFromKeyStore(ks)
-
-	keyPair, err := km.ChatIdKeyPair()
-	require.Nil(t, err)
-
-	fmt.Println(keyPair)
-
+	require.Equal(t, "hi", string(plain))
 }
