@@ -149,7 +149,30 @@ func (s *DoubleRatchetKeyStore) Count(k dr.Key) uint {
 }
 
 func (s *DoubleRatchetKeyStore) All() map[dr.Key]map[uint]dr.Key {
-	return map[dr.Key]map[uint]dr.Key{}
+
+	respCha, err := s.api.Send(&DRKeyStoreFetchAllKeys{})
+
+	if err != nil {
+		logger.Error(err)
+		return map[dr.Key]map[uint]dr.Key{}
+	}
+
+	resp := <-respCha
+	if resp.Error != nil {
+		logger.Error(resp.Error)
+		resp.Close(nil)
+		return map[dr.Key]map[uint]dr.Key{}
+	}
+
+	keys, err := UnmarshalFetchAllKeysPayload(resp.Payload, s.km)
+	if err != nil {
+		resp.Close(err)
+		logger.Error(err)
+		return map[dr.Key]map[uint]dr.Key{}
+	}
+
+	return keys
+
 }
 
 func New() *DoubleRatchetKeyStore {

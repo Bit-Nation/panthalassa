@@ -1,11 +1,11 @@
 package client
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	"encoding/hex"
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
@@ -364,5 +364,45 @@ func TestDoubleRatchetKeyStore_CountSuccess(t *testing.T) {
 	}
 
 	drk.Count(k)
+
+}
+
+func TestDoubleRatchetKeyStore_FetchAllKeysSuccess(t *testing.T) {
+
+	c := make(chan string)
+
+	// fake client
+	api := deviceApi.New(&UpStreamTestImpl{
+		f: func(data string) {
+			c <- data
+		},
+	})
+
+	// answer request of fake client
+	go func() {
+		for {
+			select {
+			case data := <-c:
+
+				rpcCall := deviceApi.ApiCall{}
+				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
+					panic(err)
+				}
+
+				mustBeEqual("DR:KEY_STORE:FETCH_ALL_KEYS", rpcCall.Type)
+				mustBeEqual(``, rpcCall.Data)
+
+				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":"{\"0000000000000000000100010000000000010001000000000000000100000001\":{\"444\":\"{\\\"iv\\\":\\\"6IW62YJEo5o+Yc9eeRoyaA==\\\",\\\"cipher_text\\\":\\\"61eWJQS97l2t8ncDpSKKy567kidCKu9Po2cA/ZJZxUQ=\\\",\\\"mac\\\":\\\"v9n9PM68Wdj+g86hQUIS6ZyweDOtjhUyU34+xIos1q8=\\\",\\\"v\\\":1}\"}}"}`))
+
+			}
+		}
+	}()
+
+	drk := DoubleRatchetKeyStore{
+		api: api,
+		km:  keyManagerFactory(),
+	}
+
+	fmt.Println(drk.All())
 
 }

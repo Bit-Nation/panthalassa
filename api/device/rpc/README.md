@@ -95,3 +95,24 @@ Response:
     }"
 }
 ```
+
+#### DR:KEY_STORE:FETCH_ALL_KEYS
+> Fetch all keys
+
+Type: `DR:KEY_STORE:FETCH_ALL_KEYS`
+
+Data:
+> no data is required
+
+Response:
+
+```
+{
+    error: "",
+    payload: "{
+        index_key_one_0x02: {
+            "4": "encrypted key"
+        }
+    }"
+}
+```

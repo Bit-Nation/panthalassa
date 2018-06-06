@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 
@@ -155,4 +156,73 @@ func (c *DRKeyStoreCountCall) Data() (string, error) {
 
 func (c *DRKeyStoreCountCall) Valid() error {
 	return nil
+}
+
+type DRKeyStoreFetchAllKeys struct{}
+
+func (c *DRKeyStoreFetchAllKeys) Type() string {
+	return "DR:KEY_STORE:FETCH_ALL_KEYS"
+}
+
+func (c *DRKeyStoreFetchAllKeys) Data() (string, error) {
+	return "", nil
+}
+
+func (c *DRKeyStoreFetchAllKeys) Valid() error {
+	return nil
+}
+
+func UnmarshalFetchAllKeysPayload(payload string, km *keyManager.KeyManager) (map[dr.Key]map[uint]dr.Key, error) {
+
+	// unmarshal payload
+	var raw map[string]map[uint]string
+	if err := json.Unmarshal([]byte(payload), &raw); err != nil {
+		return map[dr.Key]map[uint]dr.Key{}, err
+	}
+
+	allKeys := map[dr.Key]map[uint]dr.Key{}
+
+	for k, v := range raw {
+
+		rawIndexKey, err := hex.DecodeString(k)
+		if err != nil {
+			return map[dr.Key]map[uint]dr.Key{}, err
+		}
+
+		if len(rawIndexKey) != 32 {
+			return nil, errors.New("an index key must be exactly 32 bytes long")
+		}
+
+		msgKeys := map[uint]dr.Key{}
+		for msgNum, encryptedMsgKey := range v {
+
+			// parse cipher text
+			ct, err := aes.Unmarshal([]byte(encryptedMsgKey))
+			if err != nil {
+				return map[dr.Key]map[uint]dr.Key{}, err
+			}
+
+			// decrypt message key
+			secret, err := km.AESDecrypt(ct)
+
+			if len(rawIndexKey) != 32 {
+				return nil, errors.New("an message key must be exactly 32 bytes long")
+			}
+
+			var msgKey dr.Key
+			copy(msgKey[:], secret)
+
+			msgKeys[msgNum] = msgKey
+
+		}
+
+		var indexKey dr.Key
+		copy(indexKey[:], rawIndexKey)
+
+		allKeys[indexKey] = msgKeys
+
+	}
+
+	return allKeys, nil
+
 }
