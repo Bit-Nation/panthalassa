@@ -97,6 +97,21 @@ func (s *DoubleRatchetKeyStore) DeleteMk(k dr.Key, msgNum uint) {
 
 func (s *DoubleRatchetKeyStore) DeletePk(k dr.Key) {
 
+	respCha, err := s.api.Send(&DRKeyStoreDeleteIndexKey{
+		IndexKey: hex.EncodeToString(k[:]),
+	})
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	resp := <-respCha
+	resp.Close(nil)
+
+	if resp.Error != nil {
+		logger.Error(resp.Error)
+	}
+
 }
 
 func (s *DoubleRatchetKeyStore) Count(k dr.Key) uint {

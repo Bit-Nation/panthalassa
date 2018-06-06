@@ -246,6 +246,7 @@ func TestDoubleRatchetKeyStore_DeleteMessageKeySuccess(t *testing.T) {
 				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
 					panic(err)
 				}
+				mustBeEqual("DR:KEY_STORE:DELETE_MESSAGE_KEY", rpcCall.Type)
 
 				mustBeEqual(`{"index_key":"0000000000000000000100010000000000010001000000000000000100000001","msg_num":3032}`, rpcCall.Data)
 
@@ -268,5 +269,52 @@ func TestDoubleRatchetKeyStore_DeleteMessageKeySuccess(t *testing.T) {
 	}
 
 	drk.DeleteMk(k, 3032)
+
+}
+
+func TestDoubleRatchetKeyStore_DeleteIndexKeySuccess(t *testing.T) {
+
+	c := make(chan string)
+
+	// fake client
+	api := deviceApi.New(&UpStreamTestImpl{
+		f: func(data string) {
+			c <- data
+		},
+	})
+
+	// answer request of fake client
+	go func() {
+		for {
+			select {
+			case data := <-c:
+
+				rpcCall := deviceApi.ApiCall{}
+				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
+					panic(err)
+				}
+				mustBeEqual("DR:KEY_STORE:DELETE_INDEX_KEY", rpcCall.Type)
+
+				mustBeEqual(`{"index_key":"0000000000000000000100010000000000010001000000000000000100000001"}`, rpcCall.Data)
+
+				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":""}`))
+
+			}
+		}
+	}()
+
+	drk := DoubleRatchetKeyStore{
+		api: api,
+		km:  keyManagerFactory(),
+	}
+
+	k := dr.Key{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	}
+
+	drk.DeletePk(k)
 
 }

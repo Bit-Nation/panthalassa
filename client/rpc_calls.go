@@ -116,3 +116,23 @@ func (c *DRKeyStoreDeleteMK) Data() (string, error) {
 func (c *DRKeyStoreDeleteMK) Valid() error {
 	return nil
 }
+
+type DRKeyStoreDeleteIndexKey struct {
+	IndexKey string `json:"index_key"`
+}
+
+func (c *DRKeyStoreDeleteIndexKey) Type() string {
+	return "DR:KEY_STORE:DELETE_INDEX_KEY"
+}
+
+func (c *DRKeyStoreDeleteIndexKey) Data() (string, error) {
+	data, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (c *DRKeyStoreDeleteIndexKey) Valid() error {
+	return nil
+}

@@ -61,3 +61,19 @@ Response:
     payload: ""
 }
 ```
+
+#### DR:KEY_STORE:DELETE_INDEX_KEY
+> Delete index key from key storage
+
+Type: `DR:KEY_STORE:DELETE_INDEX_KEY`
+
+Data:
+- `index_key` (string) index key as hex string
+
+Response:
+```
+{
+    error: "",
+    payload: ""
+}
+```
