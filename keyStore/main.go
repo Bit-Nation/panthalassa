@@ -35,7 +35,7 @@ type jsonStore struct {
 }
 
 //Return the plain keys store
-func (s Store) Marshal() (string, error) {
+func (s Store) Marshal() ([]byte, error) {
 
 	//Json representation
 	js := jsonStore{
@@ -44,14 +44,7 @@ func (s Store) Marshal() (string, error) {
 		Version:  s.version,
 	}
 
-	//Marshal the whole thing
-	b, err := json.Marshal(js)
-	if err != nil {
-		return "", err
-	}
-
-	//transform to string
-	return string(b), nil
+	return json.Marshal(js)
 
 }
 

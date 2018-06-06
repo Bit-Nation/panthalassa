@@ -151,7 +151,7 @@ func TestMarshal(t *testing.T) {
 	store, err := s.Marshal()
 	require.Nil(t, err)
 
-	require.Equal(t, expectedStore, store)
+	require.Equal(t, expectedStore, string(store))
 
 }
 
