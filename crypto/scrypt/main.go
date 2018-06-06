@@ -25,8 +25,8 @@ type Key struct {
 }
 
 type CipherText struct {
-	CipherText string `json:"cipher_text"`
-	ScryptKey  Key    `json:"scrypt_key"`
+	CipherText aes.CipherText `json:"cipher_text"`
+	ScryptKey  Key            `json:"scrypt_key"`
 }
 
 // exports CipherText as json
@@ -42,14 +42,18 @@ func (s *CipherText) Export() (string, error) {
 
 }
 
-// derives a key out of a password
-func makeScryptKey(pw string) (Key, error) {
+// derives a key from password
+func makeScryptKey(pw []byte) (Key, error) {
 
+	// create salt for scrypt
 	salt := make([]byte, saltLength)
+	_, err := rand.Read(salt)
+	if err != nil {
+		return Key{}, err
+	}
 
-	rand.Read(salt)
-
-	key, err := scrypt.Key([]byte(pw), salt, n, r, p, keyLength)
+	// derive new key
+	key, err := scrypt.Key(pw, salt, n, r, p, keyLength)
 	if err != nil {
 		return Key{}, err
 	}
@@ -73,39 +77,32 @@ func makeScryptKey(pw string) (Key, error) {
 }
 
 //Create new ScryptCipherText
-func NewCipherText(data string, password string) (string, error) {
+func NewCipherText(plainText []byte, password []byte) (CipherText, error) {
 
 	derivedKey, err := makeScryptKey(password)
 	if err != nil {
-		return "", err
+		return CipherText{}, err
 	}
 
-	cipherText, err := aes.Encrypt(data, derivedKey.key)
+	cipherText, err := aes.Encrypt(plainText, derivedKey.key)
 
-	cipher := CipherText{
+	return CipherText{
 		CipherText: cipherText,
 		ScryptKey:  derivedKey,
-	}
-
-	return cipher.Export()
+	}, nil
 
 }
 
-func DecryptCipherText(data, password string) (string, error) {
+// decrypt scrypt cipher
+func DecryptCipherText(cipherText CipherText, password []byte) (aes.PlainText, error) {
 
-	var c CipherText
-
-	if err := json.Unmarshal([]byte(data), &c); err != nil {
-		return "", err
-	}
-
-	key, err := scrypt.Key([]byte(password), []byte(c.ScryptKey.Salt), c.ScryptKey.N, c.ScryptKey.R, c.ScryptKey.P, c.ScryptKey.KeyLen)
+	key, err := scrypt.Key(password, cipherText.ScryptKey.Salt, cipherText.ScryptKey.N, cipherText.ScryptKey.R, cipherText.ScryptKey.P, cipherText.ScryptKey.KeyLen)
 	if err != nil {
-		return "", err
+		return aes.PlainText{}, err
 	}
 
 	var AESSecret aes.Secret
 	copy(AESSecret[:], key[:32])
 
-	return aes.Decrypt(c.CipherText, AESSecret)
+	return aes.Decrypt(cipherText.CipherText, AESSecret)
 }

@@ -5,92 +5,102 @@ package aes
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
-	"encoding/hex"
+	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"io"
 )
 
-type aesCipherText struct {
-	Iv         string `json:"iv"`
-	CipherText string `json:"cipher_text"`
+type PlainText []byte
+
+type CipherText struct {
+	IV         []byte `json:"iv"`
+	CipherText []byte `json:"cipher_text"`
+	Mac        []byte `json:"mac"`
+	Version    uint8  `json:"v"`
 }
 
-func (a aesCipherText) Marshal() ([]byte, error) {
-	return json.Marshal(a)
+// verify MAC of cipher text
+func (c CipherText) ValidMAC(s Secret) (bool, error) {
+	h := hmac.New(sha256.New, s[:])
+	if _, err := h.Write(c.CipherText); err != nil {
+		return false, err
+	}
+	return hmac.Equal(c.Mac, h.Sum(nil)), nil
+}
+
+func (c CipherText) Marshal() ([]byte, error) {
+	return json.Marshal(c)
 }
 
 type Secret [32]byte
 
-// encrypt string to base64 crypto using AES
-func Encrypt(plainText string, key Secret) (string, error) {
+// encrypt a plain text with given secret
+func Encrypt(plainText PlainText, key Secret) (CipherText, error) {
 
-	//Create cipher block
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
-		return "", err
+		return CipherText{}, err
 	}
 
-	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-	nonce := make([]byte, 12)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", err
+	cipherText := make([]byte, len(plainText))
+	iv := make([]byte, aes.BlockSize)
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return CipherText{}, err
 	}
 
-	aesGcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", err
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(cipherText, plainText)
+
+	mac := hmac.New(sha256.New, key[:])
+	if _, err := mac.Write(cipherText); err != nil {
+		return CipherText{}, err
 	}
 
-	cipherText := aesGcm.Seal(nil, nonce, []byte(plainText), nil)
-
-	ct := aesCipherText{
-		Iv:         hex.EncodeToString(nonce),
-		CipherText: hex.EncodeToString(cipherText),
+	ct := CipherText{
+		IV:         iv,
+		CipherText: cipherText,
+		Mac:        mac.Sum(nil),
+		Version:    1,
 	}
 
-	marshaled, err := ct.Marshal()
-	if err != nil {
-		return "", err
-	}
+	return ct, nil
 
-	return string(marshaled), nil
 }
 
-func Decrypt(cipherText string, secret Secret) (string, error) {
+// decrypt a cipher text with given secret
+func Decrypt(cipherText CipherText, key Secret) (PlainText, error) {
 
-	//Unmarshal cipher text
-	var ct aesCipherText
-	if err := json.Unmarshal([]byte(cipherText), &ct); err != nil {
-		return "", err
-	}
-
-	//Decode IV
-	nonce, err := hex.DecodeString(ct.Iv)
+	// create block
+	block, err := aes.NewCipher(key[:])
 	if err != nil {
-		return "", err
+		return PlainText{}, err
 	}
 
-	//Decode plain cipher text
-	encryptedCipherText, err := hex.DecodeString(ct.CipherText)
+	valid, err := cipherText.ValidMAC(key)
 	if err != nil {
-		return "", err
+		return PlainText{}, err
+	}
+	if !valid {
+		return PlainText{}, errors.New("invalid key - message authentication failed")
 	}
 
-	block, err := aes.NewCipher(secret[:])
-	if err != nil {
-		return "", err
-	}
+	stream := cipher.NewCFBDecrypter(block, cipherText.IV)
 
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", err
-	}
+	cc := cipherText.CipherText
 
-	plainText, err := aesgcm.Open(nil, nonce, encryptedCipherText, nil)
-	if err != nil {
-		return "", err
-	}
+	// XORKeyStream can work in-place if the two arguments are the same.
+	stream.XORKeyStream(cc, cc)
 
-	return string(plainText), nil
+	return cc, nil
+}
+
+func Unmarshal(rawCipherText []byte) (CipherText, error) {
+	var ct CipherText
+	if err := json.Unmarshal(rawCipherText, &ct); err != nil {
+		return CipherText{}, err
+	}
+	return ct, nil
 }
