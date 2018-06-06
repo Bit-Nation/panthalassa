@@ -96,3 +96,11 @@ func Decrypt(cipherText CipherText, key Secret) (PlainText, error) {
 
 	return cc, nil
 }
+
+func Unmarshal(rawCipherText []byte) (CipherText, error) {
+	var ct CipherText
+	if err := json.Unmarshal(rawCipherText, &ct); err != nil {
+		return CipherText{}, err
+	}
+	return ct, nil
+}
