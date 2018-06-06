@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 
+	"github.com/Bit-Nation/panthalassa/crypto/aes"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
 	doubleratchet "github.com/tiabc/doubleratchet"
@@ -92,22 +93,20 @@ func (c *Chat) NewPreKeyBundle() (PanthalassaPreKeyBundle, error) {
 }
 
 // export X3DH secret
-func EncryptX3DHSecret(b x3dh.SharedSecret, km *keyManager.KeyManager) (string, error) {
-	secretStr := hex.EncodeToString(b[:])
-	return km.AESEncrypt(secretStr)
+func EncryptX3DHSecret(b x3dh.SharedSecret, km *keyManager.KeyManager) (aes.CipherText, error) {
+	return km.AESEncrypt(b[:])
 }
 
 // decrypt x3dh secret
-func DecryptX3DHSecret(secret string, km *keyManager.KeyManager) (x3dh.SharedSecret, error) {
+func DecryptX3DHSecret(secret aes.CipherText, km *keyManager.KeyManager) (x3dh.SharedSecret, error) {
 	sec, err := km.AESDecrypt(secret)
 	if err != nil {
 		return x3dh.SharedSecret{}, err
 	}
-	rawSecret, err := hex.DecodeString(sec)
-	if len(rawSecret) != 32 {
+	if len(sec) != 32 {
 		return x3dh.SharedSecret{}, errors.New("x3dh shared secret must have 32 bytes")
 	}
 	sh := [32]byte{}
-	copy(sh[:], rawSecret[:])
+	copy(sh[:], sec[:])
 	return sh, nil
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	chat "github.com/Bit-Nation/panthalassa/chat"
+	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	profile "github.com/Bit-Nation/panthalassa/profile"
 )
 
@@ -35,15 +36,15 @@ func NewPreKeyBundle() (string, error) {
 	}
 
 	// encrypt private part
-	privtePartCipherText, err := panthalassaInstance.km.AESEncrypt(string(privatePart))
+	privtePartCipherText, err := panthalassaInstance.km.AESEncrypt(privatePart)
 	if err != nil {
 		return "", err
 	}
 
 	// marshal pre key bundle
 	preKeyBundle, err := json.Marshal(struct {
-		PublicPart  string `json:"public_part"`
-		PrivatePart string `json:"private_part"`
+		PublicPart  string         `json:"public_part"`
+		PrivatePart aes.CipherText `json:"private_part"`
 	}{
 		PublicPart:  string(publicPart),
 		PrivatePart: privtePartCipherText,
@@ -90,8 +91,8 @@ func InitializeChat(identityPublicKey, preKeyBundle string) (string, error) {
 	}
 
 	initialProtocol, err := json.Marshal(struct {
-		Message chat.Message `json:"message"`
-		Secret  string       `json:"secret"`
+		Message chat.Message   `json:"message"`
+		Secret  aes.CipherText `json:"secret"`
 	}{
 		Message: msg,
 		Secret:  exportedSecret,
@@ -102,6 +103,7 @@ func InitializeChat(identityPublicKey, preKeyBundle string) (string, error) {
 }
 
 // create message
+// secret should be a aes cipher text as string
 func CreateHumanMessage(rawMsg, rawProfile, secret string) (string, error) {
 
 	if panthalassaInstance == nil {
@@ -114,8 +116,14 @@ func CreateHumanMessage(rawMsg, rawProfile, secret string) (string, error) {
 		return "", err
 	}
 
+	// unmarshal raw secret (secret is a cipher text)
+	cipherText, err := aes.Unmarshal([]byte(rawMsg))
+	if err != nil {
+		return "", err
+	}
+
 	// shared secret
-	sharedSecret, err := chat.DecryptX3DHSecret(secret, panthalassaInstance.km)
+	sharedSecret, err := chat.DecryptX3DHSecret(cipherText, panthalassaInstance.km)
 	if err != nil {
 		return "", err
 	}
@@ -137,14 +145,20 @@ func CreateHumanMessage(rawMsg, rawProfile, secret string) (string, error) {
 }
 
 // decrypt a chat message
+// secret should be a cipher text as string
 func DecryptMessage(message, secret string) (string, error) {
 
 	if panthalassaInstance == nil {
 		return "", errors.New("please start panthalassa first")
 	}
 
+	ct, err := aes.Unmarshal([]byte(secret))
+	if err != nil {
+		return "", err
+	}
+
 	// shared secret
-	sharedSecret, err := chat.DecryptX3DHSecret(secret, panthalassaInstance.km)
+	sharedSecret, err := chat.DecryptX3DHSecret(ct, panthalassaInstance.km)
 	if err != nil {
 		return "", err
 	}
@@ -183,6 +197,16 @@ func HandleInitialMessage(message, preKeyBundlePrivatePart string) (string, erro
 		return "", err
 	}
 
-	return chat.EncryptX3DHSecret(sec, panthalassaInstance.km)
+	ct, err := chat.EncryptX3DHSecret(sec, panthalassaInstance.km)
+	if err != nil {
+		return "", err
+	}
+
+	ctRaw, err := ct.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	return string(ctRaw), err
 
 }
