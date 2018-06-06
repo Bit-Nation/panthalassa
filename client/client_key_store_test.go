@@ -224,3 +224,49 @@ func TestDoubleRatchetKeyStore_PutSuccess(t *testing.T) {
 	drk.Put(pubKey, 30, msgKey)
 
 }
+
+func TestDoubleRatchetKeyStore_DeleteMessageKeySuccess(t *testing.T) {
+
+	c := make(chan string)
+
+	// fake client
+	api := deviceApi.New(&UpStreamTestImpl{
+		f: func(data string) {
+			c <- data
+		},
+	})
+
+	// answer request of fake client
+	go func() {
+		for {
+			select {
+			case data := <-c:
+
+				rpcCall := deviceApi.ApiCall{}
+				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
+					panic(err)
+				}
+
+				mustBeEqual(`{"index_key":"0000000000000000000100010000000000010001000000000000000100000001","msg_num":3032}`, rpcCall.Data)
+
+				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":""}`))
+
+			}
+		}
+	}()
+
+	drk := DoubleRatchetKeyStore{
+		api: api,
+		km:  keyManagerFactory(),
+	}
+
+	k := dr.Key{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	}
+
+	drk.DeleteMk(k, 3032)
+
+}

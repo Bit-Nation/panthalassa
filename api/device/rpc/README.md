@@ -44,3 +44,20 @@ Response:
     payload: ""
 }
 ```
+
+#### DR:KEY_STORE:DELETE_MESSAGE_KEY
+> Delete messsage key by index key and message number
+
+Type: `DR:KEY_STORE:DELETE_MESSAGE_KEY`
+
+Data:
+- `index_key` (string) index key as hex string
+- `msg_number` (uint) number of the message
+
+Response:
+```
+{
+    error: "",
+    payload: ""
+}
+```

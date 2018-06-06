@@ -95,3 +95,24 @@ func (c *DRKeyStorePutCall) Data() (string, error) {
 func (c *DRKeyStorePutCall) Valid() error {
 	return nil
 }
+
+type DRKeyStoreDeleteMK struct {
+	IndexKey  string `json:"index_key"`
+	MsgNumber uint   `json:"msg_num"`
+}
+
+func (c *DRKeyStoreDeleteMK) Type() string {
+	return "DR:KEY_STORE:DELETE_MESSAGE_KEY"
+}
+
+func (c *DRKeyStoreDeleteMK) Data() (string, error) {
+	data, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (c *DRKeyStoreDeleteMK) Valid() error {
+	return nil
+}

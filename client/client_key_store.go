@@ -77,6 +77,22 @@ func (s *DoubleRatchetKeyStore) Put(k dr.Key, msgNum uint, mk dr.Key) {
 
 func (s *DoubleRatchetKeyStore) DeleteMk(k dr.Key, msgNum uint) {
 
+	respCha, err := s.api.Send(&DRKeyStoreDeleteMK{
+		IndexKey:  hex.EncodeToString(k[:]),
+		MsgNumber: msgNum,
+	})
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	resp := <-respCha
+	resp.Close(nil)
+
+	if resp.Error != nil {
+		logger.Error(resp.Error)
+	}
+
 }
 
 func (s *DoubleRatchetKeyStore) DeletePk(k dr.Key) {
