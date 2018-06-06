@@ -9,7 +9,7 @@ import (
 
 func TestScryptValueKeyCreation(t *testing.T) {
 
-	sV, err := makeScryptKey("a")
+	sV, err := makeScryptKey([]byte("a"))
 	require.Nil(t, err)
 
 	require.Equal(t, n, sV.N)
@@ -28,14 +28,14 @@ func TestScryptCipherText_Export(t *testing.T) {
 
 	require.Nil(t, e)
 
-	require.Equal(t, "{\"cipher_text\":\"\",\"scrypt_key\":{\"n\":0,\"r\":0,\"p\":0,\"key_len\":0,\"salt\":null}}", encryptedValue)
+	require.Equal(t, "{\"cipher_text\":{\"iv\":null,\"cipher_text\":null,\"mac\":null,\"v\":0},\"scrypt_key\":{\"n\":0,\"r\":0,\"p\":0,\"key_len\":0,\"salt\":null}}", encryptedValue)
 
 }
 
 func TestSuccessEncryptAndDecrypt(t *testing.T) {
 
-	value := "i am the value"
-	key := "password"
+	value := []byte("i am the value")
+	key := []byte("password")
 
 	//create cipher text
 	cipherText, err := NewCipherText(value, key)
@@ -44,22 +44,22 @@ func TestSuccessEncryptAndDecrypt(t *testing.T) {
 	//decrypt cipher text
 	plainText, err := DecryptCipherText(cipherText, key)
 	require.Nil(t, err)
-	require.Equal(t, value, plainText)
+	require.Equal(t, string(value), string(plainText))
 
 }
 
 func TestFailDecryption(t *testing.T) {
 
-	value := "i am the value"
-	key := "password"
+	value := []byte("i am the value")
+	key := []byte("password")
 
 	//create cipher text
 	ethKey, err := NewCipherText(value, key)
 	require.Nil(t, err)
 
 	//decrypt cipher text
-	plainText, err := DecryptCipherText(ethKey, "passwordddd")
+	plainText, err := DecryptCipherText(ethKey, []byte("word_password"))
 	require.Error(t, errors.New("cipher: message authentication failed"), err)
-	require.Equal(t, "", plainText)
+	require.Equal(t, "", string(plainText))
 
 }
