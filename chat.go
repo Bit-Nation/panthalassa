@@ -7,7 +7,6 @@ import (
 
 	chat "github.com/Bit-Nation/panthalassa/chat"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
-	profile "github.com/Bit-Nation/panthalassa/profile"
 )
 
 // create new pre key bundle

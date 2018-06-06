@@ -3,7 +3,6 @@ package chat
 import (
 	"time"
 
-	profile "github.com/Bit-Nation/panthalassa/profile"
 	x3dh "github.com/Bit-Nation/x3dh"
 )
 
