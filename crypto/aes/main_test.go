@@ -1,7 +1,6 @@
 package aes
 
 import (
-	"errors"
 	"testing"
 
 	require "github.com/stretchr/testify/require"
@@ -16,7 +15,7 @@ func TestSuccessEncryptDecrypt(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
-	value := "I am the value"
+	value := []byte("I am the value")
 
 	//Encrypt
 	cipherText, e := Encrypt(value, secret)
@@ -27,7 +26,7 @@ func TestSuccessEncryptDecrypt(t *testing.T) {
 	require.Nil(t, err)
 
 	//Decrypted value must match the given value
-	require.Equal(t, value, res)
+	require.Equal(t, string(value), string(res))
 
 }
 
@@ -39,7 +38,7 @@ func TestFailedDecryption(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
-	value := "I am the plain text"
+	value := []byte("I am the plain text")
 
 	// encrypt
 	cipherText, e := Encrypt(value, secret)
@@ -49,8 +48,8 @@ func TestFailedDecryption(t *testing.T) {
 	secret[31] = 0x01
 
 	// decrypt
-	res, err := Decrypt(cipherText, secret)
-	require.Equal(t, "", res)
-	require.Error(t, errors.New("cipher: message authentication failed"), err)
+	plainText, err := Decrypt(cipherText, secret)
+	require.Equal(t, PlainText{}, plainText)
+	require.EqualError(t, err, "invalid key - message authentication failed")
 
 }
