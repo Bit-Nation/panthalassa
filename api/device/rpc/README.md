@@ -1,18 +1,28 @@
 # Supported calls
 
-#### PRE_KEY_PUT
+A response should always be a json object with a `error` key and a `payload` key.
+If there is no error after processing the request let it me an empty string. The payload can be an empty string as well.
+IMPORTANT: payload has to be a serialized json object in the case there is a result that should be send.
 
-Type: `PRE_KEY_PUT`
-> Save a public key with a corresponding private key
+### Double ratchet key Store
 
-Data:
-- `public_key` (string)
-- `private_key` (string)
+#### DR:KEY_STORE:GET
+> Fetch a double ratchet key from the client.
 
-#### PRE_KEY_FETCH
-> Fetch a pre key based on the public key
-
-Type: `PRE_KEY_FETCH`
+Type: `DR:KEY_STORE:GET`
 
 Data:
-- `public_key` (string)
+- `key` (string)
+- `msg_num` (uint)
+
+Response:
+Let the key be an empty string if there is no key found for the request.
+
+```
+{
+    error: "",
+    payload: "{
+        key: ""
+    }"
+}
+```
