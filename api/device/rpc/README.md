@@ -1,18 +1,118 @@
 # Supported calls
 
-#### PRE_KEY_PUT
+A response should always be a json object with a `error` key and a `payload` key.
+If there is no error after processing the request let it me an empty string. The payload can be an empty string as well.
+IMPORTANT: payload has to be a serialized json object in the case there is a result that should be send.
 
-Type: `PRE_KEY_PUT`
-> Save a public key with a corresponding private key
+### Double ratchet key Store
 
-Data:
-- `public_key` (string)
-- `private_key` (string)
+#### DR:KEY_STORE:GET
+> Fetch a double ratchet key from the client.
 
-#### PRE_KEY_FETCH
-> Fetch a pre key based on the public key
-
-Type: `PRE_KEY_FETCH`
+Type: `DR:KEY_STORE:GET`
 
 Data:
-- `public_key` (string)
+- `key` (string)
+- `msg_num` (uint)
+
+Response:
+
+```
+{
+    error: "",
+    payload: "{
+        key: ""
+    }"
+}
+```
+
+#### DR:KEY_STORE:PUT
+> Safe a key to the double ratchet key store
+
+Type: `DR:KEY_STORE:PUT`
+
+Data:
+- `index_key` (string) hex string
+- `msg_number` (uint) number of the message
+- `msg_key` (string) encrypted message key
+
+Response:
+
+```
+{
+    error: "",
+    payload: ""
+}
+```
+
+#### DR:KEY_STORE:DELETE_MESSAGE_KEY
+> Delete messsage key by index key and message number
+
+Type: `DR:KEY_STORE:DELETE_MESSAGE_KEY`
+
+Data:
+- `index_key` (string) index key as hex string
+- `msg_number` (uint) number of the message
+
+Response:
+```
+{
+    error: "",
+    payload: ""
+}
+```
+
+#### DR:KEY_STORE:DELETE_INDEX_KEY
+> Delete index key from key storage
+
+Type: `DR:KEY_STORE:DELETE_INDEX_KEY`
+
+Data:
+- `index_key` (string) index key as hex string
+
+Response:
+```
+{
+    error: "",
+    payload: ""
+}
+```
+
+#### DR:KEY_STORE:COUNT_MESSAGES
+> Count messages for given index key
+
+Type: `DR:KEY_STORE:COUNT_MESSAGES`
+
+Data:
+- `index_key` (string) index key as a hex string
+
+Response:
+```
+{
+    error: "",
+    payload: "{
+        count: 4
+    }"
+}
+```
+
+#### DR:KEY_STORE:FETCH_ALL_KEYS
+> Fetch all keys
+
+Type: `DR:KEY_STORE:FETCH_ALL_KEYS`
+
+Data:
+> no data is required
+
+Response:
+
+```
+{
+    error: "",
+    payload: "{
+        index_key_one_0x02: {
+            "4": "encrypted key"
+        }
+    }"
+}
+```
