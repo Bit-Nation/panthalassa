@@ -77,3 +77,21 @@ Response:
     payload: ""
 }
 ```
+
+#### DR:KEY_STORE:COUNT_MESSAGES
+> Count messages for given index key
+
+Type: `DR:KEY_STORE:COUNT_MESSAGES`
+
+Data:
+- `index_key` (string) index key as a hex string
+
+Response:
+```
+{
+    error: "",
+    payload: "{
+        count: 4
+    }"
+}
+```

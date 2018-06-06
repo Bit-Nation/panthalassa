@@ -136,3 +136,23 @@ func (c *DRKeyStoreDeleteIndexKey) Data() (string, error) {
 func (c *DRKeyStoreDeleteIndexKey) Valid() error {
 	return nil
 }
+
+type DRKeyStoreCountCall struct {
+	IndexKey string `json:"index_key"`
+}
+
+func (c *DRKeyStoreCountCall) Type() string {
+	return "DR:KEY_STORE:COUNT_MESSAGES"
+}
+
+func (c *DRKeyStoreCountCall) Data() (string, error) {
+	data, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (c *DRKeyStoreCountCall) Valid() error {
+	return nil
+}

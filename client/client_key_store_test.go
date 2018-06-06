@@ -318,3 +318,51 @@ func TestDoubleRatchetKeyStore_DeleteIndexKeySuccess(t *testing.T) {
 	drk.DeletePk(k)
 
 }
+
+func TestDoubleRatchetKeyStore_CountSuccess(t *testing.T) {
+
+	c := make(chan string)
+
+	// fake client
+	api := deviceApi.New(&UpStreamTestImpl{
+		f: func(data string) {
+			c <- data
+		},
+	})
+
+	// answer request of fake client
+	go func() {
+		for {
+			select {
+			case data := <-c:
+
+				rpcCall := deviceApi.ApiCall{}
+				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
+					panic(err)
+				}
+
+				mustBeEqual("DR:KEY_STORE:COUNT_MESSAGES", rpcCall.Type)
+
+				mustBeEqual(`{"index_key":"0000000000000000000100010000000000010001000000000000000100000001"}`, rpcCall.Data)
+
+				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":"{\"key\":\"{\\\"count\\\":3}\"}"}`))
+
+			}
+		}
+	}()
+
+	drk := DoubleRatchetKeyStore{
+		api: api,
+		km:  keyManagerFactory(),
+	}
+
+	k := dr.Key{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	}
+
+	drk.Count(k)
+
+}

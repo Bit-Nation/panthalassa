@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/hex"
+	"encoding/json"
 
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
@@ -115,7 +116,36 @@ func (s *DoubleRatchetKeyStore) DeletePk(k dr.Key) {
 }
 
 func (s *DoubleRatchetKeyStore) Count(k dr.Key) uint {
-	return 9
+
+	respCha, err := s.api.Send(&DRKeyStoreCountCall{
+		IndexKey: hex.EncodeToString(k[:]),
+	})
+	if err != nil {
+		logger.Error(err)
+		return 0
+	}
+
+	resp := <-respCha
+
+	// exit on error
+	if resp.Error != nil {
+		resp.Close(nil)
+		logger.Error(resp.Error)
+		return 0
+	}
+
+	// unmarshal payload
+	var respStr = struct {
+		Count uint `json:"count"`
+	}{}
+	if err := json.Unmarshal([]byte(resp.Payload), &respStr); err != nil {
+		resp.Close(err)
+		logger.Error(err)
+		return 0
+	}
+	resp.Close(nil)
+	return respStr.Count
+
 }
 
 func (s *DoubleRatchetKeyStore) All() map[dr.Key]map[uint]dr.Key {
