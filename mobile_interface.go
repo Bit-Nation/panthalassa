@@ -6,6 +6,7 @@ import (
 
 	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
 	chat "github.com/Bit-Nation/panthalassa/chat"
+	clientImpl "github.com/Bit-Nation/panthalassa/client"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
 	profile "github.com/Bit-Nation/panthalassa/profile"
@@ -62,8 +63,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		return err
 	}
 
-	// @Todo implement the key store and the client
-	c, err := chat.New(chatKeyPair, km, nil)
+	c, err := chat.New(chatKeyPair, km, clientImpl.New(api, km))
 	if err != nil {
 		return err
 	}

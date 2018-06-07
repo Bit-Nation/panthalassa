@@ -175,6 +175,9 @@ func (s *DoubleRatchetKeyStore) All() map[dr.Key]map[uint]dr.Key {
 
 }
 
-func New() *DoubleRatchetKeyStore {
-	return &DoubleRatchetKeyStore{}
+func New(api *deviceApi.Api, km *keyManager.KeyManager) *DoubleRatchetKeyStore {
+	return &DoubleRatchetKeyStore{
+		api: api,
+		km:  km,
+	}
 }
