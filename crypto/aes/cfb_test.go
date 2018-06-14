@@ -172,6 +172,7 @@ func TestCFBDecrypt(t *testing.T) {
 			IV:         iv,
 			Mac:        mac,
 			CipherText: cipherText,
+			Version:    uint8(1),
 		}, secKey)
 		require.Nil(t, err)
 

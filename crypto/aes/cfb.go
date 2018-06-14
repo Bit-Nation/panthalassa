@@ -3,9 +3,7 @@ package aes
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
 	"io"
 )
 
@@ -32,18 +30,19 @@ func CFBEncrypt(plainText PlainText, key Secret) (CipherText, error) {
 	cipherText := make([]byte, len(plainText))
 	stream.XORKeyStream(cipherText, plainText)
 
-	// create mac
-	mac := hmac.New(sha256.New, key[:])
-	if _, err := mac.Write(cipherText); err != nil {
-		return CipherText{}, err
-	}
-
+	// cipher text
 	ct := CipherText{
 		IV:         iv,
 		CipherText: cipherText,
-		Mac:        mac.Sum(nil),
 		Version:    1,
 	}
+
+	// create mac
+	mac, err := vOneMac(ct, key)
+	if err != nil {
+		return CipherText{}, err
+	}
+	ct.Mac = mac
 
 	return ct, nil
 
