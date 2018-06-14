@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 type PlainText []byte
@@ -19,13 +20,61 @@ type CipherText struct {
 
 var MacError = errors.New("invalid key - message authentication failed")
 
+// create version one MAC
+// based on cipher text
+func vOneMac(ct CipherText, secret Secret) ([]byte, error) {
+	if ct.Version != 1 {
+		return nil, errors.New("cipher text must be of version one")
+	}
+	h := hmac.New(sha256.New, secret[:])
+	if _, err := h.Write(ct.CipherText); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
+}
+
+// create version two of MAC
+// cipher text + IV + Version
+func vTwoMac(ct CipherText, secret Secret) ([]byte, error) {
+	if ct.Version != 2 {
+		return nil, errors.New("cipher text must be of version two")
+	}
+	h := hmac.New(sha256.New, secret[:])
+	if _, err := h.Write(ct.CipherText); err != nil {
+		return nil, err
+	}
+	if _, err := h.Write(ct.IV); err != nil {
+		return nil, err
+	}
+	if _, err := h.Write([]byte{ct.Version}); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
+}
+
 // verify MAC of cipher text
 func (c CipherText) ValidMAC(s Secret) (bool, error) {
-	h := hmac.New(sha256.New, s[:])
-	if _, err := h.Write(c.CipherText); err != nil {
-		return false, err
+
+	switch c.Version {
+	// this has only been used for version 1 of the cipher text
+	// version one only used the cipher text as the hmac message
+	case uint8(1):
+		mac, err := vOneMac(c, s)
+		if err != nil {
+			return false, err
+		}
+		return hmac.Equal(c.Mac, mac), nil
+	// version two use the cipher text + IV as the message
+	case uint8(2):
+		mac, err := vTwoMac(c, s)
+		if err != nil {
+			return false, err
+		}
+		return hmac.Equal(c.Mac, mac), nil
+	default:
+		return false, errors.New(fmt.Sprintf("failed to verify MAC since we don't know how to handle version: %d", c.Version))
 	}
-	return hmac.Equal(c.Mac, h.Sum(nil)), nil
+
 }
 
 // marshal cipher text
