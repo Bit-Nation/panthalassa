@@ -15,6 +15,9 @@ const p = 1
 const saltLength = 50
 const keyLength = 32
 
+// for better testing
+var cfbDecrypt = aes.CFBDecrypt
+
 type Key struct {
 	N      int    `json:"n"`
 	R      int    `json:"r"`
@@ -27,19 +30,12 @@ type Key struct {
 type CipherText struct {
 	CipherText aes.CipherText `json:"cipher_text"`
 	ScryptKey  Key            `json:"scrypt_key"`
+	Version    uint8          `json:"version"`
 }
 
 // exports CipherText as json
-func (s *CipherText) Export() (string, error) {
-
-	jsonData, err := json.Marshal(s)
-
-	if err != nil {
-		return "", err
-	}
-
-	return string(jsonData), nil
-
+func (s *CipherText) Marshal() ([]byte, error) {
+	return json.Marshal(s)
 }
 
 // derives a key from password
@@ -84,11 +80,12 @@ func NewCipherText(plainText []byte, password []byte) (CipherText, error) {
 		return CipherText{}, err
 	}
 
-	cipherText, err := aes.Encrypt(plainText, derivedKey.key)
+	cipherText, err := aes.CTREncrypt(plainText, derivedKey.key)
 
 	return CipherText{
 		CipherText: cipherText,
 		ScryptKey:  derivedKey,
+		Version:    1,
 	}, nil
 
 }
@@ -104,5 +101,10 @@ func DecryptCipherText(cipherText CipherText, password []byte) (aes.PlainText, e
 	var AESSecret aes.Secret
 	copy(AESSecret[:], key[:32])
 
-	return aes.Decrypt(cipherText.CipherText, AESSecret)
+	// version 0 of the CipherText used CFB
+	if cipherText.Version == uint8(0) {
+		return cfbDecrypt(cipherText.CipherText, AESSecret)
+	}
+
+	return aes.CTRDecrypt(cipherText.CipherText, AESSecret)
 }
