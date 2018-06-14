@@ -77,3 +77,69 @@ func TestVersionTwoOfMac(t *testing.T) {
 	require.Nil(t, mac)
 
 }
+
+// verify mac
+func TestVerifyMACInvalidVersion(t *testing.T) {
+
+	// should exit with error since version != 1 || != 2
+	ct := CipherText{
+		Version: uint8(5),
+	}
+	valid, err := ct.ValidMAC(Secret{})
+	require.EqualError(t, err, "failed to verify MAC since we don't know how to handle version: 5")
+	require.False(t, valid)
+
+}
+
+func TestVerifyMACVersionOne(t *testing.T) {
+
+	// should be valid since we can handle verion one
+	oldVOneMac := vOneMac
+	sec := Secret{
+		0x23,
+	}
+	ct := CipherText{
+		Version: 1,
+		Mac:     []byte("i am a version one mac"),
+	}
+	// we override the mac function for better testing
+	vOneMac = func(ct CipherText, secret Secret) ([]byte, error) {
+		require.Equal(t, sec, secret)
+		require.Equal(t, []byte("i am a version one mac"), ct.Mac)
+		return []byte("i am a version one mac"), nil
+	}
+	valid, err := ct.ValidMAC(sec)
+	require.Nil(t, err)
+	require.True(t, valid)
+
+	// reset vOneMac function
+	vOneMac = oldVOneMac
+
+}
+
+func TestVerifyMACVersionTwo(t *testing.T) {
+
+	// should be valid since we can handle verion one
+	oldVTwoMac := vOneMac
+	sec := Secret{
+		0x23,
+	}
+	ct := CipherText{
+		Version: 2,
+		Mac:     []byte("i am a version one mac"),
+	}
+
+	// we override the mac function for better testing
+	vTwoMac = func(ct CipherText, secret Secret) ([]byte, error) {
+		require.Equal(t, sec, secret)
+		require.Equal(t, []byte("i am a version one mac"), ct.Mac)
+		return []byte("i am a version one mac"), nil
+	}
+	valid, err := ct.ValidMAC(sec)
+	require.Nil(t, err)
+	require.True(t, valid)
+
+	// reset vOneMac function
+	vTwoMac = oldVTwoMac
+
+}

@@ -22,7 +22,7 @@ var MacError = errors.New("invalid key - message authentication failed")
 
 // create version one MAC
 // based on cipher text
-func vOneMac(ct CipherText, secret Secret) ([]byte, error) {
+var vOneMac = func(ct CipherText, secret Secret) ([]byte, error) {
 	if ct.Version != 1 {
 		return nil, errors.New("cipher text must be of version one")
 	}
@@ -35,7 +35,7 @@ func vOneMac(ct CipherText, secret Secret) ([]byte, error) {
 
 // create version two of MAC
 // cipher text + IV + Version
-func vTwoMac(ct CipherText, secret Secret) ([]byte, error) {
+var vTwoMac = func(ct CipherText, secret Secret) ([]byte, error) {
 	if ct.Version != 2 {
 		return nil, errors.New("cipher text must be of version two")
 	}
