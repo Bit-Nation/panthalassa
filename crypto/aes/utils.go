@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 )
 
 type PlainText []byte
@@ -15,6 +16,8 @@ type CipherText struct {
 	Mac        []byte `json:"mac"`
 	Version    uint8  `json:"v"`
 }
+
+var MacError = errors.New("invalid key - message authentication failed")
 
 // verify MAC of cipher text
 func (c CipherText) ValidMAC(s Secret) (bool, error) {
