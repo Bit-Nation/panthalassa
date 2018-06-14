@@ -3,9 +3,7 @@ package aes
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
 	"io"
 )
 
@@ -34,18 +32,16 @@ func CTREncrypt(plainText PlainText, secret Secret) (CipherText, error) {
 	stream := cipher.NewCTR(block, iv)
 	stream.XORKeyStream(cipherText, plainText)
 
-	// create mac
-	mac := hmac.New(sha256.New, secret[:])
-	if _, err := mac.Write(cipherText); err != nil {
-		return CipherText{}, err
-	}
-
+	// create cipher text
 	ct := CipherText{
 		IV:         iv,
 		CipherText: cipherText,
-		Mac:        mac.Sum(nil),
 		Version:    2,
 	}
+
+	// create mac
+	mac, err := vTwoMac(ct, secret)
+	ct.Mac = mac
 
 	return ct, err
 }

@@ -138,25 +138,25 @@ func TestCTRDecrypt(t *testing.T) {
 			iv:         "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
 			plainText:  "6bc1bee22e409f96e93d7e117393172a",
 			cipherText: "601ec313775789a5b7a7f504bbf3d228",
-			mac:        "093064d157f77392516d83cf10fd9b8a5fa87fba23610e154fbc27e0c0d365c5",
+			mac:        "3465d5a7141a0f265ce4148f7b2c00461167662e2892ac15ca49a13474e9759c",
 		},
 		testVector{
 			iv:         "f0f1f2f3f4f5f6f7f8f9fafbfcfdff00",
 			plainText:  "ae2d8a571e03ac9c9eb76fac45af8e51",
 			cipherText: "f443e3ca4d62b59aca84e990cacaf5c5",
-			mac:        "34581b637e00b6e5bec87c7510d828e8e77501def213dea95dc0b78df151454d",
+			mac:        "31493d770e783d72d0504497cc53c7504be3cc9a2f06e6f41485b38692b1b34c",
 		},
 		testVector{
 			iv:         "f0f1f2f3f4f5f6f7f8f9fafbfcfdff01",
 			plainText:  "30c81c46a35ce411e5fbc1191a0a52ef",
 			cipherText: "2b0930daa23de94ce87017ba2d84988d",
-			mac:        "d3278e392fe2b4ccdeb7850269af37118c360a725e1ff07aacc724d1a6fb29c2",
+			mac:        "dff4a5f39af148fb68523150c39098d988b43392b37ed1b38fd58525b8432dac",
 		},
 		testVector{
 			iv:         "f0f1f2f3f4f5f6f7f8f9fafbfcfdff02",
 			plainText:  "f69f2445df4f9b17ad2b417be66c3710",
 			cipherText: "dfc9c58db67aada613c2dd08457941a6",
-			mac:        "4d132c30069eb5014fc616ed819315b15c089f5adbf66129335bcfb436749932",
+			mac:        "858aba8f3a3141c8e7317128687c3d70069d9b7287271bc565d704d6c6298911",
 		},
 	}
 
@@ -184,6 +184,7 @@ func TestCTRDecrypt(t *testing.T) {
 			IV:         iv,
 			Mac:        mac,
 			CipherText: cipherText,
+			Version:    uint8(2),
 		}, secKey)
 		require.Nil(t, err)
 
