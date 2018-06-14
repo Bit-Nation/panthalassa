@@ -1,34 +1,38 @@
 package aes
 
-//Taken from this example: https://gist.github.com/cannium/c167a19030f2a3c6adbb5a5174bea3ff
-
 import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
-	"errors"
 	"io"
 )
 
+var cfbRandReader io.Reader = rand.Reader
+
 // encrypt a plain text with given secret
+// Deprecated: use CTREncrypt instead
 func CFBEncrypt(plainText PlainText, key Secret) (CipherText, error) {
 
+	// create block
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return CipherText{}, err
 	}
 
-	cipherText := make([]byte, len(plainText))
+	// create IV
 	iv := make([]byte, aes.BlockSize)
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+	if _, err := io.ReadFull(cfbRandReader, iv); err != nil {
 		return CipherText{}, err
 	}
 
+	// create cfb encrypter
 	stream := cipher.NewCFBEncrypter(block, iv)
+	cipherText := make([]byte, len(plainText))
 	stream.XORKeyStream(cipherText, plainText)
 
+	// create mac
 	mac := hmac.New(sha256.New, key[:])
 	if _, err := mac.Write(cipherText); err != nil {
 		return CipherText{}, err
@@ -46,6 +50,7 @@ func CFBEncrypt(plainText PlainText, key Secret) (CipherText, error) {
 }
 
 // decrypt a cipher text with given secret
+// Deprecated: use CFBDecrypt instead
 func CFBDecrypt(cipherText CipherText, key Secret) (PlainText, error) {
 
 	// create block
@@ -59,7 +64,7 @@ func CFBDecrypt(cipherText CipherText, key Secret) (PlainText, error) {
 		return PlainText{}, err
 	}
 	if !valid {
-		return PlainText{}, errors.New("invalid key - message authentication failed")
+		return PlainText{}, MacError
 	}
 
 	stream := cipher.NewCFBDecrypter(block, cipherText.IV)
