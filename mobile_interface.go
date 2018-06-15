@@ -90,8 +90,13 @@ func Start(config string, password string, client UpStream) error {
 		return err
 	}
 
+	store, err := keyManager.UnmarshalStore([]byte(c.EncryptedKeyManager))
+	if err != nil {
+		return err
+	}
+
 	// open key manager with password
-	km, err := keyManager.OpenWithPassword(c.EncryptedKeyManager, password)
+	km, err := keyManager.OpenWithPassword(store, password)
 	if err != nil {
 		return err
 	}
@@ -108,8 +113,13 @@ func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
 		return err
 	}
 
+	store, err := keyManager.UnmarshalStore([]byte(c.EncryptedKeyManager))
+	if err != nil {
+		return err
+	}
+
 	// create key manager
-	km, err := keyManager.OpenWithMnemonic(c.EncryptedKeyManager, mnemonic)
+	km, err := keyManager.OpenWithMnemonic(store, mnemonic)
 	if err != nil {
 		return err
 	}
@@ -207,6 +217,8 @@ func Stop() error {
 	//Stop panthalassa
 	err := panthalassaInstance.Stop()
 	if err != nil {
+		//Reset singleton
+		panthalassaInstance = nil
 		return err
 	}
 

@@ -1,11 +1,15 @@
 package keyManager
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/crypto/scrypt"
 	"testing"
 
+	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
+	panthScrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
@@ -241,9 +245,122 @@ func TestKeyManager_AESEncryptDecrypt(t *testing.T) {
 
 	// encrypt the cipher text
 	cipherText, err := km.AESEncrypt([]byte("hi"))
+	require.Nil(t, err)
 
 	// decrypt the cipher text
 	plain, err := km.AESDecrypt(cipherText)
 	require.Nil(t, err)
 	require.Equal(t, "hi", string(plain))
+}
+
+func TestV2KeyManager(t *testing.T) {
+
+	//create key storage
+	jsonKeyStore := `{"mnemonic":"differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom","keys":{"ed_25519_private_key":"9d426d0eb4170529672df197454bc77cc36cb341c872bcee0bece79ac893b34a8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ed_25519_public_key":"8c5de2e7d099b881ed6214f8add6cbba2a84f57546b7f0a6d39197c904529f3f","ethereum_private_key":"eba47c97d7a6688d03e41b145d26090216c4468231bb46677553141f75222d5c"},"version":1}`
+	ks, err := keyStore.UnmarshalStore(jsonKeyStore)
+	require.Nil(t, err)
+
+	// create key manager
+	km := CreateFromKeyStore(ks)
+
+	// test if export works
+	s, err := km.Export("pw", "pw")
+	require.Nil(t, err)
+
+	// must be version 2 from now on
+	require.Equal(t, uint8(2), s.Version)
+
+}
+
+func TestMigration(t *testing.T) {
+
+	pw := "my_password"
+
+	// scrypt params
+	const n = 16384
+	const r = 8
+	const p = 1
+	const keyLength = 32
+
+	// create salt
+	salt := make([]byte, 50)
+	_, err := rand.Read(salt)
+	require.Nil(t, err)
+
+	// mnemonic
+	mne, err := mnemonic.FromString("differ destroy head candy imitate barely wine ranch roof barrel sheriff blame umbrella visit sell green dress embark ramp cement rotate crawl session broom")
+	require.Nil(t, err)
+
+	// create key store from mnemonic
+	s, err := keyStore.NewFromMnemonic(mne)
+	require.Nil(t, err)
+
+	// fetch private key
+	ethPrivateKey, err := s.GetKey("ethereum_private_key")
+	require.Nil(t, err)
+
+	// export key store
+	strKeyStore, err := s.Marshal()
+	require.Nil(t, err)
+
+	// create old version of key manager
+	// version 1 used to use AES CFB (scrypt cipher v1)
+	key, err := scrypt.Key([]byte(pw), salt, n, r, p, keyLength)
+	require.Nil(t, err)
+	var encryptionSecret = aes.Secret{}
+	copy(encryptionSecret[:], key[:])
+
+	ct, err := aes.CFBEncrypt(strKeyStore, encryptionSecret)
+	require.Nil(t, err)
+
+	// this is a valid panthalassa scrypt cipher text
+	// which can be used by the key manager
+	// (key manager pass it ot our scrypt package)
+	encryptedKeyStore := panthScrypt.CipherText{
+		CipherText: ct,
+		ScryptKey: panthScrypt.Key{
+			N:      n,
+			P:      p,
+			R:      r,
+			KeyLen: keyLength,
+			Salt:   salt,
+		},
+		Version: uint8(0),
+	}
+
+	// create key manager store
+	str := Store{
+		EncryptedKeyStore: encryptedKeyStore,
+		Version:           1,
+	}
+
+	// open the store we just created
+	// AES CFB should be used to decrypt
+	// the key store
+	km, err := OpenWithPassword(str, pw)
+	require.Nil(t, err)
+
+	// when we export it we should now
+	// have a key manager key store
+	// of version 2 since we use AES CTR
+	// from now on.
+	migratedStore, err := km.Export(pw, pw)
+	require.Nil(t, err)
+
+	require.Equal(t, uint8(2), migratedStore.Version)
+	require.Equal(t, uint8(2), migratedStore.EncryptedKeyStore.CipherText.Version)
+
+	// open the migrate store again
+	// to make sure decryption works fine
+	km, err = OpenWithPassword(migratedStore, pw)
+	require.Nil(t, err)
+
+	// get ethereum private key
+	pk, err := km.GetEthereumPrivateKey()
+	require.Nil(t, err)
+
+	// make sure that the private key is still the same
+	// after the migration from CFB to CTR
+	require.Equal(t, ethPrivateKey, pk)
+
 }

@@ -289,10 +289,15 @@ func main() {
 				return
 			}
 
+			rawStore, err := exportedAccount.Marshal()
+			if err != nil {
+				panic(err)
+			}
+
 			err = db.Write("account", id.String(), &Account{
 				ID:           id.String(),
 				Name:         accountName,
-				AccountStore: exportedAccount,
+				AccountStore: string(rawStore),
 				Profile:      string(rawProfile),
 			})
 

@@ -2,9 +2,9 @@ package keyManager
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 
+	"encoding/json"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	scrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
@@ -31,14 +31,21 @@ type Store struct {
 	Version           uint8             `json:"version"`
 }
 
-//Open encrypted keystore with password
-func OpenWithPassword(encryptedStore, pw string) (*KeyManager, error) {
+// marshal
+func (s Store) Marshal() ([]byte, error) {
+	return json.Marshal(s)
+}
 
-	//unmarshal encrypted account
-	var store Store
-	if err := json.Unmarshal([]byte(encryptedStore), &store); err != nil {
-		return &KeyManager{}, err
+func UnmarshalStore(data []byte) (Store, error) {
+	var s Store
+	if err := json.Unmarshal(data, &s); err != nil {
+		return Store{}, err
 	}
+	return s, nil
+}
+
+//Open encrypted keystore with password
+func OpenWithPassword(store Store, pw string) (*KeyManager, error) {
 
 	//Decrypt key store
 	jsonKeyStore, err := scrypt.DecryptCipherText(store.EncryptedKeyStore, []byte(pw))
@@ -61,16 +68,10 @@ func OpenWithPassword(encryptedStore, pw string) (*KeyManager, error) {
 
 //Open account with mnemonic.
 //This should only be used as a backup
-func OpenWithMnemonic(encryptedAccount, mnemonic string) (*KeyManager, error) {
-
-	//unmarshal encrypted account
-	var acc Store
-	if err := json.Unmarshal([]byte(encryptedAccount), &acc); err != nil {
-		return &KeyManager{}, err
-	}
+func OpenWithMnemonic(encryptedAccount Store, mnemonic string) (*KeyManager, error) {
 
 	//decrypt password with mnemonic
-	pw, err := scrypt.DecryptCipherText(acc.Password, []byte(mnemonic))
+	pw, err := scrypt.DecryptCipherText(encryptedAccount.Password, []byte(mnemonic))
 	if err != nil {
 		return &KeyManager{}, err
 	}
@@ -80,36 +81,36 @@ func OpenWithMnemonic(encryptedAccount, mnemonic string) (*KeyManager, error) {
 }
 
 //Export the account
-func (km KeyManager) Export(pw, pwConfirm string) (string, error) {
+func (km KeyManager) Export(pw, pwConfirm string) (Store, error) {
 
 	//Exit if password's are not equal
 	if pw != pwConfirm {
-		return "", errors.New("password miss match")
+		return Store{}, errors.New("password miss match")
 	}
 
 	//Marshal the keystore
 	keyStore, err := km.keyStore.Marshal()
 	if err != nil {
-		return "", err
+		return Store{}, err
 	}
 
 	//encrypt key store with password
 	encryptedKeyStore, err := scrypt.NewCipherText(keyStore, []byte(pw))
 	if err != nil {
-		return "", err
+		return Store{}, err
 	}
 
 	//encrypt password with mnemonic
 	encryptedPassword, err := scrypt.NewCipherText([]byte(pw), []byte(km.keyStore.GetMnemonic().String()))
+	if err != nil {
+		return Store{}, err
+	}
 
-	//Marshal account
-	acc, err := json.Marshal(Store{
+	return Store{
 		Password:          encryptedPassword,
 		EncryptedKeyStore: encryptedKeyStore,
-		Version:           1,
-	})
-
-	return string(acc), err
+		Version:           uint8(2),
+	}, nil
 
 }
 
@@ -263,7 +264,7 @@ func (km KeyManager) AESDecrypt(cipherText aes.CipherText) (aes.PlainText, error
 		return aes.PlainText{}, err
 	}
 
-	return aes.Decrypt(cipherText, aesSecret)
+	return aes.CTRDecrypt(cipherText, aesSecret)
 }
 
 // encrypt a value with aes
@@ -273,7 +274,7 @@ func (km KeyManager) AESEncrypt(plainText aes.PlainText) (aes.CipherText, error)
 		return aes.CipherText{}, err
 	}
 
-	return aes.Encrypt(plainText, aesSecret)
+	return aes.CTREncrypt(plainText, aesSecret)
 }
 
 func (km KeyManager) ChatIdKeyPair() (x3dh.KeyPair, error) {

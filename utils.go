@@ -26,7 +26,20 @@ func NewAccountKeys(pw, pwConfirm string) (string, error) {
 	}
 
 	km := keyManager.CreateFromKeyStore(ks)
-	return km.Export(pw, pwConfirm)
+
+	// export store
+	store, err := km.Export(pw, pwConfirm)
+	if err != nil {
+		return "", err
+	}
+
+	rawStore, err := store.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	return string(rawStore), nil
+
 }
 
 //Create new account store from mnemonic
@@ -47,7 +60,18 @@ func NewAccountKeysFromMnemonic(mne, pw, pwConfirm string) (string, error) {
 
 	//Create keyManager
 	km := keyManager.CreateFromKeyStore(ks)
-	return km.Export(pw, pwConfirm)
+
+	store, err := km.Export(pw, pwConfirm)
+	if err != nil {
+		return "", err
+	}
+
+	rawStore, err := store.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	return string(rawStore), nil
 }
 
 //Check if mnemonic is valid
@@ -65,7 +89,12 @@ func IsValidMnemonic(mne string) bool {
 // sign profile
 func SignProfileStandAlone(name, location, image, keyManagerStore, password string) (string, error) {
 
-	p, err := profile.SignWithKeyManagerStore(name, location, image, keyManagerStore, password)
+	store, err := keyManager.UnmarshalStore([]byte(keyManagerStore))
+	if err != nil {
+		return "", err
+	}
+
+	p, err := profile.SignWithKeyManagerStore(name, location, image, store, password)
 
 	if err != nil {
 		return "", err
