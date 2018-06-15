@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 
+	"encoding/json"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	scrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
@@ -28,6 +29,19 @@ type Store struct {
 	Password          scrypt.CipherText `json:"password"`
 	EncryptedKeyStore scrypt.CipherText `json:"encrypted_key_store"`
 	Version           uint8             `json:"version"`
+}
+
+// marshal
+func (s Store) Marshal() ([]byte, error) {
+	return json.Marshal(s)
+}
+
+func UnmarshalStore(data []byte) (Store, error) {
+	var s Store
+	if err := json.Unmarshal(data, &s); err != nil {
+		return Store{}, err
+	}
+	return s, nil
 }
 
 //Open encrypted keystore with password

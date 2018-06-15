@@ -30,6 +30,7 @@ func (s *DoubleRatchetKeyStore) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) 
 	}
 
 	resp := <-respCha
+
 	if resp.Error != nil {
 		resp.Close(nil)
 		return dr.Key{}, false
