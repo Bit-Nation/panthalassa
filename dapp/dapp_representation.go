@@ -1,9 +1,14 @@
 package dapp
 
 import (
-	"crypto/sha256"
-	"golang.org/x/crypto/ed25519"
+	"bytes"
+	"errors"
+
+	mh "github.com/multiformats/go-multihash"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
+
+var InvalidSignature = errors.New("failed to verify signature for DApp")
 
 // JSON Representation of published DApp
 type JsonRepresentation struct {
@@ -16,21 +21,23 @@ type JsonRepresentation struct {
 // hash the published DApp
 func (r JsonRepresentation) hash() ([]byte, error) {
 
-	h := sha256.New()
+	buff := bytes.NewBuffer([]byte(r.Name))
 
-	if _, err := h.Write([]byte(r.Name)); err != nil {
+	if _, err := buff.Write([]byte(r.Code)); err != nil {
 		return nil, err
 	}
 
-	if _, err := h.Write([]byte(r.Code)); err != nil {
+	if _, err := buff.Write([]byte(r.SignaturePublicKey)); err != nil {
 		return nil, err
 	}
 
-	if _, err := h.Write([]byte(r.SignaturePublicKey)); err != nil {
+	multiHash, err := mh.Sum(buff.Bytes(), mh.SHA3_256, -1)
+	if err != nil {
 		return nil, err
 	}
 
-	return h.Sum(nil), nil
+	return multiHash, nil
+
 }
 
 // verify if this published DApp

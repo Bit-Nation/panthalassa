@@ -1,11 +1,12 @@
 package dapp
 
 import (
+	"bytes"
 	"crypto/rand"
-	"crypto/sha256"
 	"golang.org/x/crypto/ed25519"
 	"testing"
 
+	mh "github.com/multiformats/go-multihash"
 	require "github.com/stretchr/testify/require"
 )
 
@@ -22,21 +23,23 @@ func TestDAppRepresentationHash(t *testing.T) {
 
 	// calculate hash manually
 	// name + code + signature public key
-	h := sha256.New()
-	_, err = h.Write([]byte(rep.Name))
+	buff := bytes.NewBuffer([]byte(rep.Name))
+
+	_, err = buff.Write([]byte(rep.Code))
 	require.Nil(t, err)
-	_, err = h.Write(rep.Code)
+
+	_, err = buff.Write([]byte(rep.SignaturePublicKey))
 	require.Nil(t, err)
-	_, err = h.Write([]byte(rep.SignaturePublicKey))
+
+	expectedHash, err := mh.Sum(buff.Bytes(), mh.SHA3_256, -1)
 	require.Nil(t, err)
-	expectedHash := h.Sum(nil)
 
 	// calculate hash
 	calculateHash, err := rep.hash()
 	require.Nil(t, err)
 
 	// check if hashes match
-	require.Equal(t, expectedHash, calculateHash)
+	require.Equal(t, string(expectedHash), string(calculateHash))
 
 }
 
