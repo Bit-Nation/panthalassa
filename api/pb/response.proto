@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package api;
+
+message Response {
+
+    string requestID = 1;
+    string error = 2;
+
+}

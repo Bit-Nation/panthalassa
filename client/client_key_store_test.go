@@ -76,7 +76,7 @@ func TestDoubleRatchetKeyStore_GetSuccess(t *testing.T) {
 
 				mustBeEqual(`{"key":"0000000000000000000100010000000000010001000000000000000100000001","msg_num":7}`, rpcCall.Data)
 
-				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":"{\"key\":\"{\\\"iv\\\":\\\"f+ZgKGwhkz82bokcs7HI8A==\\\",\\\"cipher_text\\\":\\\"Qu0SeXs/ahOjqcwPRIrK0sR9ngirapvt33x3SNLayFs=\\\",\\\"mac\\\":\\\"vJhCluH/bWdkcaA3vtTzDDsYFVO0A7UcL7wbPbvYdG0=\\\",\\\"v\\\":1}\"}"}`))
+				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":"{\"key\":\"{\\\"iv\\\":\\\"3Zd2O1KxUz2OZnWQPrTgCg==\\\",\\\"cipher_text\\\":\\\"q4FO26h5TICATqwwp9RXXXes1jX8asn+0TkL5Khx8Oc=\\\",\\\"mac\\\":\\\"XwX884HeXuodY3vgoKvmZcGkW0oPu2fBvRafxAsMu/I=\\\",\\\"v\\\":2}\"}"}`))
 
 			}
 		}

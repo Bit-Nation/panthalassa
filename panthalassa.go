@@ -30,7 +30,21 @@ func (p *Panthalassa) Stop() error {
 
 //Export account with the given password
 func (p *Panthalassa) Export(pw, pwConfirm string) (string, error) {
-	return p.km.Export(pw, pwConfirm)
+
+	// export
+	store, err := p.km.Export(pw, pwConfirm)
+	if err != nil {
+		return "", err
+	}
+
+	// marshal key store
+	rawStore, err := store.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	return string(rawStore), nil
+
 }
 
 // add friend to peer store
