@@ -19,11 +19,18 @@ func TestAddGetDAppDevStream(t *testing.T) {
 
 	s := &swarm.Stream{}
 
+	key := []byte("my_app_id")
+
+	// test what happens if stream doesn't exist
+	exist, str := reg.getDAppDevStream(key)
+	require.Nil(t, str)
+	require.False(t, exist)
+
 	// add stream
-	reg.addDAppDevStream([]byte("my_app_id"), s)
+	reg.addDAppDevStream(key, s)
 
 	// get stream
-	exist, str := reg.getDAppDevStream([]byte("my_app_id"))
+	exist, str = reg.getDAppDevStream(key)
 	require.Equal(t, s, str)
 	require.True(t, exist)
 
