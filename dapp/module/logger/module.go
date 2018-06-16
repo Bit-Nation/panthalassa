@@ -23,9 +23,9 @@ func (l *Logger) Name() string {
 
 // Register a module that writes console.log
 // to the given logger
-func (l *Logger) Register(vm *otto.Otto) {
+func (l *Logger) Register(vm *otto.Otto) error {
 
-	vm.Set("console", map[string]interface{}{
+	return vm.Set("console", map[string]interface{}{
 		"log": func(call otto.FunctionCall) otto.Value {
 			toLog := []string{}
 			for _, arg := range call.ArgumentList {
