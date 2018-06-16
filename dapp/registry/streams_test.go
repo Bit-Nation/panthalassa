@@ -124,7 +124,7 @@ func TestDevStreamHandler(t *testing.T) {
 	testStream := stream{
 		conn: &c,
 	}
-	
+
 	// make sure the default value of reset is false
 	require.False(t, testStream.reset)
 
