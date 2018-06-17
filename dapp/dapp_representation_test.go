@@ -17,7 +17,7 @@ func TestDAppRepresentationHash(t *testing.T) {
 
 	rep := JsonRepresentation{
 		Name:               "Send / Receive Money",
-		Code:               []byte(`var wallet = "0x930aa9a843266bdb02847168d571e7913907dd84"`),
+		Code:               `var wallet = "0x930aa9a843266bdb02847168d571e7913907dd84"`,
 		SignaturePublicKey: pub,
 	}
 
@@ -35,7 +35,7 @@ func TestDAppRepresentationHash(t *testing.T) {
 	require.Nil(t, err)
 
 	// calculate hash
-	calculateHash, err := rep.hash()
+	calculateHash, err := rep.Hash()
 	require.Nil(t, err)
 
 	// check if hashes match
@@ -50,7 +50,7 @@ func TestDAppVerifySignature(t *testing.T) {
 
 	rep := JsonRepresentation{
 		Name:               "Send / Receive Money",
-		Code:               []byte(`var wallet = "0x930aa9a843266bdb02847168d571e7913907dd84"`),
+		Code:               `var wallet = "0x930aa9a843266bdb02847168d571e7913907dd84"`,
 		SignaturePublicKey: pub,
 	}
 
@@ -61,7 +61,7 @@ func TestDAppVerifySignature(t *testing.T) {
 	require.False(t, valid)
 
 	// hash the representation
-	calculatedHash, err := rep.hash()
+	calculatedHash, err := rep.Hash()
 	require.Nil(t, err)
 
 	// sign representation

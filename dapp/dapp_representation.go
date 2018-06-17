@@ -13,13 +13,13 @@ var InvalidSignature = errors.New("failed to verify signature for DApp")
 // JSON Representation of published DApp
 type JsonRepresentation struct {
 	Name               string `json:"name"`
-	Code               []byte `json:"code"`
+	Code               string `json:"code"`
 	SignaturePublicKey []byte `json:"signature_public_key"`
 	Signature          []byte `json:"signature"`
 }
 
 // hash the published DApp
-func (r JsonRepresentation) hash() ([]byte, error) {
+func (r JsonRepresentation) Hash() ([]byte, error) {
 
 	buff := bytes.NewBuffer([]byte(r.Name))
 
@@ -27,7 +27,7 @@ func (r JsonRepresentation) hash() ([]byte, error) {
 		return nil, err
 	}
 
-	if _, err := buff.Write([]byte(r.SignaturePublicKey)); err != nil {
+	if _, err := buff.Write(r.SignaturePublicKey); err != nil {
 		return nil, err
 	}
 
@@ -44,7 +44,7 @@ func (r JsonRepresentation) hash() ([]byte, error) {
 // was signed with the attached public key
 func (r JsonRepresentation) VerifySignature() (bool, error) {
 
-	hash, err := r.hash()
+	hash, err := r.Hash()
 	if err != nil {
 		return false, err
 	}
