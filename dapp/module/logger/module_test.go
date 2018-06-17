@@ -75,7 +75,7 @@ func TestLoggerModule(t *testing.T) {
 
 		loggerModule, err := New(nil)
 		require.Nil(t, err)
-		loggerModule.logger = l
+		loggerModule.Logger = l
 		loggerModule.Register(vm)
 
 		_, err = vm.Run(testValue.js)
