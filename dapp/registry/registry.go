@@ -63,14 +63,12 @@ func NewDAppRegistry(h host.Host, client Client) *Registry {
 // start a DApp
 func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 
-	l, err := golog.GetLogger("app name")
-	if err != nil {
-		return err
-	}
-
 	vmModules := []module.Module{
 		&uuidv4Mod.UUIDV4{},
 	}
+
+	var l *golog.Logger
+	l, err := golog.GetLogger("app name")
 
 	// if there is a stream for this DApp
 	// we would like to mutate the logger
@@ -79,12 +77,16 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 	exist, stream := r.getDAppDevStream(dApp.SignaturePublicKey)
 	if exist {
 		// append log module
-		lm, err := loggerMod.New(stream)
+		logger, err := loggerMod.New(stream)
+		l = logger.Logger
 		if err != nil {
 			return err
 		}
-		vmModules = append(vmModules, lm)
+		vmModules = append(vmModules, logger)
 	} else {
+		if err != nil {
+			return err
+		}
 		l.SetBackend(golog.AddModuleLevel(golog.NewLogBackend(ioutil.Discard, "", 0)))
 	}
 
