@@ -78,9 +78,12 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 	// this will write logs to the stream
 	exist, stream := r.getDAppDevStream(dApp.SignaturePublicKey)
 	if exist {
-		l.SetBackend(golog.AddModuleLevel(golog.NewLogBackend(stream, "", 0)))
 		// append log module
-		vmModules = append(vmModules, loggerMod.New(l))
+		lm, err := loggerMod.New(stream)
+		if err != nil {
+			return err
+		}
+		vmModules = append(vmModules, lm)
 	} else {
 		l.SetBackend(golog.AddModuleLevel(golog.NewLogBackend(ioutil.Discard, "", 0)))
 	}
