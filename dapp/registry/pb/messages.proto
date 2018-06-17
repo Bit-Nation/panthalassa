@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package api;
+
+message Message {
+
+    enum Type {
+        LOG = 0;
+        DApp = 1;
+    }
+
+    Type type = 1;
+
+    bytes log = 2;
+    bytes dApp = 3;
+
+}
