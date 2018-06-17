@@ -7,7 +7,7 @@ import (
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	pb "github.com/Bit-Nation/panthalassa/dapp/registry/pb"
 	net "github.com/libp2p/go-libp2p-net"
-	protoMc "github.com/multiformats/go-multicodec/json"
+	protoMc "github.com/multiformats/go-multicodec/protobuf"
 )
 
 // this stream handler is used for development purpose
@@ -18,7 +18,7 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 	go func() {
 
 		reader := bufio.NewReader(str)
-		decoder := protoMc.Multicodec(true).Decoder(reader)
+		decoder := protoMc.Multicodec(nil).Decoder(reader)
 
 		for {
 
