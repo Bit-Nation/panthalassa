@@ -24,7 +24,7 @@ func (l *streamLogger) Write(data []byte) (int, error) {
 		Log:  data,
 	}
 
-	if err := l.encoder.Encode(msg); err != nil {
+	if err := l.encoder.Encode(&msg); err != nil {
 		return 0, err
 	}
 
@@ -36,7 +36,7 @@ func (l *streamLogger) Write(data []byte) (int, error) {
 }
 
 type Logger struct {
-	logger *logger.Logger
+	Logger *logger.Logger
 }
 
 func New(stream net.Stream) (*Logger, error) {
@@ -48,14 +48,14 @@ func New(stream net.Stream) (*Logger, error) {
 
 	w := bufio.NewWriter(stream)
 	loggerStream := &streamLogger{
-		writer:  bufio.NewWriter(stream),
+		writer:  w,
 		encoder: protoMc.Multicodec(nil).Encoder(w),
 	}
 
 	l.SetBackend(logger.AddModuleLevel(logger.NewLogBackend(loggerStream, "", 0)))
 
 	return &Logger{
-		logger: l,
+		Logger: l,
 	}, nil
 }
 
@@ -73,7 +73,7 @@ func (l *Logger) Register(vm *otto.Otto) error {
 			for _, arg := range call.ArgumentList {
 				toLog = append(toLog, arg.String())
 			}
-			l.logger.Info(strings.Join(toLog, ","))
+			l.Logger.Info(strings.Join(toLog, ","))
 			return otto.Value{}
 		},
 	})
