@@ -21,9 +21,9 @@ type UpStream interface {
 // Create new api with given client
 func New(client UpStream) *API {
 	return &API{
-		lock: sync.Mutex{},
-		requests: map[string]chan*Response{},
-		client: client,
+		lock:     sync.Mutex{},
+		requests: map[string]chan *Response{},
+		client:   client,
 	}
 }
 

@@ -3,9 +3,10 @@ package aes
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-	"github.com/kataras/iris/core/errors"
-	"github.com/stretchr/testify/require"
+	"errors"
 	"testing"
+
+	require "github.com/stretchr/testify/require"
 )
 
 func TestVersionOneOfMac(t *testing.T) {
