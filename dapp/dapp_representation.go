@@ -2,6 +2,7 @@ package dapp
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 
 	mh "github.com/multiformats/go-multihash"
@@ -51,4 +52,8 @@ func (r JsonRepresentation) VerifySignature() (bool, error) {
 
 	return ed25519.Verify(r.SignaturePublicKey, hash, r.Signature), nil
 
+}
+
+func (r JsonRepresentation) Marshal() ([]byte, error) {
+	return json.Marshal(r)
 }
