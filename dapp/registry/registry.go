@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"io/ioutil"
@@ -10,10 +11,11 @@ import (
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
-	state "github.com/Bit-Nation/panthalassa/state"
 	log "github.com/ipfs/go-log"
 	host "github.com/libp2p/go-libp2p-host"
 	net "github.com/libp2p/go-libp2p-net"
+	pstore "github.com/libp2p/go-libp2p-peerstore"
+	ma "github.com/multiformats/go-multiaddr"
 	golog "github.com/op/go-logging"
 )
 
@@ -22,23 +24,23 @@ var logger = log.Logger("dapp - registry")
 // keep track of all running DApps
 type Registry struct {
 	host           host.Host
-	state          *state.State
 	lock           sync.Mutex
 	dAppDevStreams map[string]net.Stream
 	dAppInstances  map[string]*dapp.DApp
 	closeChan      chan *dapp.JsonRepresentation
+	client         Client
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, state *state.State) *Registry {
+func NewDAppRegistry(h host.Host, client Client) *Registry {
 
 	r := &Registry{
 		host:           h,
-		state:          state,
 		lock:           sync.Mutex{},
 		dAppDevStreams: map[string]net.Stream{},
 		dAppInstances:  map[string]*dapp.DApp{},
 		closeChan:      make(chan *dapp.JsonRepresentation),
+		client:         client,
 	}
 
 	// add worker to remove DApps
@@ -53,12 +55,6 @@ func NewDAppRegistry(h host.Host, state *state.State) *Registry {
 			}
 		}
 	}()
-
-	// set dapp development stream
-	// @todo maybe it make sense to register the protocol only
-	// @todo if we are in development mode. It will expose less
-	// @todo attack vectors.
-	h.SetStreamHandler("/dapp-development/0.0.0", r.devStreamHandler)
 
 	return r
 
@@ -101,6 +97,32 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 
 	return nil
 
+}
+
+// use this to connect to a development server
+func (r *Registry) ConnectDevelopmentServer(addr ma.Multiaddr) error {
+
+	// address to peer info
+	pInfo, err := pstore.InfoFromP2pAddr(addr)
+	if err != nil {
+		return err
+	}
+
+	// connect to peer
+	if err := r.host.Connect(context.Background(), *pInfo); err != nil {
+		return err
+	}
+
+	// create stream to development peer
+	str, err := r.host.NewStream(context.Background(), pInfo.ID, "/dapp-development/0.0.0")
+	if err != nil {
+		return err
+	}
+
+	// handle stream
+	r.devStreamHandler(str)
+
+	return nil
 }
 
 func (r *Registry) ShutDown(dAppJson dapp.JsonRepresentation) error {
