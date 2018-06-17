@@ -2,11 +2,12 @@ package registry
 
 import (
 	"bufio"
-	"fmt"
+	"encoding/json"
 
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
+	pb "github.com/Bit-Nation/panthalassa/dapp/registry/pb"
 	net "github.com/libp2p/go-libp2p-net"
-	mc "github.com/multiformats/go-multicodec/json"
+	protoMc "github.com/multiformats/go-multicodec/json"
 )
 
 // this stream handler is used for development purpose
@@ -14,31 +15,51 @@ import (
 // the client will then decide what to do with it.
 func (r *Registry) devStreamHandler(str net.Stream) {
 
-	// exit if peer is not white listed for DApp development
-	if !r.state.HasDAppDevPeer(str.Conn().RemotePeer()) {
-		logger.Warning(fmt.Sprintf("peer: %s wasn't whitelisted for dapp development", str.Conn().RemotePeer().Pretty()))
-		if err := str.Reset(); err != nil {
-			logger.Error(err)
-		}
-		return
-	}
-
 	go func() {
 
 		reader := bufio.NewReader(str)
-		decoder := mc.Multicodec(true).Decoder(reader)
+		decoder := protoMc.Multicodec(true).Decoder(reader)
 
-		// decode app from stream
-		var app dapp.JsonRepresentation
-		if err := decoder.Decode(&app); err != nil {
-			logger.Error(err)
+		for {
+
+			// decode app from stream
+			msg := pb.Message{}
+			if err := decoder.Decode(&msg); err != nil {
+				logger.Error(err)
+				continue
+			}
+
+			if msg.Type != pb.Message_DApp {
+				logger.Error("i can only handle DApps")
+				continue
+			}
+
+			var app dapp.JsonRepresentation
+			if err := json.Unmarshal(msg.DApp, &app); err != nil {
+				logger.Error(err)
+				continue
+			}
+
+			// add stream to registry so that we can
+			// associate it with the DApp
+			r.addDAppDevStream(app.SignaturePublicKey, str)
+
+			valid, err := app.VerifySignature()
+			if err != nil {
+				logger.Error(err)
+				continue
+			}
+			if !valid {
+				logger.Error("Received invalid signature for DApp: ", app.Name)
+				continue
+			}
+
+			// push received DApp upstream
+			if err := r.client.HandleReceivedDApp(app); err != nil {
+				logger.Error(err)
+			}
+
 		}
-
-		// add stream to registry so that we can
-		// associate it with the DApp
-		r.addDAppDevStream(app.SignaturePublicKey, str)
-
-		//@todo send dapp to device
 
 	}()
 
