@@ -39,7 +39,7 @@ type Logger struct {
 	logger *logger.Logger
 }
 
-func New(l *logger.Logger, stream net.Stream) (*Logger, error) {
+func New(stream net.Stream) (*Logger, error) {
 
 	l, err := logger.GetLogger("")
 	if err != nil {
@@ -47,12 +47,12 @@ func New(l *logger.Logger, stream net.Stream) (*Logger, error) {
 	}
 
 	w := bufio.NewWriter(stream)
-	loo := &streamLogger{
+	loggerStream := &streamLogger{
 		writer:  bufio.NewWriter(stream),
 		encoder: protoMc.Multicodec(nil).Encoder(w),
 	}
 
-	l.SetBackend(logger.AddModuleLevel(logger.NewLogBackend(loo, "", 0)))
+	l.SetBackend(logger.AddModuleLevel(logger.NewLogBackend(loggerStream, "", 0)))
 
 	return &Logger{
 		logger: l,
