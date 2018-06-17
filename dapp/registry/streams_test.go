@@ -2,16 +2,12 @@ package registry
 
 import (
 	"errors"
-	"sync"
-	"testing"
 	"time"
 
-	state "github.com/Bit-Nation/panthalassa/state"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	net "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"
-	require "github.com/stretchr/testify/require"
 )
 
 // test stream implementation
@@ -101,40 +97,4 @@ func (c *conn) RemotePeer() peer.ID {
 func (c *conn) RemotePublicKey() crypto.PubKey {
 	panic("not implemented")
 	return nil
-}
-
-func TestDevStreamHandler(t *testing.T) {
-
-	// app state
-	s := state.New()
-
-	// create DApp registry
-	r := Registry{
-		state:          s,
-		lock:           sync.Mutex{},
-		dAppDevStreams: map[string]net.Stream{},
-	}
-
-	// create fake connection
-	c := conn{
-		remotePeerId: "i_am_the_remote_peer_id",
-	}
-
-	// create fake stream
-	testStream := stream{
-		conn: &c,
-	}
-
-	// make sure the default value of reset is false
-	require.False(t, testStream.reset)
-
-	// now try to connect it should fail
-	// since the peer is not whitelisted
-	r.devStreamHandler(&testStream)
-
-	// make sure reset is true since we reset
-	// the stream when a peer is not allowed
-	// to connect on that protocol
-	require.True(t, testStream.reset)
-
 }

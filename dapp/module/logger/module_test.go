@@ -73,7 +73,9 @@ func TestLoggerModule(t *testing.T) {
 		require.Nil(t, err)
 		l.SetBackend(logger.AddModuleLevel(b))
 
-		loggerModule := New(l)
+		loggerModule, err := New(nil)
+		require.Nil(t, err)
+		loggerModule.logger = l
 		loggerModule.Register(vm)
 
 		_, err = vm.Run(testValue.js)

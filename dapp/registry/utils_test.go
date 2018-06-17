@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	net "github.com/libp2p/go-libp2p-net"
-	swarm "github.com/libp2p/go-libp2p-swarm"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +16,7 @@ func TestAddGetDAppDevStream(t *testing.T) {
 		dAppDevStreams: map[string]net.Stream{},
 	}
 
-	s := &swarm.Stream{}
+	s := &stream{}
 
 	key := []byte("my_app_id")
 
