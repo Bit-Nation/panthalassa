@@ -38,28 +38,10 @@
       "version": "0.7.20"
     },
     {
-      "author": "jbenet",
-      "hash": "QmeiCcJfDW1GJnWUArudsv5rQsihpi4oyddPhdqo3CfX6i",
-      "name": "go-datastore",
-      "version": "2.4.1"
-    },
-    {
-      "author": "jbenet",
-      "hash": "QmPpegoMqhAEqjncrzArm7KVWAkCm78rqL2DPuNjhPrshg",
-      "name": "go-datastore",
-      "version": "1.4.1"
-    },
-    {
       "author": "florian",
       "hash": "QmQVFBtJk8WXP7dVuAdcom5o7vRZF9pNBN5ZghuLvz5rLy",
       "name": "go-libp2p-bootstrap",
       "version": "1.0.0"
-    },
-    {
-      "author": "whyrusleeping",
-      "hash": "Qme1knMqwt1hKZbc1BmQFmnm9f36nyQGwXxPGVpVJ9rMK5",
-      "name": "go-libp2p-crypto",
-      "version": "1.6.2"
     },
     {
       "hash": "QmSBxn1eLMdViZRDGW9rRHRYwtqq5bqUgipqTMPuTim616",
@@ -76,6 +58,30 @@
       "hash": "QmcJukH2sAFjY3HdBKq35WDzWoL3UUu2gt9wdfqZTUyM74",
       "name": "go-libp2p-peer",
       "version": "2.3.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH",
+      "name": "go-libp2p-peerstore",
+      "version": "1.4.15"
+    },
+    {
+      "author": "jbenet",
+      "hash": "QmeiCcJfDW1GJnWUArudsv5rQsihpi4oyddPhdqo3CfX6i",
+      "name": "go-datastore",
+      "version": "2.4.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmfZTdmunzKzAGJrSvXXQbQ5kLLUiEMX5vdwux7iXkdk7D",
+      "name": "go-libp2p-host",
+      "version": "2.1.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "Qme1knMqwt1hKZbc1BmQFmnm9f36nyQGwXxPGVpVJ9rMK5",
+      "name": "go-libp2p-crypto",
+      "version": "1.6.2"
     }
   ],
   "gxVersion": "0.12.1",
