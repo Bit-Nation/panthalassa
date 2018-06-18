@@ -9,4 +9,5 @@ import (
 // saving the received DApp
 type Client interface {
 	HandleReceivedDApp(dApp dapp.JsonRepresentation) error
+	Render(jsonJSX string) error
 }
