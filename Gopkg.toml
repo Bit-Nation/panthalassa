@@ -1,0 +1,149 @@
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
+# [prune]
+#   non-go = false
+#   go-tests = true
+#   unused-packages = true
+
+[[prune.project]]
+    name = "github.com/ethereum/go-ethereum"
+    unused-packages = false
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/Bit-Nation/x3dh"
+
+[[constraint]]
+  name = "github.com/asaskevich/govalidator"
+  version = "9.0.0"
+
+[[constraint]]
+  name = "github.com/ethereum/go-ethereum"
+  version = "1.8.11"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/florianlenz/go-libp2p-bootstrap"
+
+[[constraint]]
+  name = "github.com/golang/protobuf"
+  version = "1.1.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/ipfs/go-cid"
+
+[[constraint]]
+  name = "github.com/ipfs/go-datastore"
+  version = "1.4.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/ipfs/go-log"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/libp2p/go-libp2p"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/libp2p/go-libp2p-crypto"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/libp2p/go-libp2p-host"
+
+[[constraint]]
+  branch = "deps/remove/bbloom"
+  name = "github.com/libp2p/go-libp2p-kad-dht"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/libp2p/go-libp2p-net"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/libp2p/go-libp2p-peer"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/libp2p/go-libp2p-peerstore"
+
+[[constraint]]
+  name = "github.com/multiformats/go-multiaddr"
+  version = "0.1.2"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/multiformats/go-multibase"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/multiformats/go-multicodec"
+
+[[constraint]]
+  name = "github.com/multiformats/go-multihash"
+  version = "0.1.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/nanobox-io/golang-scribble"
+
+[[constraint]]
+  name = "github.com/op/go-logging"
+  version = "1.0.0"
+
+[[constraint]]
+  revision = "15f95af6e78dcd2030d8195a138bd88d4f403546"
+  name = "github.com/robertkrimen/otto"
+
+[[constraint]]
+  name = "github.com/satori/go.uuid"
+  version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/stretchr/testify"
+  version = "1.2.2"
+
+[[constraint]]
+  revision = "9d7f37c630e2bf368f380032c57186efe4230bbe"
+  name = "github.com/tiabc/doubleratchet"
+
+[[constraint]]
+  revision = "2c9cfd17756470a0b7c3e4b7954bae7d11035504"
+  name = "github.com/tyler-smith/go-bip32"
+
+[[constraint]]
+  revision = "8e7a99b3e716f36d3b080a9a70f9eb45abe4edcc"
+  name = "github.com/tyler-smith/go-bip39"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+
+[[constraint]]
+  name = "gopkg.in/abiosoft/ishell.v2"
+  version = "2.0.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true
