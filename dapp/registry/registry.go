@@ -10,6 +10,7 @@ import (
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
+	reactMod "github.com/Bit-Nation/panthalassa/dapp/module/react"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	log "github.com/ipfs/go-log"
 	host "github.com/libp2p/go-libp2p-host"
@@ -63,12 +64,19 @@ func NewDAppRegistry(h host.Host, client Client) *Registry {
 // start a DApp
 func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 
-	vmModules := []module.Module{
-		&uuidv4Mod.UUIDV4{},
-	}
-
 	var l *golog.Logger
 	l, err := golog.GetLogger("app name")
+	if err != nil {
+		return err
+	}
+
+	vmModules := []module.Module{
+		&uuidv4Mod.UUIDV4{},
+		&reactMod.React{
+			Client: r.client,
+			Logger: l,
+		},
+	}
 
 	// if there is a stream for this DApp
 	// we would like to mutate the logger
