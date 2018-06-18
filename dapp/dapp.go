@@ -62,7 +62,7 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 	go func() {
 		_, err := vm.Run(app.Code)
 		if err != nil {
-			l.Error(err)
+			l.Error(err.Error())
 			closer <- app
 		}
 	}()
