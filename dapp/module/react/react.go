@@ -33,9 +33,9 @@ func (r *React) Register(vm *otto.Otto) error {
 	err := vm.Set("renderReact", func(call otto.FunctionCall) otto.Value {
 
 		if !call.Argument(0).IsString() {
-			v, err := otto.ToValue("")
+			v, err := otto.ToValue("expected element to be a string")
 			if err != nil {
-				r.Logger.Error(err)
+				r.Logger.Error(err.Error())
 				return otto.Value{}
 			}
 			return v
@@ -45,7 +45,7 @@ func (r *React) Register(vm *otto.Otto) error {
 		if err != nil {
 			v, err := otto.ToValue(err.Error())
 			if err != nil {
-				r.Logger.Error(err)
+				r.Logger.Error(err.Error())
 				return otto.Value{}
 			}
 			return v
