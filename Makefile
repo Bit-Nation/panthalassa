@@ -13,7 +13,8 @@ deps:
 	go get github.com/stretchr/testify
 install:
 	gx install
-	go get ./...
+	dep ensure
+	gx-go rw
 deps_mobile:
 	go get golang.org/x/mobile/cmd/gomobile
 	gomobile clean
