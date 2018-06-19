@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
+	api "github.com/Bit-Nation/panthalassa/api"
 	bootstrap "github.com/florianlenz/go-libp2p-bootstrap"
 	ds "github.com/ipfs/go-datastore"
 	log "github.com/ipfs/go-log"
@@ -26,7 +26,7 @@ var bootstrapPeers = []string{
 
 var logger = log.Logger("mesh")
 
-func New(meshPk lp2pCrypto.PrivKey, api *deviceApi.Api, rendezvousKey, signedProfile string) (*Network, <-chan error, error) {
+func New(meshPk lp2pCrypto.PrivKey, api *api.API, rendezvousKey, signedProfile string) (*Network, <-chan error, error) {
 
 	//Create host
 	h, err := lp2p.New(context.Background(), func(cfg *lp2p.Config) error {

@@ -64,9 +64,7 @@ func TestRequestResponse(t *testing.T) {
 				panic(err)
 			}
 			receivedRequestID = req.RequestID
-			out := api.Respond(req.RequestID, &pb.Response{
-				RequestID: req.RequestID,
-			}, nil, time.Second)
+			out := api.Respond(req.RequestID, &pb.Response{}, nil, time.Second)
 			if out != nil {
 				panic("expected nil but got: " + out.Error())
 			}
@@ -74,7 +72,7 @@ func TestRequestResponse(t *testing.T) {
 	}()
 
 	resp, err := api.request(&pb.Request{}, time.Second)
+	resp.Closer <- nil
 	require.Nil(t, err)
-	require.Equal(t, resp.Msg.RequestID, receivedRequestID)
 
 }

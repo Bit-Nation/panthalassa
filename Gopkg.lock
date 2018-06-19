@@ -36,12 +36,6 @@
   revision = "5312a61534124124185d41f09206b9fef1d88403"
 
 [[projects]]
-  name = "github.com/asaskevich/govalidator"
-  packages = ["."]
-  revision = "ccb8e960c48f04d6935e72476ae4a51028f9e22f"
-  version = "v9"
-
-[[projects]]
   branch = "master"
   name = "github.com/btcsuite/btcd"
   packages = ["btcec"]
@@ -734,7 +728,7 @@
     "unix",
     "windows"
   ]
-  revision = "6c888cc515d3ed83fc103cf1d84468aad274b0a7"
+  revision = "fc8bd948cf46f9c7af0f07d34151ce25fe90e477"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -778,6 +772,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "057a273c85db906caa048e9aa8d3347a430575f2521681d5e07d52b9bf8041e2"
+  inputs-digest = "c13e934bd3381f6c5dc279b09d49986d6388cdf1d73eb401339cb7113ed42e47"
   solver-name = "gps-cdcl"
   solver-version = 1

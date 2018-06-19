@@ -28,6 +28,7 @@ func New(client UpStream) *API {
 }
 
 type API struct {
+	DoubleRatchetKeyStoreApi
 	lock     sync.Mutex
 	requests map[string]chan *Response
 	client   UpStream
@@ -40,7 +41,7 @@ type API struct {
 type Response struct {
 	Msg    *pb.Response
 	Error  error
-	Closer <-chan error
+	Closer chan error
 }
 
 // send a response for a received api request
@@ -125,7 +126,10 @@ func (a *API) request(req *pb.Request, timeOut time.Duration) (*Response, error)
 	// or time out
 	select {
 	case res := <-reqChan:
-		return res, nil
+		if res.Error != nil {
+			res.Closer <- nil
+		}
+		return res, res.Error
 	case <-time.After(timeOut):
 		// remove request from stack
 		_, err := a.cutRequest(requestId.String())
