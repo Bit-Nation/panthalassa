@@ -4,6 +4,13 @@ package api;
 
 message Request {
 
-    string requestID = 2;
+    string requestID = 1;
+
+    message DRKeyStoreGet {
+        bytes drKey = 1;
+        uint64 messageNumber = 2;
+    }
+
+    DRKeyStoreGet dRKeyStoreGet = 2;
 
 }

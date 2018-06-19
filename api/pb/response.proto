@@ -7,4 +7,10 @@ message Response {
     string requestID = 1;
     string error = 2;
 
+    message DRKeyStoreGet {
+        bytes messageKey = 1;
+    }
+
+    DRKeyStoreGet dRKeyStoreGet = 3;
+
 }
