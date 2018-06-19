@@ -11,6 +11,11 @@ message Response {
         bytes messageKey = 1;
     }
 
+    message DRKeyStoreCount {
+        uint64 count = 1;
+    }
+
     DRKeyStoreGet dRKeyStoreGet = 3;
+    DRKeyStoreCount dRKeyStoreCount = 4;
 
 }

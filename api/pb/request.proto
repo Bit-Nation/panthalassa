@@ -26,9 +26,14 @@ message Request {
         bytes key = 1;
     }
 
+    message DRKeyStoreCount {
+        bytes key = 1;
+    }
+
     DRKeyStoreGet dRKeyStoreGet = 2;
     DRKeyStorePut dRKeyStorePut = 3;
     DRKeyStoreDeleteMK dRKeyStoreDeleteMK = 4;
     DRKeyStoreDeleteKeys dRKeyStoreDeleteKeys = 5;
+    DRKeyStoreCount dRKeyStoreCount = 6;
 
 }

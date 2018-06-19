@@ -129,8 +129,21 @@ func (s *DoubleRatchetKeyStoreApi) DeletePk(k dr.Key) {
 }
 
 func (s *DoubleRatchetKeyStoreApi) Count(k dr.Key) uint {
-
-
+	
+	resp, err := s.api.request(&pb.Request{
+		DRKeyStoreCount: &pb.Request_DRKeyStoreCount{
+			Key: k[:],
+		},
+	}, time.Second * 8)
+	
+	if err != nil {
+		logger.Error(err)
+		return 0
+	}
+	
+	resp.Closer <- nil
+	
+	return uint(resp.Msg.DRKeyStoreCount.Count)
 
 }
 
