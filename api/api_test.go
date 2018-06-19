@@ -74,6 +74,7 @@ func TestRequestResponse(t *testing.T) {
 	}()
 
 	resp, err := api.request(&pb.Request{}, time.Second)
+	resp.Closer <- nil
 	require.Nil(t, err)
 	require.Equal(t, resp.Msg.RequestID, receivedRequestID)
 

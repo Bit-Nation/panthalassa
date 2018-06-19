@@ -40,7 +40,7 @@ type API struct {
 type Response struct {
 	Msg    *pb.Response
 	Error  error
-	Closer <-chan error
+	Closer chan error
 }
 
 // send a response for a received api request
