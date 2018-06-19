@@ -64,7 +64,32 @@ func (s *DoubleRatchetKeyStoreApi) Get(k dr.Key, msgNum uint) (mk dr.Key, ok boo
 // save message key (double ratchet key)
 func (s *DoubleRatchetKeyStoreApi) Put(k dr.Key, msgNum uint, mk dr.Key) {
 
-
+	ct, err := s.km.AESEncrypt(mk[:])
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	
+	rawCt, err := ct.Marshal()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	
+	resp, err := s.api.request(&pb.Request{
+		DRKeyStorePut: &pb.Request_DRKeyStorePut{
+			MessageKey: k[:],
+			MessageNumber: uint64(msgNum),
+			Key: rawCt,
+		},
+	}, time.Second * 8)
+	
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	
+	resp.Closer <- nil
 
 }
 

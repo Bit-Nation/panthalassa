@@ -11,6 +11,13 @@ message Request {
         uint64 messageNumber = 2;
     }
 
+    message DRKeyStorePut {
+        bytes key = 1;
+        uint64 messageNumber = 2;
+        bytes messageKey = 3;
+    }
+
     DRKeyStoreGet dRKeyStoreGet = 2;
+    DRKeyStorePut dRKeyStorePut = 3;
 
 }
