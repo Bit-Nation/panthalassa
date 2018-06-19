@@ -94,8 +94,20 @@ func (s *DoubleRatchetKeyStoreApi) Put(k dr.Key, msgNum uint, mk dr.Key) {
 }
 
 func (s *DoubleRatchetKeyStoreApi) DeleteMk(k dr.Key, msgNum uint) {
-
-
+	
+	resp, err := s.api.request(&pb.Request{
+		DRKeyStoreDeleteMK: &pb.Request_DRKeyStoreDeleteMK{
+			Key: k[:],
+			MsgNum: uint64(msgNum),
+		},
+	}, time.Second * 8)
+	
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	
+	resp.Closer <- nil
 
 }
 

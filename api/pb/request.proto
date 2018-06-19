@@ -17,7 +17,13 @@ message Request {
         bytes messageKey = 3;
     }
 
+    message DRKeyStoreDeleteMK {
+        bytes key = 1;
+        uint64 msgNum = 2;
+    }
+
     DRKeyStoreGet dRKeyStoreGet = 2;
     DRKeyStorePut dRKeyStorePut = 3;
+    DRKeyStoreDeleteMK dRKeyStoreDeleteMK = 4;
 
 }
