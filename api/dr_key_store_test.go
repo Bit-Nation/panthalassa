@@ -1,15 +1,17 @@
 package api
 
 import (
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
+	"time"
 
-	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
+	pb "github.com/Bit-Nation/panthalassa/api/pb"
+	"github.com/Bit-Nation/panthalassa/crypto/aes"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
+	proto "github.com/golang/protobuf/proto"
 	require "github.com/stretchr/testify/require"
 	dr "github.com/tiabc/doubleratchet"
 )
@@ -54,174 +56,136 @@ func keyManagerFactory() *keyManager.KeyManager {
 
 func TestDoubleRatchetKeyStore_GetSuccess(t *testing.T) {
 
+	km := keyManagerFactory()
+
+	k := dr.Key{}
+	k[4] = 0x16
+
+	rawMsgKey := dr.Key{}
+	rawMsgKey[2] = 0x34
+
+	ct, err := km.AESEncrypt(rawMsgKey[:])
+	require.Nil(t, err)
+	rawCt, err := ct.Marshal()
+	require.Nil(t, err)
+
 	c := make(chan string)
 
-	// fake client
-	api := deviceApi.New(&UpStreamTestImpl{
-		f: func(data string) {
-			c <- data
+	api := API{
+		lock:     sync.Mutex{},
+		requests: map[string]chan *Response{},
+		client: &UpStreamTestImpl{
+			f: func(data string) {
+				c <- data
+			},
 		},
-	})
+	}
 
-	// answer request of fake client
 	go func() {
-		for {
-			select {
-			case data := <-c:
 
-				rpcCall := deviceApi.ApiCall{}
-				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
-					panic(err)
-				}
+		select {
+		case data := <-c:
 
-				mustBeEqual(`{"key":"0000000000000000000100010000000000010001000000000000000100000001","msg_num":7}`, rpcCall.Data)
+			req := pb.Request{}
+			requireNil(proto.Unmarshal([]byte(data), &req))
 
-				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":"{\"key\":\"{\\\"iv\\\":\\\"3Zd2O1KxUz2OZnWQPrTgCg==\\\",\\\"cipher_text\\\":\\\"q4FO26h5TICATqwwp9RXXXes1jX8asn+0TkL5Khx8Oc=\\\",\\\"mac\\\":\\\"XwX884HeXuodY3vgoKvmZcGkW0oPu2fBvRafxAsMu/I=\\\",\\\"v\\\":2}\"}"}`))
+			keyRequest := req.DRKeyStoreGet
+			key := dr.Key{}
+			copy(key[:], keyRequest.DrKey)
 
+			if k != key {
+				panic("expected keys to match")
 			}
+
+			mustBeEqual(uint64(5), keyRequest.MessageNumber)
+
+			err = api.Respond(req.RequestID, &pb.Response{
+				DRKeyStoreGet: &pb.Response_DRKeyStoreGet{
+					MessageKey: rawCt,
+				},
+			}, nil, time.Second)
+			requireNil(err)
+
 		}
+
 	}()
 
-	drk := DoubleRatchetKeyStore{
-		api: api,
+	dra := DoubleRatchetKeyStoreApi{
+		api: &api,
 		km:  keyManagerFactory(),
 	}
 
-	k := dr.Key{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-	}
-
-	key, exist := drk.Get(k, 7)
+	key, exist := dra.Get(k, 5)
+	require.Equal(t, rawMsgKey, key)
 	require.True(t, exist)
-	require.Equal(t, dr.Key{
-		0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	}, key)
-
-}
-
-func TestDoubleRatchetKeyStore_GetError(t *testing.T) {
-
-	c := make(chan string)
-
-	// fake client
-	api := deviceApi.New(&UpStreamTestImpl{
-		f: func(data string) {
-			c <- data
-		},
-	})
-
-	// answer request of fake client
-	go func() {
-		for {
-			select {
-			case data := <-c:
-
-				rpcCall := deviceApi.ApiCall{}
-				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
-					panic(err)
-				}
-
-				mustBeEqual(`{"key":"0000000000000000000100010000000000010001000000000000000100000001","msg_num":7}`, rpcCall.Data)
-
-				requireNil(api.Receive(rpcCall.Id, `{"error":"I am an error","payload":""}`))
-
-			}
-		}
-	}()
-
-	drk := DoubleRatchetKeyStore{
-		api: api,
-		km:  keyManagerFactory(),
-	}
-
-	k := dr.Key{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-	}
-
-	key, exist := drk.Get(k, 7)
-	require.False(t, exist)
-	require.Equal(t, dr.Key{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	}, key)
 
 }
 
 func TestDoubleRatchetKeyStore_PutSuccess(t *testing.T) {
 
+	indexKey := dr.Key{}
+	indexKey[4] = 0x16
+
+	msgKey := dr.Key{}
+	msgKey[2] = 0x34
+
 	c := make(chan string)
 
-	km := keyManagerFactory()
-
-	// fake client
-	api := deviceApi.New(&UpStreamTestImpl{
-		f: func(data string) {
-			c <- data
+	api := API{
+		lock:     sync.Mutex{},
+		requests: map[string]chan *Response{},
+		client: &UpStreamTestImpl{
+			f: func(data string) {
+				c <- data
+			},
 		},
-	})
-
-	pubKey := dr.Key{
-		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
 
-	msgKey := dr.Key{
-		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-	}
-
-	// answer request of fake client
 	go func() {
-		for {
-			select {
-			case data := <-c:
 
-				rpcCall := deviceApi.ApiCall{}
-				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
-					panic(err)
-				}
+		select {
+		case data := <-c:
 
-				// check type
-				mustBeEqual("DR:KEY_STORE:PUT", rpcCall.Type)
+			req := pb.Request{}
+			requireNil(proto.Unmarshal([]byte(data), &req))
 
-				var c DRKeyStorePutCall
-				requireNil(json.Unmarshal([]byte(rpcCall.Data), &c))
+			keyRequest := req.DRKeyStorePut
+			decodedIndexKey := dr.Key{}
+			copy(decodedIndexKey[:], keyRequest.Key)
 
-				mustBeEqual("0100000000000000000000000000000000000000000000000000000000000000", c.IndexKey)
-				mustBeEqual(uint(30), c.MsgNumber)
-
-				plainKey, err := km.AESDecrypt(c.DoubleRatchetKey)
-				requireNil(err)
-
-				mustBeEqual(hex.EncodeToString(msgKey[:]), hex.EncodeToString(plainKey))
-
-				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":""}`))
-
+			// make sure index key is correct
+			if decodedIndexKey != indexKey {
+				panic("expected keys to match")
 			}
+
+			// check that message number is correct
+			mustBeEqual(uint64(5), keyRequest.MessageNumber)
+
+			km := keyManagerFactory()
+			ct, err := aes.Unmarshal(keyRequest.MessageKey)
+			requireNil(err)
+			rawDecodedMsgKey, err := km.AESDecrypt(ct)
+			decodedMsgKey := dr.Key{}
+			copy(decodedMsgKey[:], rawDecodedMsgKey)
+
+			// make sure message key correct
+			if decodedMsgKey != msgKey {
+				panic("expected keys to match")
+			}
+
+			err = api.Respond(req.RequestID, &pb.Response{}, nil, time.Second)
+			requireNil(err)
+
 		}
+
 	}()
 
-	drk := DoubleRatchetKeyStore{
-		api: api,
+	dra := DoubleRatchetKeyStoreApi{
+		api: &api,
 		km:  keyManagerFactory(),
 	}
 
-	drk.Put(pubKey, 30, msgKey)
+	dra.Put(indexKey, 5, msgKey)
 
 }
 
@@ -229,46 +193,50 @@ func TestDoubleRatchetKeyStore_DeleteMessageKeySuccess(t *testing.T) {
 
 	c := make(chan string)
 
-	// fake client
-	api := deviceApi.New(&UpStreamTestImpl{
-		f: func(data string) {
-			c <- data
+	msgKey := dr.Key{}
+	msgKey[2] = 0x34
+
+	api := API{
+		lock:     sync.Mutex{},
+		requests: map[string]chan *Response{},
+		client: &UpStreamTestImpl{
+			f: func(data string) {
+				c <- data
+			},
 		},
-	})
+	}
 
-	// answer request of fake client
 	go func() {
-		for {
-			select {
-			case data := <-c:
 
-				rpcCall := deviceApi.ApiCall{}
-				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
-					panic(err)
-				}
-				mustBeEqual("DR:KEY_STORE:DELETE_MESSAGE_KEY", rpcCall.Type)
+		select {
+		case data := <-c:
 
-				mustBeEqual(`{"index_key":"0000000000000000000100010000000000010001000000000000000100000001","msg_num":3032}`, rpcCall.Data)
+			req := pb.Request{}
+			requireNil(proto.Unmarshal([]byte(data), &req))
+			keyRequest := req.DRKeyStoreDeleteMK
 
-				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":""}`))
+			decodedIndexKey := dr.Key{}
+			copy(decodedIndexKey[:], keyRequest.Key)
 
+			// make sure index key is correct
+			if decodedIndexKey != msgKey {
+				panic("expected keys to match")
 			}
+
+			// check that message number is correct
+			mustBeEqual(uint64(6), keyRequest.MsgNum)
+
+			api.Respond(req.RequestID, &pb.Response{}, nil, time.Second*2)
 		}
+
 	}()
 
-	drk := DoubleRatchetKeyStore{
-		api: api,
+	dra := DoubleRatchetKeyStoreApi{
+		api: &api,
 		km:  keyManagerFactory(),
 	}
 
-	k := dr.Key{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-	}
-
-	drk.DeleteMk(k, 3032)
+	dra.DeleteMk(msgKey, 6)
 
 }
 
@@ -276,46 +244,47 @@ func TestDoubleRatchetKeyStore_DeleteIndexKeySuccess(t *testing.T) {
 
 	c := make(chan string)
 
-	// fake client
-	api := deviceApi.New(&UpStreamTestImpl{
-		f: func(data string) {
-			c <- data
+	msgKey := dr.Key{}
+	msgKey[2] = 0x34
+
+	api := API{
+		lock:     sync.Mutex{},
+		requests: map[string]chan *Response{},
+		client: &UpStreamTestImpl{
+			f: func(data string) {
+				c <- data
+			},
 		},
-	})
+	}
 
-	// answer request of fake client
 	go func() {
-		for {
-			select {
-			case data := <-c:
 
-				rpcCall := deviceApi.ApiCall{}
-				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
-					panic(err)
-				}
-				mustBeEqual("DR:KEY_STORE:DELETE_INDEX_KEY", rpcCall.Type)
+		select {
+		case data := <-c:
 
-				mustBeEqual(`{"index_key":"0000000000000000000100010000000000010001000000000000000100000001"}`, rpcCall.Data)
+			req := pb.Request{}
+			requireNil(proto.Unmarshal([]byte(data), &req))
+			keyRequest := req.DRKeyStoreDeleteKeys
 
-				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":""}`))
+			decodedIndexKey := dr.Key{}
+			copy(decodedIndexKey[:], keyRequest.Key)
 
+			// make sure index key is correct
+			if decodedIndexKey != msgKey {
+				panic("expected keys to match")
 			}
+
+			api.Respond(req.RequestID, &pb.Response{}, nil, time.Second*2)
 		}
+
 	}()
 
-	drk := DoubleRatchetKeyStore{
-		api: api,
+	dra := DoubleRatchetKeyStoreApi{
+		api: &api,
 		km:  keyManagerFactory(),
 	}
 
-	k := dr.Key{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-	}
-
-	drk.DeletePk(k)
+	dra.DeletePk(msgKey)
 
 }
 
@@ -323,47 +292,51 @@ func TestDoubleRatchetKeyStore_CountSuccess(t *testing.T) {
 
 	c := make(chan string)
 
-	// fake client
-	api := deviceApi.New(&UpStreamTestImpl{
-		f: func(data string) {
-			c <- data
+	msgKey := dr.Key{}
+	msgKey[2] = 0x34
+
+	api := API{
+		lock:     sync.Mutex{},
+		requests: map[string]chan *Response{},
+		client: &UpStreamTestImpl{
+			f: func(data string) {
+				c <- data
+			},
 		},
-	})
+	}
 
-	// answer request of fake client
 	go func() {
-		for {
-			select {
-			case data := <-c:
 
-				rpcCall := deviceApi.ApiCall{}
-				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
-					panic(err)
-				}
+		select {
+		case data := <-c:
 
-				mustBeEqual("DR:KEY_STORE:COUNT_MESSAGES", rpcCall.Type)
+			req := pb.Request{}
+			requireNil(proto.Unmarshal([]byte(data), &req))
+			keyRequest := req.DRKeyStoreCount
 
-				mustBeEqual(`{"index_key":"0000000000000000000100010000000000010001000000000000000100000001"}`, rpcCall.Data)
+			decodedIndexKey := dr.Key{}
+			copy(decodedIndexKey[:], keyRequest.Key)
 
-				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":"{\"key\":\"{\\\"count\\\":3}\"}"}`))
-
+			// make sure index key is correct
+			if decodedIndexKey != msgKey {
+				panic("expected keys to match")
 			}
+
+			api.Respond(req.RequestID, &pb.Response{
+				DRKeyStoreCount: &pb.Response_DRKeyStoreCount{
+					Count: uint64(4),
+				},
+			}, nil, time.Second*2)
 		}
+
 	}()
 
-	drk := DoubleRatchetKeyStore{
-		api: api,
+	dra := DoubleRatchetKeyStoreApi{
+		api: &api,
 		km:  keyManagerFactory(),
 	}
 
-	k := dr.Key{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-	}
-
-	drk.Count(k)
+	require.Equal(t, uint(4), dra.Count(msgKey))
 
 }
 
@@ -371,38 +344,56 @@ func TestDoubleRatchetKeyStore_FetchAllKeysSuccess(t *testing.T) {
 
 	c := make(chan string)
 
-	// fake client
-	api := deviceApi.New(&UpStreamTestImpl{
-		f: func(data string) {
-			c <- data
+	indexKey := dr.Key{}
+	indexKey[5] = 0x44
+
+	msgKey := dr.Key{}
+	msgKey[2] = 0x34
+
+	encryptedMsgKey, err := keyManagerFactory().AESEncrypt(msgKey[:])
+	require.Nil(t, err)
+	rawEncryptedMsgKey, err := encryptedMsgKey.Marshal()
+	require.Nil(t, err)
+
+	api := API{
+		lock:     sync.Mutex{},
+		requests: map[string]chan *Response{},
+		client: &UpStreamTestImpl{
+			f: func(data string) {
+				c <- data
+			},
 		},
-	})
+	}
 
-	// answer request of fake client
 	go func() {
-		for {
-			select {
-			case data := <-c:
 
-				rpcCall := deviceApi.ApiCall{}
-				if err := json.Unmarshal([]byte(data), &rpcCall); err != nil {
-					panic(err)
-				}
+		select {
+		case data := <-c:
 
-				mustBeEqual("DR:KEY_STORE:FETCH_ALL_KEYS", rpcCall.Type)
-				mustBeEqual(``, rpcCall.Data)
+			req := pb.Request{}
+			requireNil(proto.Unmarshal([]byte(data), &req))
 
-				requireNil(api.Receive(rpcCall.Id, `{"error":"","payload":"{\"0000000000000000000100010000000000010001000000000000000100000001\":{\"444\":\"{\\\"iv\\\":\\\"6IW62YJEo5o+Yc9eeRoyaA==\\\",\\\"cipher_text\\\":\\\"61eWJQS97l2t8ncDpSKKy567kidCKu9Po2cA/ZJZxUQ=\\\",\\\"mac\\\":\\\"v9n9PM68Wdj+g86hQUIS6ZyweDOtjhUyU34+xIos1q8=\\\",\\\"v\\\":1}\"}}"}`))
-
-			}
+			api.Respond(req.RequestID, &pb.Response{
+				DRKeyStoreAll: &pb.Response_DRKeyStoreAll{
+					All: []*pb.Response_DRKeyStoreAll_Key{
+						&pb.Response_DRKeyStoreAll_Key{
+							Key: indexKey[:],
+							MessageKeys: map[uint64][]byte{
+								uint64(4): rawEncryptedMsgKey,
+							},
+						},
+					},
+				},
+			}, nil, time.Second*2)
 		}
+
 	}()
 
-	drk := DoubleRatchetKeyStore{
-		api: api,
+	dra := DoubleRatchetKeyStoreApi{
+		api: &api,
 		km:  keyManagerFactory(),
 	}
 
-	fmt.Println(drk.All())
+	require.Equal(t, msgKey, dra.All()[indexKey][4])
 
 }

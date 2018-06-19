@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 
-	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
+	api "github.com/Bit-Nation/panthalassa/api"
+	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
 	chat "github.com/Bit-Nation/panthalassa/chat"
-	clientImpl "github.com/Bit-Nation/panthalassa/client"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
 	profile "github.com/Bit-Nation/panthalassa/profile"
+	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
+	"time"
 )
 
 var panthalassaInstance *Panthalassa
@@ -40,7 +42,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 	}
 
 	// device api
-	api := deviceApi.New(client)
+	api := api.New(client)
 
 	// we don't need the rendevouz key for now
 	m, errReporter, err := mesh.New(pk, api, "", config.SignedProfile)
@@ -63,18 +65,18 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		return err
 	}
 
-	c, err := chat.New(chatKeyPair, km, clientImpl.New(api, km))
+	c, err := chat.New(chatKeyPair, km, api)
 	if err != nil {
 		return err
 	}
 
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
-		km:        km,
-		upStream:  client,
-		deviceApi: api,
-		mesh:      m,
-		chat:      &c,
+		km:       km,
+		upStream: client,
+		api:      api,
+		mesh:     m,
+		chat:     &c,
 	}
 
 	return nil
@@ -148,13 +150,23 @@ func EthAddress() (string, error) {
 	return panthalassaInstance.km.GetEthereumAddress()
 }
 
-func SendResponse(id string, data string) error {
+func SendResponse(id string, data string, responseError string, timeout uint) error {
 
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa")
 	}
 
-	return panthalassaInstance.deviceApi.Receive(id, data)
+	resp := &apiPB.Response{}
+	if err := proto.Unmarshal([]byte(data), resp); err != nil {
+		return err
+	}
+
+	var err error
+	if responseError != "" {
+		err = errors.New(responseError)
+	}
+
+	return panthalassaInstance.api.Respond(id, resp, err, time.Duration(timeout)*time.Second)
 }
 
 //Export the current account store with given password

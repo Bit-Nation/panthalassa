@@ -4,8 +4,7 @@ import (
 	"encoding/hex"
 
 	"fmt"
-	api "github.com/Bit-Nation/panthalassa/api/device"
-	deviceApi "github.com/Bit-Nation/panthalassa/api/device"
+	api "github.com/Bit-Nation/panthalassa/api"
 	chat "github.com/Bit-Nation/panthalassa/chat"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
@@ -14,11 +13,11 @@ import (
 )
 
 type Panthalassa struct {
-	km        *keyManager.KeyManager
-	upStream  api.UpStream
-	deviceApi *deviceApi.Api
-	mesh      *mesh.Network
-	chat      *chat.Chat
+	km       *keyManager.KeyManager
+	upStream api.UpStream
+	api      *api.API
+	mesh     *mesh.Network
+	chat     *chat.Chat
 }
 
 //Stop the panthalassa instance
