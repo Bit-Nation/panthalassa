@@ -147,9 +147,71 @@ func (s *DoubleRatchetKeyStoreApi) Count(k dr.Key) uint {
 
 }
 
+// @todo the all method is way to heavy. Long term we need to have another solution
 func (s *DoubleRatchetKeyStoreApi) All() map[dr.Key]map[uint]dr.Key {
-
-
+	
+	resp, err := s.api.request(&pb.Request{
+		DRKeyStoreAll: &pb.Request_DRKeyStoreAll{},
+	}, time.Second * 8)
+	
+	if err != nil {
+		logger.Error(err)
+		return map[dr.Key]map[uint]dr.Key{}
+	}
+	
+	var keys = map[dr.Key]map[uint]dr.Key{}
+	
+	for _, k := range resp.Msg.DRKeyStoreAll.All {
+		
+		// exit if key len is incorrect
+		if len(k.Key) != 32 {
+			e := errors.New("got invalid key in All() (expected key len == 32 bytes)")
+			logger.Error(e)
+			resp.Closer <- e
+			return map[dr.Key]map[uint]dr.Key{}
+		}
+		
+		indexKey := dr.Key{}
+		copy(indexKey[:], k.Key)
+		
+		messages := map[uint]dr.Key{}
+		
+		for msgNum, key := range k.MessageKeys {
+			
+			ct, err := aes.Unmarshal(key)
+			if err != nil {
+				resp.Closer <- err
+				logger.Error(err)
+				return map[dr.Key]map[uint]dr.Key{}
+			}
+			
+			rawMsgKey, err := s.km.AESDecrypt(ct)
+			if err != nil {
+				resp.Closer <- err
+				logger.Error(err)
+				return map[dr.Key]map[uint]dr.Key{}
+			}
+			
+			if len(rawMsgKey) != 32 {
+				e := errors.New("got invalid key in All() (expected key len == 32 bytes)")
+				logger.Error(e)
+				resp.Closer <- e
+				return map[dr.Key]map[uint]dr.Key{}
+			}
+			
+			msgKey := dr.Key{}
+			copy(msgKey[:], rawMsgKey)
+			
+			messages[uint(msgNum)] = msgKey
+		}
+		
+		keys[indexKey] = messages
+		
+	}
+	
+	resp.Closer <- nil
+	
+	return keys
 
 }
 
