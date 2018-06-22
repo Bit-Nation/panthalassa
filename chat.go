@@ -101,9 +101,7 @@ func InitializeChat(identityPublicKey, preKeyBundle string) (string, error) {
 
 	initialProtocol, err := json.Marshal(struct {
 		Message chat.Message   `json:"message"`
-		Secret  aes.CipherText `json:"shared_chat_secret
-
-"`
+		Secret  aes.CipherText `json:"shared_chat_secret"`
 	}{
 		Message: msg,
 		Secret:  exportedSecret,
