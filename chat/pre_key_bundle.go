@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 
+	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
 	ed25519 "golang.org/x/crypto/ed25519"
@@ -20,6 +21,11 @@ type PreKeyBundlePublic struct {
 type PreKeyBundlePrivate struct {
 	OneTimePreKey x3dh.PrivateKey `json:"one_time_pre_key"`
 	SignedPreKey  x3dh.PrivateKey `json:"signed_one_time_pre_key"`
+}
+
+type ExportedPreKeyBundle struct {
+	PublicPart  PreKeyBundlePublic `json:"public_part"`
+	PrivatePart aes.CipherText     `json:"private_part"`
 }
 
 // marshal private part of pre key bundle
@@ -82,13 +88,9 @@ func (b *PanthalassaPreKeyBundle) Marshal() ([]byte, error) {
 
 // unmarshal pre key bundle
 func UnmarshalPreKeyBundle(preKeyBundle []byte) (PanthalassaPreKeyBundle, error) {
-
 	var b PanthalassaPreKeyBundle
-	err := json.Unmarshal(preKeyBundle, &b)
-	if err != nil {
-		return PanthalassaPreKeyBundle{}, nil
+	if err := json.Unmarshal(preKeyBundle, &b); err != nil {
+		return PanthalassaPreKeyBundle{}, err
 	}
-
 	return b, nil
-
 }
