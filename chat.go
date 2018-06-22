@@ -22,12 +22,6 @@ func NewPreKeyBundle() (string, error) {
 		return "", err
 	}
 
-	// marshal public part
-	publicPart, err := bundle.PublicPart.Marshal()
-	if err != nil {
-		return "", err
-	}
-
 	// marshal private part and encrypt
 	privatePart, err := bundle.PrivatePart.Marshal()
 	if err != nil {
@@ -40,20 +34,18 @@ func NewPreKeyBundle() (string, error) {
 		return "", err
 	}
 
-	// marshal pre key bundle
-	preKeyBundle, err := json.Marshal(struct {
-		PublicPart  string         `json:"public_part"`
-		PrivatePart aes.CipherText `json:"private_part"`
-	}{
-		PublicPart:  string(publicPart),
+	exportedBundle := chat.ExportedPreKeyBundle{
+		PublicPart:  bundle.PublicPart,
 		PrivatePart: privtePartCipherText,
-	})
+	}
 
+	// marshal pre key bundle
+	marshaledExportedBundle, err := json.Marshal(exportedBundle)
 	if err != nil {
 		return "", err
 	}
 
-	return string(preKeyBundle), nil
+	return string(marshaledExportedBundle), nil
 
 }
 
@@ -73,13 +65,31 @@ func InitializeChat(identityPublicKey, preKeyBundle string) (string, error) {
 		return "", errors.New("public key must have length of 32 bytes")
 	}
 
-	// decode pre key bundle
-	bundle, err := chat.UnmarshalPreKeyBundle([]byte(preKeyBundle))
+	// decode exported pre key bundle
+	b := chat.ExportedPreKeyBundle{}
+	if err := json.Unmarshal([]byte(preKeyBundle), &b); err != nil {
+		return "", err
+	}
+
+	// decrypt private part
+	rawPrivatePart, err := panthalassaInstance.km.AESDecrypt(b.PrivatePart)
 	if err != nil {
 		return "", err
 	}
 
-	msg, initializedProtocol, err := panthalassaInstance.chat.InitializeChat(pubKey, bundle)
+	// unmarshal private part
+	pp := chat.PreKeyBundlePrivate{}
+	if err := json.Unmarshal(rawPrivatePart, &pp); err != nil {
+		return "", err
+	}
+
+	// plain private part
+	privatePart := chat.PanthalassaPreKeyBundle{
+		PublicPart:  b.PublicPart,
+		PrivatePart: pp,
+	}
+
+	msg, initializedProtocol, err := panthalassaInstance.chat.InitializeChat(pubKey, privatePart)
 	if err != nil {
 		return "", err
 	}
@@ -91,7 +101,9 @@ func InitializeChat(identityPublicKey, preKeyBundle string) (string, error) {
 
 	initialProtocol, err := json.Marshal(struct {
 		Message chat.Message   `json:"message"`
-		Secret  aes.CipherText `json:"secret"`
+		Secret  aes.CipherText `json:"shared_chat_secret
+
+"`
 	}{
 		Message: msg,
 		Secret:  exportedSecret,
