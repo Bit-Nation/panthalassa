@@ -4,10 +4,20 @@ import (
 	"encoding/hex"
 	"errors"
 	"time"
+	"crypto/rand"
 
 	x3dh "github.com/Bit-Nation/x3dh"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
+
+var randSource = rand.Reader
+
+// a shared secret contains
+// an id + the x3dh secret
+type SharedSecret struct {
+	ID []byte
+	Secret x3dh.SharedSecret
+}
 
 type Initialisation struct {
 	Msg    Message `json:"message"`
@@ -22,8 +32,14 @@ func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, preKeyBundle Panthalas
 		return Message{}, x3dh.InitializedProtocol{}, err
 	}
 
+	// create id for shared secret
+	var sid [16]byte
+	if _, err := randSource.Read(sid[:]); err != nil {
+		return Message{}, x3dh.InitializedProtocol{}, err
+	}
+	
 	// create encrypted message
-	msg, err := c.encryptMessage(ip.SharedSecret, []byte("hi"))
+	msg, err := c.encryptMessage(ip.SharedSecret, sid[:])
 	if err != nil {
 		return Message{}, x3dh.InitializedProtocol{}, err
 	}
@@ -50,31 +66,30 @@ func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, preKeyBundle Panthalas
 	return m, ip, err
 }
 
-func (c *Chat) HandleInitialMessage(m Message, keyBundlePrivate PreKeyBundlePrivate) (x3dh.SharedSecret, error) {
+func (c *Chat) HandleInitialMessage(m Message, keyBundlePrivate PreKeyBundlePrivate) (SharedSecret, error) {
 
 	// message type should be: PROTOCOL_INITIALISATION
 	if m.Type != "PROTOCOL_INITIALISATION" {
-		return x3dh.SharedSecret{}, errors.New("message must be of type PROTOCOL_INITIALISATION")
+		return SharedSecret{}, errors.New("message must be of type PROTOCOL_INITIALISATION")
 	}
 
 	// verify signature of message
 	valid, err := m.VerifySignature()
-
 	if err != nil {
-		return x3dh.SharedSecret{}, err
+		return SharedSecret{}, err
 	}
 	if !valid {
-		return x3dh.SharedSecret{}, errors.New("invalid signature")
+		return SharedSecret{}, errors.New("invalid signature")
 	}
 
 	// get my ephemeral key
 	remoteEphemeralKeyStr, exist := m.AdditionalData["ephemeral_key"]
 	if !exist {
-		return x3dh.SharedSecret{}, errors.New("missing ephemeral_key")
+		return SharedSecret{}, errors.New("missing ephemeral_key")
 	}
 	remoteEphemeralKeyRaw, err := hex.DecodeString(remoteEphemeralKeyStr)
 	if err != nil {
-		return x3dh.SharedSecret{}, err
+		return SharedSecret{}, err
 	}
 	var remoteEphemeralKey x3dh.PublicKey
 	copy(remoteEphemeralKey[:], remoteEphemeralKeyRaw[:])
@@ -93,9 +108,17 @@ func (c *Chat) HandleInitialMessage(m Message, keyBundlePrivate PreKeyBundlePriv
 	})
 
 	if err != nil {
-		return x3dh.SharedSecret{}, err
+		return SharedSecret{}, err
 	}
-
-	return sec, nil
+	
+	id, err := c.DecryptMessage(sec, m)
+	if err != nil {
+		return SharedSecret{}, err
+	}
+	
+	return SharedSecret{
+		ID: []byte(id),
+		Secret: sec,
+	}, nil
 
 }
