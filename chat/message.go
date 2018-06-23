@@ -14,6 +14,7 @@ import (
 type Message struct {
 	Type                 string                `json:"type"`
 	SendAt               time.Time             `json:"timestamp"`
+	UsedSecretRef        string                `json:"used_secret"`
 	AdditionalData       map[string]string     `json:"additional_data"`
 	DoubleratchetMessage doubleratchet.Message `json:"doubleratchet_message"`
 	Signature            []byte                `json:"signature"`

@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"time"
@@ -8,6 +9,8 @@ import (
 	x3dh "github.com/Bit-Nation/x3dh"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
+
+var randSource = rand.Reader
 
 type Initialisation struct {
 	Msg    Message `json:"message"`
@@ -22,6 +25,12 @@ func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, preKeyBundle Panthalas
 		return Message{}, x3dh.InitializedProtocol{}, err
 	}
 
+	// create id for shared secret
+	var sid [16]byte
+	if _, err := randSource.Read(sid[:]); err != nil {
+		return Message{}, x3dh.InitializedProtocol{}, err
+	}
+
 	// create encrypted message
 	msg, err := c.encryptMessage(ip.SharedSecret, []byte("hi"))
 	if err != nil {
@@ -30,8 +39,9 @@ func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, preKeyBundle Panthalas
 
 	// construct message
 	m := Message{
-		Type:   "PROTOCOL_INITIALISATION",
-		SendAt: time.Now(),
+		Type:          "PROTOCOL_INITIALISATION",
+		SendAt:        time.Now(),
+		UsedSecretRef: hex.EncodeToString(sid[:]),
 		AdditionalData: map[string]string{
 			"used_one_time_pre_key": hex.EncodeToString(ip.UsedOneTimePreKey[:]),
 			"used_signed_pre_key":   hex.EncodeToString(ip.UsedSignedPreKey[:]),
@@ -59,7 +69,6 @@ func (c *Chat) HandleInitialMessage(m Message, keyBundlePrivate PreKeyBundlePriv
 
 	// verify signature of message
 	valid, err := m.VerifySignature()
-
 	if err != nil {
 		return x3dh.SharedSecret{}, err
 	}

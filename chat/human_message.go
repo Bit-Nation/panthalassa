@@ -11,7 +11,7 @@ type Info struct {
 }
 
 // send a message to a chat partner
-func (c *Chat) CreateHumanMessage(msg string, sec x3dh.SharedSecret) (Message, error) {
+func (c *Chat) CreateHumanMessage(msg string, secretID string, sec x3dh.SharedSecret) (Message, error) {
 
 	// create doublerachet cipher text
 	encryptedMessage, err := c.encryptMessage(sec, []byte(msg))
@@ -22,6 +22,7 @@ func (c *Chat) CreateHumanMessage(msg string, sec x3dh.SharedSecret) (Message, e
 	m := Message{
 		Type:                 "HUMAN_MESSAGE",
 		SendAt:               time.Now(),
+		UsedSecretRef:        secretID,
 		DoubleratchetMessage: encryptedMessage,
 	}
 
