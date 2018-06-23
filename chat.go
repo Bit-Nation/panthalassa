@@ -113,7 +113,7 @@ func InitializeChat(identityPublicKey, preKeyBundle string) (string, error) {
 
 // create message
 // secret should be a aes cipher text as string
-func CreateHumanMessage(rawMsg, secret string) (string, error) {
+func CreateHumanMessage(rawMsg, secretID, secret string) (string, error) {
 
 	if panthalassaInstance == nil {
 		return "", errors.New("please start panthalassa first")
@@ -132,7 +132,7 @@ func CreateHumanMessage(rawMsg, secret string) (string, error) {
 	}
 
 	// create message
-	msg, err := panthalassaInstance.chat.CreateHumanMessage(rawMsg, sharedSecret)
+	msg, err := panthalassaInstance.chat.CreateHumanMessage(rawMsg, secretID, sharedSecret)
 	if err != nil {
 		return "", err
 	}
