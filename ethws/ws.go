@@ -162,14 +162,13 @@ func New(conf Config) *EthereumWS {
 		// try to connect till success
 		for {
 			co, _, err := wsg.DefaultDialer.Dial(conf.WSUrl, nil)
-			if err != nil {
-				logger.Error(err)
-				// wait a bit. We don't want to stress the endpoint
-				time.Sleep(conf.Retry)
-				continue
+			if err == nil {
+				break
 			}
+			logger.Error(err)
+			// wait a bit. We don't want to stress the endpoint
+			time.Sleep(conf.Retry)
 			etws.conn = co
-			break
 		}
 
 		// signal the workers to start
