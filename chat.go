@@ -66,30 +66,12 @@ func InitializeChat(identityPublicKey, preKeyBundle string) (string, error) {
 	}
 
 	// decode exported pre key bundle
-	b := chat.ExportedPreKeyBundle{}
-	if err := json.Unmarshal([]byte(preKeyBundle), &b); err != nil {
+	pp := chat.PreKeyBundlePublic{}
+	if err := json.Unmarshal([]byte(preKeyBundle), &pp); err != nil {
 		return "", err
 	}
 
-	// decrypt private part
-	rawPrivatePart, err := panthalassaInstance.km.AESDecrypt(b.PrivatePart)
-	if err != nil {
-		return "", err
-	}
-
-	// unmarshal private part
-	pp := chat.PreKeyBundlePrivate{}
-	if err := json.Unmarshal(rawPrivatePart, &pp); err != nil {
-		return "", err
-	}
-
-	// plain private part
-	privatePart := chat.PanthalassaPreKeyBundle{
-		PublicPart:  b.PublicPart,
-		PrivatePart: pp,
-	}
-
-	msg, initializedProtocol, err := panthalassaInstance.chat.InitializeChat(pubKey, privatePart)
+	msg, initializedProtocol, err := panthalassaInstance.chat.InitializeChat(pubKey, pp)
 	if err != nil {
 		return "", err
 	}

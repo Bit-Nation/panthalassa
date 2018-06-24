@@ -67,7 +67,7 @@ func TestChat_HandleInitialMessage(t *testing.T) {
 	idPublicKeyAlice, err := hex.DecodeString(idPublicKeyStrAlice)
 	require.Nil(t, err)
 
-	msgFromAlice, initializedProtocol, err := chatAlice.InitializeChat(idPublicKeyAlice, bobPreKeyBundle)
+	msgFromAlice, initializedProtocol, err := chatAlice.InitializeChat(idPublicKeyAlice, bobPreKeyBundle.PublicPart)
 
 	sharedSecret, err := chatBob.HandleInitialMessage(msgFromAlice, PreKeyBundlePrivate{
 		OneTimePreKey: bobPreKeyBundle.PrivatePart.OneTimePreKey,
