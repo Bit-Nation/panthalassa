@@ -101,6 +101,7 @@ func New(conf Config) *EthereumWS {
 		for {
 			select {
 			case req := <-etws.requestQueue:
+
 				// send request
 				if err := etws.conn.WriteJSON(req); err != nil {
 					logger.Error(err)
@@ -162,12 +163,12 @@ func New(conf Config) *EthereumWS {
 		for {
 			co, _, err := wsg.DefaultDialer.Dial(conf.WSUrl, nil)
 			if err == nil {
+				etws.conn = co
 				break
 			}
 			logger.Error(err)
 			// wait a bit. We don't want to stress the endpoint
 			time.Sleep(conf.Retry)
-			etws.conn = co
 		}
 
 		// signal the workers to start
