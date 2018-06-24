@@ -38,10 +38,14 @@ type Error struct {
 
 type Response struct {
 	JsonRPC  string      `json:"jsonrpc"`
-	RPCError Error       `json:"error"`
+	RPCError *Error      `json:"error,omitempty"`
 	Result   interface{} `json:"result"`
 	ID       uint        `json:"id"`
-	Error    error
+	error    error
+}
+
+func (r *Response) Error() error {
+	return r.error
 }
 
 type EthereumWS struct {
@@ -106,7 +110,7 @@ func New(conf Config) *EthereumWS {
 					respChan := etws.requests[req.ID]
 					etws.lock.Unlock()
 
-					respChan <- Response{Error: err}
+					respChan <- Response{error: err}
 				}
 			}
 		}
