@@ -10,10 +10,10 @@ func TestValidator(t *testing.T) {
 
 	v := New()
 
-	v.Set(0, TypeFunction)
-	require.Equal(t, 10, v.rules[0])
+	v.Set(0, &TypeFunction)
+	require.Equal(t, &TypeFunction, v.rules[0])
 
-	v.Set(1, TypeObject)
-	require.Equal(t, 30, v.rules[1])
+	v.Set(1, &TypeFunction)
+	require.Equal(t, &TypeFunction, v.rules[1])
 
 }
