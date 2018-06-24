@@ -3,7 +3,6 @@ package ethws
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -21,7 +20,7 @@ type Config struct {
 }
 
 type Request struct {
-	ID      uint          `json:"id"`
+	ID      int64         `json:"id"`
 	Method  string        `json:"method"`
 	Params  []interface{} `json:"params"`
 	JsonRPC string        `json:"jsonrpc"`
@@ -40,7 +39,7 @@ type Response struct {
 	JsonRPC  string      `json:"jsonrpc"`
 	RPCError *Error      `json:"error,omitempty"`
 	Result   interface{} `json:"result"`
-	ID       uint        `json:"id"`
+	ID       int64       `json:"id"`
 	error    error
 }
 
@@ -52,7 +51,7 @@ type EthereumWS struct {
 	lock sync.Mutex
 	// requests that need to be send
 	requestQueue chan Request
-	requests     map[uint]chan<- Response
+	requests     map[int64]chan<- Response
 	conn         *wsg.Conn
 }
 
@@ -65,10 +64,10 @@ func (ws *EthereumWS) SendRequest(r Request) (<-chan Response, error) {
 	ws.lock.Lock()
 	defer ws.lock.Unlock()
 	for {
-		id := rand.Uint64()
-		if _, exist := ws.requests[uint(id)]; !exist {
-			r.ID = uint(id)
-			ws.requests[uint(id)] = c
+		id := time.Now().UnixNano()
+		if _, exist := ws.requests[id]; !exist {
+			r.ID = id
+			ws.requests[id] = c
 			break
 		}
 	}
@@ -89,7 +88,7 @@ func New(conf Config) *EthereumWS {
 	etws := &EthereumWS{
 		lock:         sync.Mutex{},
 		requestQueue: make(chan Request, 1000),
-		requests:     map[uint]chan<- Response{},
+		requests:     map[int64]chan<- Response{},
 	}
 
 	// worker that sends the requests
