@@ -22,7 +22,7 @@ func TestEthereumWebSocket(t *testing.T) {
 	require.Nil(t, err)
 
 	resp := <-respChan
-	require.Nil(t, resp.Error)
+	require.Nil(t, resp.Error())
 
 	require.Equal(t, "2.0", resp.JsonRPC)
 	require.Equal(t, "0x3f", resp.Result)
