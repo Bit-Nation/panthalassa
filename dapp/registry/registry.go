@@ -6,12 +6,15 @@ import (
 	"errors"
 	"io/ioutil"
 	"sync"
+	"time"
 
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
+	ethWSMod "github.com/Bit-Nation/panthalassa/dapp/module/ethWebSocket"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
 	reactMod "github.com/Bit-Nation/panthalassa/dapp/module/react"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
+	ethws "github.com/Bit-Nation/panthalassa/ethws"
 	log "github.com/ipfs/go-log"
 	host "github.com/libp2p/go-libp2p-host"
 	net "github.com/libp2p/go-libp2p-net"
@@ -30,10 +33,16 @@ type Registry struct {
 	dAppInstances  map[string]*dapp.DApp
 	closeChan      chan *dapp.JsonRepresentation
 	client         Client
+	conf           Config
+	ethWS          *ethws.EthereumWS
+}
+
+type Config struct {
+	EthWSEndpoint string
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, client Client) *Registry {
+func NewDAppRegistry(h host.Host, client Client, conf Config) *Registry {
 
 	r := &Registry{
 		host:           h,
@@ -42,6 +51,11 @@ func NewDAppRegistry(h host.Host, client Client) *Registry {
 		dAppInstances:  map[string]*dapp.DApp{},
 		closeChan:      make(chan *dapp.JsonRepresentation),
 		client:         client,
+		conf:           conf,
+		ethWS: ethws.New(ethws.Config{
+			Retry: time.Second,
+			WSUrl: conf.EthWSEndpoint,
+		}),
 	}
 
 	// add worker to remove DApps
@@ -76,6 +90,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 			Client: r.client,
 			Logger: l,
 		},
+		ethWSMod.New(l, r.ethWS),
 	}
 
 	// if there is a stream for this DApp
