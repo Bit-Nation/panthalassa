@@ -17,10 +17,10 @@ type Initialisation struct {
 	Secret string  `json:"secret"`
 }
 
-func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, preKeyBundle PanthalassaPreKeyBundle) (Message, x3dh.InitializedProtocol, error) {
+func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, pubPreKeyBundle PreKeyBundlePublic) (Message, x3dh.InitializedProtocol, error) {
 
 	// init the protocol
-	ip, err := c.x3dh.CalculateSecret(&preKeyBundle.PublicPart)
+	ip, err := c.x3dh.CalculateSecret(&pubPreKeyBundle)
 	if err != nil {
 		return Message{}, x3dh.InitializedProtocol{}, err
 	}
