@@ -1,9 +1,9 @@
 package modal
 
 import (
-	otto "github.com/robertkrimen/otto"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/op/go-logging"
+	otto "github.com/robertkrimen/otto"
 )
 
 type Device interface {
@@ -30,7 +30,7 @@ func (m *Module) Name() string {
 func (m *Module) Register(vm *otto.Otto) error {
 
 	return vm.Set("showModal", func(call otto.FunctionCall) otto.Value {
-		
+
 		// validate function call
 		v := validator.New()
 		v.Set(0, &validator.TypeString)
@@ -38,13 +38,13 @@ func (m *Module) Register(vm *otto.Otto) error {
 		if err := v.Validate(vm, call); err != nil {
 			return *err
 		}
-		
+
 		// request to show modal
 		err := m.device.ShowModal(
 			call.Argument(0).String(),
 			call.Argument(1).String(),
 		)
-		
+
 		// call callback if passed in
 		fn := call.Argument(2)
 		if fn.IsFunction() {
@@ -54,9 +54,9 @@ func (m *Module) Register(vm *otto.Otto) error {
 			}
 			fn.Call(fn)
 		}
-		
+
 		return otto.Value{}
-		
+
 	})
 
 }
