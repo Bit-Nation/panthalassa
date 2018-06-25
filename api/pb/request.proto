@@ -39,4 +39,11 @@ message Request {
     DRKeyStoreCount dRKeyStoreCount = 6;
     DRKeyStoreAll dRKeyStoreAll = 7;
 
+    message ShowModal {
+        string title = 1;
+        string layout = 2;
+    }
+
+    ShowModal showModal = 8;
+
 }

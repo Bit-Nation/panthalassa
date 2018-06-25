@@ -42,7 +42,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 	}
 
 	// device api
-	api := api.New(client)
+	api := api.New(client, km)
 
 	// we don't need the rendevouz key for now
 	m, errReporter, err := mesh.New(pk, api, "", config.SignedProfile)

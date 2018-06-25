@@ -24,7 +24,7 @@ func TestAPI_addAndCutRequestWorks(t *testing.T) {
 	req.RequestID = "hi"
 
 	// api
-	api := New(&testUpStream{})
+	api := New(&testUpStream{}, keyManagerFactory())
 
 	// make sure request doesn't exist
 	_, exist := api.requests["hi"]
@@ -49,12 +49,14 @@ func TestRequestResponse(t *testing.T) {
 
 	var receivedRequestID string
 
+	km := keyManagerFactory()
+
 	// api
 	api := New(&testUpStream{
 		sendFn: func(data string) {
 			dataChan <- data
 		},
-	})
+	}, km)
 
 	go func() {
 		select {

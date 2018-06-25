@@ -8,10 +8,12 @@ import (
 	"sync"
 	"time"
 
+	api "github.com/Bit-Nation/panthalassa/api"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
 	ethWSMod "github.com/Bit-Nation/panthalassa/dapp/module/ethWebSocket"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
+	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
 	reactMod "github.com/Bit-Nation/panthalassa/dapp/module/react"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
@@ -35,6 +37,7 @@ type Registry struct {
 	client         Client
 	conf           Config
 	ethWS          *ethws.EthereumWS
+	api            *api.API
 }
 
 type Config struct {
@@ -42,7 +45,7 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, client Client, conf Config) *Registry {
+func NewDAppRegistry(h host.Host, client Client, conf Config, api *api.API) *Registry {
 
 	r := &Registry{
 		host:           h,
@@ -56,6 +59,7 @@ func NewDAppRegistry(h host.Host, client Client, conf Config) *Registry {
 			Retry: time.Second,
 			WSUrl: conf.EthWSEndpoint,
 		}),
+		api: api,
 	}
 
 	// add worker to remove DApps
@@ -91,6 +95,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 			Logger: l,
 		},
 		ethWSMod.New(l, r.ethWS),
+		modalMod.New(l, r.api),
 	}
 
 	// if there is a stream for this DApp
