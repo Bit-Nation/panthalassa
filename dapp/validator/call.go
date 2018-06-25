@@ -3,68 +3,75 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 
 	otto "github.com/robertkrimen/otto"
 )
 
-const (
-	TypeFunction = iota
-	TypeNumber   = iota
-	TypeObject   = iota
-)
+type Validator = func(call otto.FunctionCall, position int) error
 
-var validators = map[int]func(call otto.FunctionCall, position int) error{
-	TypeFunction: func(call otto.FunctionCall, position int) error {
-		if !call.Argument(position).IsFunction() {
-			return errors.New(fmt.Sprintf("expected parameter %d to be of type function", position))
-		}
-		return nil
-	},
-	TypeNumber: func(call otto.FunctionCall, position int) error {
-		if !call.Argument(position).IsNumber() {
-			return errors.New(fmt.Sprintf("expected parameter %d to be of type number", position))
-		}
-		return nil
-	},
-	TypeObject: func(call otto.FunctionCall, position int) error {
-		if !call.Argument(position).IsObject() {
-			return errors.New(fmt.Sprintf("expected parameter %d to be of type object", position))
-		}
-		return nil
-	},
+var TypeFunction = func(call otto.FunctionCall, position int) error {
+	if !call.Argument(position).IsFunction() {
+		return errors.New(fmt.Sprintf("expected parameter %d to be of type function", position))
+	}
+	return nil
+}
+
+var TypeNumber = func(call otto.FunctionCall, position int) error {
+	if !call.Argument(position).IsNumber() {
+		return errors.New(fmt.Sprintf("expected parameter %d to be of type number", position))
+	}
+	return nil
+}
+
+var TypeString = func(call otto.FunctionCall, position int) error {
+	if !call.Argument(position).IsString() {
+		return errors.New(fmt.Sprintf("expected parameter %d to be of type string", position))
+	}
+	return nil
 }
 
 type CallValidator struct {
 	lock  sync.Mutex
-	rules map[int]int
+	rules map[int]*Validator
 }
 
 // add validation rule
-func (v *CallValidator) Set(index int, expectedType int) error {
+func (v *CallValidator) Set(index int, validator *Validator) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	_, exist := validators[expectedType]
-	if !exist {
-		return errors.New("type does not exist")
-	}
-	v.rules[index] = expectedType
+	v.rules[index] = validator
 	return nil
 }
 
-func (v *CallValidator) Validate(call otto.FunctionCall) error {
+func (v *CallValidator) Validate(vm *otto.Otto, call otto.FunctionCall) *otto.Value {
 
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	for index, expectedType := range v.rules {
-		validator, exist := validators[expectedType]
-		if !exist {
-			return errors.New(fmt.Sprintf("couldn't find validator for type: %d", index))
-		}
-		if err := validator(call, index); err != nil {
-			return err
-		}
+
+	keys := make([]int, 0)
+	for k, _ := range v.rules {
+		keys = append(keys, k)
 	}
+	sort.Ints(keys)
+
+	for k := range keys {
+
+		validator, exist := v.rules[k]
+		if !exist {
+			ve := vm.MakeCustomError("ValidationError", fmt.Sprintf("couldn't find validator for type: %d", k))
+			return &ve
+		}
+
+		v := *validator
+		if err := v(call, k); err != nil {
+			ve := vm.MakeCustomError("ValidationError", err.Error())
+			return &ve
+		}
+
+	}
+
 	return nil
 
 }
@@ -72,6 +79,6 @@ func (v *CallValidator) Validate(call otto.FunctionCall) error {
 func New() *CallValidator {
 	return &CallValidator{
 		lock:  sync.Mutex{},
-		rules: map[int]int{},
+		rules: map[int]*Validator{},
 	}
 }
