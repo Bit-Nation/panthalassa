@@ -6,6 +6,10 @@ import (
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
 )
 
+func (a *API) ShowModal(title, layout string) error {
+	return a.dAppApi.ShowModal(title, layout)
+}
+
 type DAppApi struct {
 	api *API
 }

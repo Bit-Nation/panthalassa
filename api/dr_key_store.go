@@ -10,6 +10,28 @@ import (
 	dr "github.com/tiabc/doubleratchet"
 )
 
+// This functions just proxy the call from the API main
+// object down to the Key store api
+func (a *API) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) {
+	return a.drKeyStoreApi.Get(k, msgNum)
+}
+func (a *API) Put(k dr.Key, msgNum uint, mk dr.Key) {
+	a.drKeyStoreApi.Put(k, msgNum, mk)
+}
+func (a *API) DeleteMk(k dr.Key, msgNum uint) {
+	a.drKeyStoreApi.DeleteMk(k, msgNum)
+}
+func (a *API) DeletePk(k dr.Key) {
+	a.drKeyStoreApi.DeletePk(k)
+}
+func (a *API) Count(k dr.Key) uint {
+	return a.drKeyStoreApi.Count(k)
+}
+func (a *API) All() map[dr.Key]map[uint]dr.Key {
+	return a.drKeyStoreApi.All()
+}
+
+// Double ratched key store api
 type DoubleRatchetKeyStoreApi struct {
 	api *API
 	km  *keyManager.KeyManager

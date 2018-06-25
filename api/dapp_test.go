@@ -1,7 +1,6 @@
 package api
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -14,15 +13,11 @@ func TestAPI_ShowModal(t *testing.T) {
 
 	c := make(chan string)
 
-	api := API{
-		lock:     sync.Mutex{},
-		requests: map[string]chan *Response{},
-		client: &UpStreamTestImpl{
-			f: func(data string) {
-				c <- data
-			},
+	api := New(&UpStreamTestImpl{
+		f: func(data string) {
+			c <- data
 		},
-	}
+	}, keyManagerFactory())
 
 	go func() {
 

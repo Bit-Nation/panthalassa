@@ -7,6 +7,7 @@ import (
 	"time"
 
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
+	"github.com/Bit-Nation/panthalassa/keyManager"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	uuid "github.com/satori/go.uuid"
@@ -19,20 +20,33 @@ type UpStream interface {
 }
 
 // Create new api with given client
-func New(client UpStream) *API {
-	return &API{
+func New(client UpStream, km *keyManager.KeyManager) *API {
+
+	a := &API{
 		lock:     sync.Mutex{},
 		requests: map[string]chan *Response{},
 		client:   client,
 	}
+
+	a.drKeyStoreApi = DoubleRatchetKeyStoreApi{
+		api: a,
+		km:  km,
+	}
+
+	a.dAppApi = DAppApi{
+		api: a,
+	}
+
+	return a
+
 }
 
 type API struct {
-	DoubleRatchetKeyStoreApi
-	DAppApi
-	lock     sync.Mutex
-	requests map[string]chan *Response
-	client   UpStream
+	drKeyStoreApi DoubleRatchetKeyStoreApi
+	dAppApi       DAppApi
+	lock          sync.Mutex
+	requests      map[string]chan *Response
+	client        UpStream
 }
 
 // This represent an api response
