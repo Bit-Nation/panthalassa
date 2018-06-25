@@ -3,18 +3,18 @@ package api
 import (
 	"sync"
 	"testing"
+	"time"
 
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
 	proto "github.com/golang/protobuf/proto"
 	require "github.com/stretchr/testify/require"
-	"time"
 )
 
 func TestAPI_ShowModal(t *testing.T) {
 
 	c := make(chan string)
 
-	api := &API{
+	api := API{
 		lock:     sync.Mutex{},
 		requests: map[string]chan *Response{},
 		client: &UpStreamTestImpl{
@@ -22,10 +22,6 @@ func TestAPI_ShowModal(t *testing.T) {
 				c <- data
 			},
 		},
-	}
-
-	dAppApi := DApp{
-		api: api,
 	}
 
 	go func() {
@@ -53,7 +49,7 @@ func TestAPI_ShowModal(t *testing.T) {
 
 	}()
 
-	err := dAppApi.ShowModal("Request Money", "{}")
+	err := api.ShowModal("Request Money", "{}")
 	require.Nil(t, err)
 
 }

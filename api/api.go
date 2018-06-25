@@ -29,6 +29,7 @@ func New(client UpStream) *API {
 
 type API struct {
 	DoubleRatchetKeyStoreApi
+	DAppApi
 	lock     sync.Mutex
 	requests map[string]chan *Response
 	client   UpStream

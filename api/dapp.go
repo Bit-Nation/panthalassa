@@ -6,12 +6,12 @@ import (
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
 )
 
-type DApp struct {
+type DAppApi struct {
 	api *API
 }
 
 // request to show a modal
-func (a *DApp) ShowModal(title, layout string) error {
+func (a *DAppApi) ShowModal(title, layout string) error {
 
 	// send request
 	_, err := a.api.request(&pb.Request{
