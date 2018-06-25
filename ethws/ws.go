@@ -1,0 +1,181 @@
+package ethws
+
+import (
+	"encoding/json"
+	"fmt"
+	"sync"
+	"time"
+
+	wsg "github.com/gorilla/websocket"
+	log "github.com/ipfs/go-log"
+)
+
+const rpcVersion = "2.0"
+
+var logger = log.Logger("ethws")
+
+type Config struct {
+	Retry time.Duration
+	WSUrl string
+}
+
+type Request struct {
+	ID      int64         `json:"id"`
+	Method  string        `json:"method"`
+	Params  []interface{} `json:"params"`
+	JsonRPC string        `json:"jsonrpc"`
+}
+
+func (r *Request) Marshal() ([]byte, error) {
+	return json.Marshal(r)
+}
+
+type Error struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type Response struct {
+	JsonRPC  string      `json:"jsonrpc"`
+	RPCError *Error      `json:"error,omitempty"`
+	Result   interface{} `json:"result"`
+	ID       int64       `json:"id"`
+	error    error
+}
+
+func (r *Response) Error() error {
+	return r.error
+}
+
+type EthereumWS struct {
+	lock sync.Mutex
+	// requests that need to be send
+	requestQueue chan Request
+	requests     map[int64]chan<- Response
+	conn         *wsg.Conn
+}
+
+// send an request to ethereum network
+func (ws *EthereumWS) SendRequest(r Request) (<-chan Response, error) {
+
+	c := make(chan Response)
+
+	// add request to stack
+	ws.lock.Lock()
+	defer ws.lock.Unlock()
+	for {
+		id := time.Now().UnixNano()
+		if _, exist := ws.requests[id]; !exist {
+			r.ID = id
+			ws.requests[id] = c
+			break
+		}
+	}
+
+	// send request to queue
+	ws.requestQueue <- r
+
+	return c, nil
+
+}
+
+// create new ethereum websocket
+func New(conf Config) *EthereumWS {
+
+	startSendWorker := make(chan bool)
+	startReadWorker := make(chan bool)
+
+	etws := &EthereumWS{
+		lock:         sync.Mutex{},
+		requestQueue: make(chan Request, 1000),
+		requests:     map[int64]chan<- Response{},
+	}
+
+	// worker that sends the requests
+	go func() {
+
+		// wait for connection
+		<-startSendWorker
+
+		// send requests
+		for {
+			select {
+			case req := <-etws.requestQueue:
+
+				// send request
+				if err := etws.conn.WriteJSON(req); err != nil {
+					logger.Error(err)
+
+					etws.lock.Lock()
+					respChan := etws.requests[req.ID]
+					etws.lock.Unlock()
+
+					respChan <- Response{error: err}
+				}
+			}
+		}
+
+	}()
+
+	// worker that read response from websocket
+	go func() {
+
+		// wait to start worker
+		<-startReadWorker
+
+		for {
+
+			// read message
+			_, response, err := etws.conn.ReadMessage()
+			if err != nil {
+				logger.Error(err)
+				continue
+			}
+
+			// unmarshal
+			var resp Response
+			if err := json.Unmarshal(response, &resp); err != nil {
+				logger.Error(err)
+				continue
+			}
+
+			// get response channel
+			etws.lock.Lock()
+			respChan, exist := etws.requests[resp.ID]
+			if !exist {
+				logger.Error(fmt.Sprintf("failed to get response channel for ID: %d", resp.ID))
+				continue
+			}
+			delete(etws.requests, resp.ID)
+			etws.lock.Unlock()
+
+			// send response
+			respChan <- resp
+
+		}
+
+	}()
+
+	// connect to ethereum node
+	go func() {
+
+		// try to connect till success
+		for {
+			co, _, err := wsg.DefaultDialer.Dial(conf.WSUrl, nil)
+			if err == nil {
+				etws.conn = co
+				break
+			}
+			logger.Error(err)
+			// wait a bit. We don't want to stress the endpoint
+			time.Sleep(conf.Retry)
+		}
+
+		// signal the workers to start
+		startReadWorker <- true
+		startSendWorker <- true
+
+	}()
+
+	return etws
+}
