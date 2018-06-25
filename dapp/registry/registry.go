@@ -13,6 +13,7 @@ import (
 	ethWSMod "github.com/Bit-Nation/panthalassa/dapp/module/ethWebSocket"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
 	reactMod "github.com/Bit-Nation/panthalassa/dapp/module/react"
+	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
 	log "github.com/ipfs/go-log"
@@ -21,6 +22,7 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	golog "github.com/op/go-logging"
+	api "github.com/Bit-Nation/panthalassa/api"
 )
 
 var logger = log.Logger("dapp - registry")
@@ -35,6 +37,7 @@ type Registry struct {
 	client         Client
 	conf           Config
 	ethWS          *ethws.EthereumWS
+	api 		   *api.API
 }
 
 type Config struct {
@@ -42,7 +45,7 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, client Client, conf Config) *Registry {
+func NewDAppRegistry(h host.Host, client Client, conf Config, api *api.API) *Registry {
 
 	r := &Registry{
 		host:           h,
@@ -56,6 +59,7 @@ func NewDAppRegistry(h host.Host, client Client, conf Config) *Registry {
 			Retry: time.Second,
 			WSUrl: conf.EthWSEndpoint,
 		}),
+		api: api,
 	}
 
 	// add worker to remove DApps
@@ -91,6 +95,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 			Logger: l,
 		},
 		ethWSMod.New(l, r.ethWS),
+		modalMod.New(l, r.api),
 	}
 
 	// if there is a stream for this DApp
