@@ -8,12 +8,13 @@ import (
 	"sync"
 	"time"
 
+	api "github.com/Bit-Nation/panthalassa/api"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
 	ethWSMod "github.com/Bit-Nation/panthalassa/dapp/module/ethWebSocket"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
-	reactMod "github.com/Bit-Nation/panthalassa/dapp/module/react"
 	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
+	reactMod "github.com/Bit-Nation/panthalassa/dapp/module/react"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
 	log "github.com/ipfs/go-log"
@@ -22,7 +23,6 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	golog "github.com/op/go-logging"
-	api "github.com/Bit-Nation/panthalassa/api"
 )
 
 var logger = log.Logger("dapp - registry")
@@ -37,7 +37,7 @@ type Registry struct {
 	client         Client
 	conf           Config
 	ethWS          *ethws.EthereumWS
-	api 		   *api.API
+	api            *api.API
 }
 
 type Config struct {
