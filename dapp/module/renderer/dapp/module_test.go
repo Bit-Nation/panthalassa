@@ -34,7 +34,7 @@ func TestModule_OpenDAppError(t *testing.T) {
 
 	})
 
-	_, err := m.OpenDApp(`{key: "value"}`)
+	err := m.OpenDApp(`{key: "value"}`)
 	require.EqualError(t, err, "I am an error")
 
 }
@@ -59,14 +59,13 @@ func TestModule_OpenDAppSuccess(t *testing.T) {
 			panic("Expected value of key to be: value")
 		}
 
-		cb.Call(cb, nil, "{}")
+		cb.Call(cb, nil)
 
 		return otto.Value{}
 
 	})
 
-	layout, err := m.OpenDApp(`{key: "value"}`)
+	err := m.OpenDApp(`{key: "value"}`)
 	require.Nil(t, err)
-	require.Equal(t, "{}", layout)
 
 }

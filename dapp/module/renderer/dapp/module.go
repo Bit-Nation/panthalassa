@@ -24,11 +24,7 @@ func (m *Module) Name() string {
 // register module function in the VM
 // setOpenHandler must be called with a callback
 // the callback that is passed to `setOpenHandler`
-// should accept two parameters:
-// 1. The "context" will hold the context in which the DApp is opened
-// 2. The "callback" should be can be called with two parameters:
-// 		1. an error
-// 		2. the rendered layout
+// The "callback" should be can be called with an error if there is one
 func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
 	return vm.Set("setOpenHandler", func(call otto.FunctionCall) otto.Value {
@@ -51,7 +47,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 	})
 }
 
-func (m *Module) OpenDApp(context string) (string, error) {
+func (m *Module) OpenDApp(context string) error {
 
 	// lock
 	m.lock.Lock()
@@ -59,54 +55,40 @@ func (m *Module) OpenDApp(context string) (string, error) {
 
 	// make sure an renderer has been set
 	if m.renderer == nil {
-		return "", errors.New("failed to open DApp - no open handler set")
+		return errors.New("failed to open DApp - no open handler set")
 	}
 
 	// convert context to otto js object
 	ctxObj, err := m.vm.Object(fmt.Sprintf(`(%s)`, context))
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	type resp struct {
-		layout string
-		error  error
-	}
-
-	c := make(chan resp, 1)
+	c := make(chan error, 1)
 
 	// call the callback
 	_, err = m.renderer.Call(*m.renderer, ctxObj, func(call otto.FunctionCall) otto.Value {
 
 		// fetch params from the callback call
 		err := call.Argument(0)
-		layout := call.Argument(1)
-
-		r := resp{}
 
 		// if there is an error, set it in the response
 		if !err.IsUndefined() {
-			r.error = errors.New(err.String())
+			c <- errors.New(err.String())
+			return otto.Value{}
 		}
 
-		// set the layout in the response
-		if layout.IsString() {
-			r.layout = layout.String()
-		}
-
-		c <- r
+		c <- nil
 
 		return otto.Value{}
 
 	})
 
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	r := <-c
-
-	return r.layout, r.error
+	return <-c
 }
 
 func New(l *log.Logger) *Module {
