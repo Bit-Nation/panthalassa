@@ -3,8 +3,10 @@ package api
 import (
 	"time"
 
+	"encoding/hex"
 	"encoding/json"
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
+	"github.com/Bit-Nation/panthalassa/dapp"
 	"github.com/kataras/iris/core/errors"
 )
 
@@ -14,6 +16,10 @@ func (a *API) ShowModal(title, layout string) error {
 
 func (a *API) SendEthereumTransaction(value, to, data string) (string, error) {
 	return a.dAppApi.SendEthereumTransaction(value, to, data)
+}
+
+func (a *API) SaveDApp(dApp dapp.JsonRepresentation) error {
+	return a.dAppApi.SaveDApp(dApp)
 }
 
 type DAppApi struct {
@@ -78,4 +84,21 @@ func (a *DAppApi) SendEthereumTransaction(value, to, data string) (string, error
 
 	return string(raw), nil
 
+}
+
+// save DApp
+func (a *DAppApi) SaveDApp(dApp dapp.JsonRepresentation) error {
+
+	resp, err := a.api.request(&pb.Request{
+		SaveDApp: &pb.Request_SaveDApp{
+			AppName:          dApp.Name,
+			Code:             dApp.Code,
+			Signature:        hex.EncodeToString(dApp.Signature),
+			SigningPublicKey: hex.EncodeToString(dApp.SignaturePublicKey),
+		},
+	}, time.Second*10)
+
+	resp.Closer <- nil
+
+	return err
 }
