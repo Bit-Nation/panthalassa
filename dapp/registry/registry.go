@@ -127,6 +127,25 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 
 }
 
+// open DApp
+func (r *Registry) OpenDApp(id, context string) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	if _, exist := r.dAppInstances[id]; !exist {
+		return errors.New("it seems like that this app hasn't been started yet")
+	}
+	return r.dAppInstances[id].RenderDApp(context)
+}
+
+func (r *Registry) RenderMessage(id, msg, context string) (string, error) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	if _, exist := r.dAppInstances[id]; !exist {
+		return "", errors.New("it seems like that this app hasn't been started yet")
+	}
+	return r.dAppInstances[id].RenderMessage(msg, context)
+}
+
 // use this to connect to a development server
 func (r *Registry) ConnectDevelopmentServer(addr ma.Multiaddr) error {
 

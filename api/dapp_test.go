@@ -123,15 +123,15 @@ func TestAPI_SaveDApp(t *testing.T) {
 			if "My DApp" != app.AppName {
 				panic("Expected dapp name to be: My DApp")
 			}
-			
+
 			if "var i = 3" != app.Code {
 				panic("Expected dapp name to be: var i = 3")
 			}
-			
+
 			if "7075626b6579" != app.SigningPublicKey {
 				panic("Expected dapp name to be: My DApp")
 			}
-			
+
 			if "7369676e6174757265" != app.Signature {
 				panic("Expected dapp name to be: My DApp")
 			}

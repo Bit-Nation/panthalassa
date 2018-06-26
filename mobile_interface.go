@@ -15,6 +15,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/Bit-Nation/panthalassa/dapp"
 )
 
 var panthalassaInstance *Panthalassa
@@ -260,7 +261,12 @@ func GetIdentityPublicKey() (string, error) {
 
 // connect the host to DApp development server
 func ConnectToDAppDevHost(address string) error {
-
+	
+	//Exit if not started
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+	
 	maAddr, err := ma.NewMultiaddr(address)
 	if err != nil {
 		return err
@@ -268,4 +274,42 @@ func ConnectToDAppDevHost(address string) error {
 
 	return panthalassaInstance.dAppReg.ConnectDevelopmentServer(maAddr)
 
+}
+
+func OpenDApp(id, context string) error {
+	
+	//Exit if not started
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+	
+	return panthalassaInstance.dAppReg.OpenDApp(id, context)
+	
+}
+
+func StartDApp(dApp string) error {
+	
+	//Exit if not started
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+	
+	dAppResp := dapp.JsonRepresentation{}
+	if err := json.Unmarshal([]byte(dApp), dAppResp); err != nil {
+		return err
+	}
+	
+	return panthalassaInstance.dAppReg.StartDApp(&dAppResp)
+	
+}
+
+func RenderMessage(id, msg, context string) (string, error) {
+	
+	//Exit if not started
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa first")
+	}
+	
+	return panthalassaInstance.dAppReg.RenderMessage(id, msg, context)
+	
 }
