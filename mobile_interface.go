@@ -266,6 +266,6 @@ func ConnectToDAppDevHost(address string) error {
 		return err
 	}
 
-	return panthalassaInstance.dAppReg.ConnectDevelopmentServer(*maAddr)
+	return panthalassaInstance.dAppReg.ConnectDevelopmentServer(maAddr)
 
 }

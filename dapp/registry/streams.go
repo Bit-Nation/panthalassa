@@ -55,7 +55,7 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 			}
 
 			// push received DApp upstream
-			if err := r.client.HandleReceivedDApp(app); err != nil {
+			if err := r.api.SaveDApp(app); err != nil {
 				logger.Error(err)
 			}
 
