@@ -14,7 +14,6 @@ import (
 	ethWSMod "github.com/Bit-Nation/panthalassa/dapp/module/ethWebSocket"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
 	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
-	reactMod "github.com/Bit-Nation/panthalassa/dapp/module/react"
 	sendEthTxMod "github.com/Bit-Nation/panthalassa/dapp/module/sendEthTx"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
@@ -35,7 +34,6 @@ type Registry struct {
 	dAppDevStreams map[string]net.Stream
 	dAppInstances  map[string]*dapp.DApp
 	closeChan      chan *dapp.JsonRepresentation
-	client         Client
 	conf           Config
 	ethWS          *ethws.EthereumWS
 	api            *api.API
@@ -46,7 +44,7 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, client Client, conf Config, api *api.API) *Registry {
+func NewDAppRegistry(h host.Host, conf Config, api *api.API) *Registry {
 
 	r := &Registry{
 		host:           h,
@@ -54,7 +52,6 @@ func NewDAppRegistry(h host.Host, client Client, conf Config, api *api.API) *Reg
 		dAppDevStreams: map[string]net.Stream{},
 		dAppInstances:  map[string]*dapp.DApp{},
 		closeChan:      make(chan *dapp.JsonRepresentation),
-		client:         client,
 		conf:           conf,
 		ethWS: ethws.New(ethws.Config{
 			Retry: time.Second,
@@ -91,10 +88,6 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 
 	vmModules := []module.Module{
 		&uuidv4Mod.UUIDV4{},
-		&reactMod.React{
-			Client: r.client,
-			Logger: l,
-		},
 		ethWSMod.New(l, r.ethWS),
 		modalMod.New(l, r.api),
 		sendEthTxMod.New(r.api, l),
