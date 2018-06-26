@@ -32,6 +32,13 @@ var TypeString = func(call otto.FunctionCall, position int) error {
 	return nil
 }
 
+var TypeObject = func(call otto.FunctionCall, position int) error {
+	if !call.Argument(position).IsString() {
+		return errors.New(fmt.Sprintf("expected parameter %d to be of type string", position))
+	}
+	return nil
+}
+
 type CallValidator struct {
 	lock  sync.Mutex
 	rules map[int]*Validator
