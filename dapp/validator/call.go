@@ -33,8 +33,8 @@ var TypeString = func(call otto.FunctionCall, position int) error {
 }
 
 var TypeObject = func(call otto.FunctionCall, position int) error {
-	if !call.Argument(position).IsString() {
-		return errors.New(fmt.Sprintf("expected parameter %d to be of type string", position))
+	if !call.Argument(position).IsObject() {
+		return errors.New(fmt.Sprintf("expected parameter %d to be of type object", position))
 	}
 	return nil
 }
