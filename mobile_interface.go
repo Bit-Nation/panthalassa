@@ -3,16 +3,18 @@ package panthalassa
 import (
 	"encoding/json"
 	"errors"
+	"time"
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
 	chat "github.com/Bit-Nation/panthalassa/chat"
+	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
-	"time"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 var panthalassaInstance *Panthalassa
@@ -25,6 +27,7 @@ type UpStream interface {
 type StartConfig struct {
 	EncryptedKeyManager string `json:"encrypted_key_manager"`
 	SignedProfile       string `json:"signed_profile"`
+	EthWsEndpoint       string `json:"eth_ws_endpoint"`
 }
 
 // create a new panthalassa instance
@@ -77,6 +80,9 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		api:      api,
 		mesh:     m,
 		chat:     &c,
+		dAppReg: dAppReg.NewDAppRegistry(m.Host, dAppReg.Config{
+			EthWSEndpoint: config.EthWsEndpoint,
+		}, api),
 	}
 
 	return nil
@@ -249,5 +255,17 @@ func GetIdentityPublicKey() (string, error) {
 	}
 
 	return panthalassaInstance.km.IdentityPublicKey()
+
+}
+
+// connect the host to DApp development server
+func ConnectToDAppDevHost(address string) error {
+
+	maAddr, err := ma.NewMultiaddr(address)
+	if err != nil {
+		return err
+	}
+
+	return panthalassaInstance.dAppReg.ConnectDevelopmentServer(*maAddr)
 
 }
