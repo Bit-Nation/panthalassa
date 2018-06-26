@@ -34,7 +34,7 @@ func TestMessage_SignVerify(t *testing.T) {
 			"key": "value",
 		},
 		DoubleratchetMessage: doubleratchet.Message{},
-		IDPubKey:             pubKeyRaw,
+		IDPubKey:             hex.EncodeToString(pubKeyRaw),
 	}
 
 	require.Nil(t, m.Sign(km))

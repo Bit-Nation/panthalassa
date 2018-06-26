@@ -48,7 +48,7 @@ func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, pubPreKeyBundle PreKey
 			"ephemeral_key":         hex.EncodeToString(ip.EphemeralKey[:]),
 		},
 		DoubleratchetMessage: msg,
-		IDPubKey:             idPubKey,
+		IDPubKey:             hex.EncodeToString(idPubKey),
 	}
 
 	// sign message

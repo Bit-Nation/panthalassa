@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"encoding/hex"
 	"github.com/Bit-Nation/panthalassa/keyManager"
 	"github.com/tiabc/doubleratchet"
 	"golang.org/x/crypto/ed25519"
@@ -18,7 +19,7 @@ type Message struct {
 	AdditionalData       map[string]string     `json:"additional_data"`
 	DoubleratchetMessage doubleratchet.Message `json:"doubleratchet_message"`
 	Signature            []byte                `json:"signature"`
-	IDPubKey             ed25519.PublicKey     `json:"id_public_key"`
+	IDPubKey             string                `json:"id_public_key"`
 }
 
 // hash the message data. Exclude signature
@@ -86,5 +87,10 @@ func (m *Message) VerifySignature() (bool, error) {
 		return false, err
 	}
 
-	return ed25519.Verify(m.IDPubKey, h, m.Signature), nil
+	k, err := hex.DecodeString(m.IDPubKey)
+	if err != nil {
+		return false, err
+	}
+
+	return ed25519.Verify(k, h, m.Signature), nil
 }
