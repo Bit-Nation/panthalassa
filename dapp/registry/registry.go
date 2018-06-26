@@ -127,6 +127,13 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 
 }
 
+// open DApp
+func (r *Registry) OpenDApp(id, context string) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	return r.dAppInstances[id].RenderDApp(context)
+}
+
 // use this to connect to a development server
 func (r *Registry) ConnectDevelopmentServer(addr ma.Multiaddr) error {
 
