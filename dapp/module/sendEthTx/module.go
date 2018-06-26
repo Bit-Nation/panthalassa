@@ -9,7 +9,7 @@ import (
 type SendEthereumTransaction interface {
 	// will return a JSON serialized transaction
 	// and an error if there is one
-	Send(value, to, data string) (string, error)
+	SendEthereumTransaction(value, to, data string) (string, error)
 }
 
 func New(ethApi SendEthereumTransaction, l *log.Logger) *Module {
@@ -76,7 +76,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			}
 
 			// try to sign a transaction
-			tx, err := m.ethApi.Send(
+			tx, err := m.ethApi.SendEthereumTransaction(
 				value.String(),
 				to.String(),
 				data.String(),

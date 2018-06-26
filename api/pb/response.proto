@@ -27,4 +27,24 @@ message Response {
     DRKeyStoreCount dRKeyStoreCount = 4;
     DRKeyStoreAll dRKeyStoreAll = 5;
 
+    message SendEthereumTransaction {
+        uint32 nonce = 1;
+        // must be base 10!
+        string gasPrice = 2;
+        // must be base 10!
+        string gasLimit = 3;
+        string to = 4;
+        // must be base 10!
+        string value = 5;
+        string data = 6;
+        string v = 7;
+        string r = 8;
+        string s = 9;
+        uint32 chainID = 10;
+        string from = 11;
+        string hash = 12;
+    }
+
+    SendEthereumTransaction sendEthereumTransaction = 6;
+
 }

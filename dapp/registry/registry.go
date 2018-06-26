@@ -15,6 +15,7 @@ import (
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
 	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
 	reactMod "github.com/Bit-Nation/panthalassa/dapp/module/react"
+	sendEthTxMod "github.com/Bit-Nation/panthalassa/dapp/module/sendEthTx"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
 	log "github.com/ipfs/go-log"
@@ -96,6 +97,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 		},
 		ethWSMod.New(l, r.ethWS),
 		modalMod.New(l, r.api),
+		sendEthTxMod.New(r.api, l),
 	}
 
 	// if there is a stream for this DApp

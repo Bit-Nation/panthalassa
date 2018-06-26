@@ -13,7 +13,7 @@ type testApi struct {
 	send func(value, to, data string) (string, error)
 }
 
-func (a *testApi) Send(value, to, data string) (string, error) {
+func (a *testApi) SendEthereumTransaction(value, to, data string) (string, error) {
 	return a.send(value, to, data)
 }
 

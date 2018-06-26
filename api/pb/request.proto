@@ -46,4 +46,12 @@ message Request {
 
     ShowModal showModal = 8;
 
+    message SendEthereumTransaction {
+        string value = 1;
+        string to = 2;
+        string data = 3;
+    }
+
+    SendEthereumTransaction sendEthereumTransaction = 9;
+
 }
