@@ -6,6 +6,7 @@ import (
 
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
 	dAppRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/dapp"
+	msgRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/message"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
@@ -16,6 +17,7 @@ type DApp struct {
 	app          *JsonRepresentation
 	closeChan    chan<- *JsonRepresentation
 	dAppRenderer *dAppRenderer.Module
+	msgRenderer  *msgRenderer.Module
 }
 
 // close DApp
@@ -32,6 +34,10 @@ func (d *DApp) ID() string {
 
 func (d *DApp) RenderDApp(context string) error {
 	return d.dAppRenderer.OpenDApp(context)
+}
+
+func (d *DApp) RenderMessage(msg, context string) (string, error) {
+	return d.msgRenderer.RenderMessage(msg, context)
 }
 
 // will start a DApp based on the given config file
@@ -63,6 +69,12 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 	if err := dr.Register(vm); err != nil {
 		return nil, err
 	}
+	
+	// register message renderer
+	mr := msgRenderer.New(l)
+	if err := dr.Register(vm); err != nil {
+		return nil, err
+	}
 
 	dApp := &DApp{
 		vm:           vm,
@@ -70,6 +82,7 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 		app:          app,
 		closeChan:    closer,
 		dAppRenderer: dr,
+		msgRenderer:  mr,
 	}
 
 	go func() {
