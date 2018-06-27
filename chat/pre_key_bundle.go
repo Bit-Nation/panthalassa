@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 
+	"encoding/hex"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
@@ -11,11 +12,11 @@ import (
 )
 
 type PreKeyBundlePublic struct {
-	BChatIdentityKey x3dh.PublicKey    `json:"chat_identity_key"`
-	BSignedPreKey    x3dh.PublicKey    `json:"signed_pre_key"`
-	BOneTimePreKey   x3dh.PublicKey    `json:"one_time_pre_key"`
-	BIdentityKey     ed25519.PublicKey `json:"identity_key"`
-	BSignature       []byte            `json:"identity_key_signature"`
+	BChatIdentityKey x3dh.PublicKey `json:"chat_identity_key"`
+	BSignedPreKey    x3dh.PublicKey `json:"signed_pre_key"`
+	BOneTimePreKey   x3dh.PublicKey `json:"one_time_pre_key"`
+	BIdentityKey     string         `json:"identity_key"`
+	BSignature       []byte         `json:"identity_key_signature"`
 }
 
 type PreKeyBundlePrivate struct {
@@ -68,7 +69,11 @@ func (b *PreKeyBundlePublic) OneTimePreKey() *x3dh.PublicKey {
 }
 
 func (b *PreKeyBundlePublic) ValidSignature() bool {
-	return ed25519.Verify(b.BIdentityKey, b.hashBundle(), b.BSignature)
+	rawIdKey, err := hex.DecodeString(b.BIdentityKey)
+	if err != nil {
+		return false
+	}
+	return ed25519.Verify(rawIdKey, b.hashBundle(), b.BSignature)
 }
 
 // sign profile with given private key

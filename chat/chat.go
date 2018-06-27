@@ -3,7 +3,6 @@ package chat
 import (
 	"crypto/rand"
 	"crypto/sha512"
-	"encoding/hex"
 	"errors"
 
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
@@ -65,18 +64,12 @@ func (c *Chat) NewPreKeyBundle() (PanthalassaPreKeyBundle, error) {
 
 	idPubKeyStr, err := c.km.IdentityPublicKey()
 
-	//unmarshal public key
-	decodedPubIdKey, err := hex.DecodeString(idPubKeyStr)
-	if err != nil {
-		return PanthalassaPreKeyBundle{}, err
-	}
-
 	preKeyB := PanthalassaPreKeyBundle{
 		PublicPart: PreKeyBundlePublic{
 			BChatIdentityKey: chatIdKey.PublicKey,
 			BSignedPreKey:    signedPreKey.PublicKey,
 			BOneTimePreKey:   oneTimePreKey.PublicKey,
-			BIdentityKey:     decodedPubIdKey,
+			BIdentityKey:     idPubKeyStr,
 		},
 		PrivatePart: PreKeyBundlePrivate{
 			OneTimePreKey: oneTimePreKey.PrivateKey,
