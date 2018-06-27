@@ -142,10 +142,13 @@ func (a *API) request(req *pb.Request, timeOut time.Duration) (*Response, error)
 	// or time out
 	select {
 	case res := <-reqChan:
+		// close the response here
+		// since we got an error back
+		// for our request
 		if res.Error != nil {
 			res.Closer <- nil
 		}
-		return res, res.Error
+		return nil, res.Error
 	case <-time.After(timeOut):
 		// remove request from stack
 		_, err := a.cutRequest(requestId.String())
