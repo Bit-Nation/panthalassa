@@ -8,6 +8,7 @@ import (
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
 	chat "github.com/Bit-Nation/panthalassa/chat"
+	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
@@ -15,7 +16,6 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/Bit-Nation/panthalassa/dapp"
 )
 
 var panthalassaInstance *Panthalassa
@@ -29,10 +29,15 @@ type StartConfig struct {
 	EncryptedKeyManager string `json:"encrypted_key_manager"`
 	SignedProfile       string `json:"signed_profile"`
 	EthWsEndpoint       string `json:"eth_ws_endpoint"`
+	EnableDebugging     bool   `json:"enable_debugging"`
 }
 
 // create a new panthalassa instance
 func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error {
+
+	if config.EnableDebugging {
+		log.SetDebugLogging()
+	}
 
 	//Exit if instance was already created and not stopped
 	if panthalassaInstance != nil {
@@ -261,12 +266,12 @@ func GetIdentityPublicKey() (string, error) {
 
 // connect the host to DApp development server
 func ConnectToDAppDevHost(address string) error {
-	
+
 	//Exit if not started
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa first")
 	}
-	
+
 	maAddr, err := ma.NewMultiaddr(address)
 	if err != nil {
 		return err
@@ -277,39 +282,39 @@ func ConnectToDAppDevHost(address string) error {
 }
 
 func OpenDApp(id, context string) error {
-	
+
 	//Exit if not started
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa first")
 	}
-	
+
 	return panthalassaInstance.dAppReg.OpenDApp(id, context)
-	
+
 }
 
 func StartDApp(dApp string) error {
-	
+
 	//Exit if not started
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa first")
 	}
-	
+
 	dAppResp := dapp.JsonRepresentation{}
 	if err := json.Unmarshal([]byte(dApp), dAppResp); err != nil {
 		return err
 	}
-	
+
 	return panthalassaInstance.dAppReg.StartDApp(&dAppResp)
-	
+
 }
 
 func RenderMessage(id, msg, context string) (string, error) {
-	
+
 	//Exit if not started
 	if panthalassaInstance == nil {
 		return "", errors.New("you have to start panthalassa first")
 	}
-	
+
 	return panthalassaInstance.dAppReg.RenderMessage(id, msg, context)
-	
+
 }
