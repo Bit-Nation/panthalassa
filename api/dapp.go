@@ -30,13 +30,16 @@ type DAppApi struct {
 func (a *DAppApi) ShowModal(title, layout string) error {
 
 	// send request
-	_, err := a.api.request(&pb.Request{
+	resp, err := a.api.request(&pb.Request{
 		ShowModal: &pb.Request_ShowModal{
 			Title:  title,
 			Layout: layout,
 		},
 	}, time.Second*20)
-
+	if err != nil {
+		resp.Closer <- nil
+	}
+	
 	return err
 
 }
