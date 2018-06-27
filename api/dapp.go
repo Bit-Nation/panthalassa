@@ -98,6 +98,10 @@ func (a *DAppApi) SaveDApp(dApp dapp.JsonRepresentation) error {
 		},
 	}, time.Second*10)
 
+	if err != nil {
+		return err
+	}
+
 	resp.Closer <- nil
 
 	return err
