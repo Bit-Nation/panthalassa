@@ -2,7 +2,6 @@ package dapp
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
