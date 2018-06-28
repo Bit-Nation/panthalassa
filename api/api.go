@@ -135,6 +135,7 @@ func (a *API) request(req *pb.Request, timeOut time.Duration) (*Response, error)
 	if err != nil {
 		return nil, err
 	}
+	logger.Info("going to send this: " + string(rawData) + " to upstream")
 	go a.client.Send(string(rawData))
 
 	// wait for the response
