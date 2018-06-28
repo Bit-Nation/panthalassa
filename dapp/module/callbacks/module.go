@@ -50,7 +50,7 @@ func (m *Module) CallFunction(id uint, payload string) error {
 	}
 
 	// parse params
-	objArgs, err := m.vm.Object(fmt.Sprintf(`(%s)`, payload))
+	objArgs, err := m.vm.Object("(" + payload + ")")
 	if err != nil {
 		return err
 	}

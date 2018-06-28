@@ -2,7 +2,6 @@ package dapp
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
@@ -61,7 +60,7 @@ func (m *Module) OpenDApp(payload string) error {
 	}
 
 	// convert context to otto js object
-	dataObj, err := m.vm.Object(fmt.Sprintf(`(%s)`, payload))
+	dataObj, err := m.vm.Object("(" + payload + ")")
 	if err != nil {
 		return err
 	}

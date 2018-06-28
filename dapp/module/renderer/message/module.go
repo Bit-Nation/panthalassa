@@ -66,7 +66,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 	}
 
 	// convert context to otto js object
-	payloadObj, err := m.vm.Object(fmt.Sprintf(`(%s)`, payload))
+	payloadObj, err := m.vm.Object("(" + payload + ")")
 	if err != nil {
 		return "", err
 	}
