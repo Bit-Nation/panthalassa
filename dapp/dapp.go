@@ -83,7 +83,7 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 	}
 
 	// register callbacks module
-	cbm := cbModule.New()
+	cbm := cbModule.New(l)
 	if err := cbm.Register(vm); err != nil {
 		return nil, err
 	}
@@ -95,6 +95,7 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 		closeChan:    closer,
 		dAppRenderer: dr,
 		msgRenderer:  mr,
+		cbMod:        cbm,
 	}
 
 	go func() {
