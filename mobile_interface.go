@@ -36,6 +36,7 @@ type StartConfig struct {
 func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error {
 
 	if config.EnableDebugging {
+
 		log.SetDebugLogging()
 	}
 
@@ -316,5 +317,21 @@ func RenderMessage(id, msg, context string) (string, error) {
 	}
 
 	return panthalassaInstance.dAppReg.RenderMessage(id, msg, context)
+
+}
+
+func CallDAppFunction(dAppId string, id int, args string) error {
+
+	// make sure we get an uint value
+	if id < 0 {
+		return errors.New("got negative number but need uint")
+	}
+
+	//Exit if not started
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+
+	return panthalassaInstance.dAppReg.CallFunction(dAppId, uint(id), args)
 
 }

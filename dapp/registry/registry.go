@@ -172,6 +172,21 @@ func (r *Registry) ConnectDevelopmentServer(addr ma.Multiaddr) error {
 	return nil
 }
 
+// call a function in a DApp
+func (r *Registry) CallFunction(dAppID string, funcId uint, args string) error {
+
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	dApp, exist := r.dAppInstances[dAppID]
+	if !exist {
+		return errors.New("can't call function of dApp that hasn't started")
+	}
+
+	return dApp.CallFunction(funcId, args)
+
+}
+
 func (r *Registry) ShutDown(dAppJson dapp.JsonRepresentation) error {
 
 	// shut down DApp & remove from state
