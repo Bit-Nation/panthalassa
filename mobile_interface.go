@@ -89,7 +89,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		chat:     &c,
 		dAppReg: dAppReg.NewDAppRegistry(m.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
-		}, api),
+		}, api, km),
 	}
 
 	return nil
@@ -301,7 +301,7 @@ func StartDApp(dApp string) error {
 	}
 
 	dAppResp := dapp.JsonRepresentation{}
-	if err := json.Unmarshal([]byte(dApp), dAppResp); err != nil {
+	if err := json.Unmarshal([]byte(dApp), &dAppResp); err != nil {
 		return err
 	}
 

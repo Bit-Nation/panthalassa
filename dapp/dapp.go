@@ -38,8 +38,8 @@ func (d *DApp) RenderDApp(context string) error {
 	return d.dAppRenderer.OpenDApp(context)
 }
 
-func (d *DApp) RenderMessage(msg, context string) (string, error) {
-	return d.msgRenderer.RenderMessage(msg, context)
+func (d *DApp) RenderMessage(payload string) (string, error) {
+	return d.msgRenderer.RenderMessage(payload)
 }
 
 func (d *DApp) CallFunction(id uint, args string) error {

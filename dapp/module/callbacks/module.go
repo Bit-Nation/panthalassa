@@ -33,7 +33,11 @@ func (m *Module) Name() string {
 	return "CALLBACKS"
 }
 
-func (m *Module) CallFunction(id uint, args string) error {
+// this will call the given function (identified by the id)
+// with the given payload as an object and a callback
+// e.g. myRegisteredFunction(payloadObj, cb)
+// the callback must be called in order to "return" from the function
+func (m *Module) CallFunction(id uint, payload string) error {
 
 	// lock
 	m.lock.Lock()
@@ -46,7 +50,7 @@ func (m *Module) CallFunction(id uint, args string) error {
 	}
 
 	// parse params
-	objArgs, err := m.vm.Object(fmt.Sprintf(`(%s)`, args))
+	objArgs, err := m.vm.Object("(" + payload + ")")
 	if err != nil {
 		return err
 	}
@@ -81,6 +85,12 @@ func (m *Module) CallFunction(id uint, args string) error {
 
 }
 
+// registerFunction will take a function as it's first and only parameter
+// if the parameter is not a function it will throw an error
+// a ID (uint) is returned that represents the id of the registered function
+// a registered function will be called with an object containing information
+// and a callback that should be called (with an optional error) in order to
+// "return"
 func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
 	return vm.Set("registerFunction", func(call otto.FunctionCall) otto.Value {
@@ -88,7 +98,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		v := validator.New()
 		v.Set(0, &validator.TypeFunction)
 		if err := v.Validate(vm, call); err != nil {
-			vm.Run(fmt.Sprintf(`throw new Error("registerFunction needs a callback as it's first param' %s")`, err.String()))
+			vm.Run(fmt.Sprintf(`throw new Error("registerFunction needs a callback as it's first param %s")`, err.String()))
 			return *err
 		}
 

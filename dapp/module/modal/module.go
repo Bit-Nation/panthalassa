@@ -27,6 +27,11 @@ func (m *Module) Name() string {
 	return "MODAL"
 }
 
+// showModal provides a way to display a modal
+// the first parameter should be the modal title
+// the second parameter should be the layout to render
+// and the third parameter is an optional callback that
+// will called with an optional error
 func (m *Module) Register(vm *otto.Otto) error {
 
 	return vm.Set("showModal", func(call otto.FunctionCall) otto.Value {
@@ -35,25 +40,32 @@ func (m *Module) Register(vm *otto.Otto) error {
 		v := validator.New()
 		v.Set(0, &validator.TypeString)
 		v.Set(1, &validator.TypeString)
+		v.Set(2, &validator.TypeFunction)
 		if err := v.Validate(vm, call); err != nil {
+			m.logger.Error(err.String())
 			return *err
 		}
 
-		// request to show modal
-		err := m.device.ShowModal(
-			call.Argument(0).String(),
-			call.Argument(1).String(),
-		)
+		// call callback
+		cb := call.Argument(2)
 
-		// call callback if passed in
-		fn := call.Argument(2)
-		if fn.IsFunction() {
+		// do the request to show modal async
+		go func() {
+
+			// request to show modal
+			err := m.device.ShowModal(
+				call.Argument(0).String(),
+				call.Argument(1).String(),
+			)
+
 			if err != nil {
-				fn.Call(fn, err.Error())
-				return otto.Value{}
+				cb.Call(cb, err.Error())
+				return
 			}
-			fn.Call(fn)
-		}
+
+			cb.Call(cb)
+
+		}()
 
 		return otto.Value{}
 
