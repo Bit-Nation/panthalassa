@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
+	cbModule "github.com/Bit-Nation/panthalassa/dapp/module/callbacks"
 	dAppRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/dapp"
 	msgRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/message"
 	logger "github.com/op/go-logging"
@@ -18,6 +19,7 @@ type DApp struct {
 	closeChan    chan<- *JsonRepresentation
 	dAppRenderer *dAppRenderer.Module
 	msgRenderer  *msgRenderer.Module
+	cbMod        *cbModule.Module
 }
 
 // close DApp
@@ -38,6 +40,10 @@ func (d *DApp) RenderDApp(context string) error {
 
 func (d *DApp) RenderMessage(msg, context string) (string, error) {
 	return d.msgRenderer.RenderMessage(msg, context)
+}
+
+func (d *DApp) CallFunction(id uint, args string) error {
+	return d.cbMod.CallFunction(id, args)
 }
 
 // will start a DApp based on the given config file
@@ -69,10 +75,16 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 	if err := dr.Register(vm); err != nil {
 		return nil, err
 	}
-	
+
 	// register message renderer
 	mr := msgRenderer.New(l)
 	if err := dr.Register(vm); err != nil {
+		return nil, err
+	}
+
+	// register callbacks module
+	cbm := cbModule.New()
+	if err := cbm.Register(vm); err != nil {
 		return nil, err
 	}
 
