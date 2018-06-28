@@ -102,7 +102,7 @@ func CreateDAppMessage(rawMsg, secretID, secret string, receiverIdKey string) (s
 	}
 
 	// unmarshal raw secret (secret is a cipher text)
-	cipherText, err := aes.Unmarshal([]byte(rawMsg))
+	cipherText, err := aes.Unmarshal([]byte(secret))
 	if err != nil {
 		return "", err
 	}
@@ -144,7 +144,7 @@ func CreateHumanMessage(rawMsg, secretID, secret string, receiverIdKey string) (
 	}
 
 	// unmarshal raw secret (secret is a cipher text)
-	cipherText, err := aes.Unmarshal([]byte(rawMsg))
+	cipherText, err := aes.Unmarshal([]byte(secret))
 	if err != nil {
 		return "", err
 	}
