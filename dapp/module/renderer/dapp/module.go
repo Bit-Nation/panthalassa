@@ -21,12 +21,13 @@ func (m *Module) Name() string {
 	return "RENDERER:DAPP"
 }
 
-// register module function in the VM
-// setOpenHandler must be called with a callback
-// the callback that is passed to `setOpenHandler`
-// The "callback" should be can be called with an error if there is one
 func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
+	// setOpenHandler must be called with a callback
+	// the callback that is passed to `setOpenHandler`
+	// will be called with an "data" object and a callback
+	// the callback should be called (with an optional error)
+	// in order to return from the function
 	return vm.Set("setOpenHandler", func(call otto.FunctionCall) otto.Value {
 
 		// validate function call
@@ -47,7 +48,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 	})
 }
 
-func (m *Module) OpenDApp(context string) error {
+// payload can be an arbitrary set of key value pairs (as a json string)
+func (m *Module) OpenDApp(payload string) error {
 
 	// lock
 	m.lock.Lock()
@@ -59,34 +61,39 @@ func (m *Module) OpenDApp(context string) error {
 	}
 
 	// convert context to otto js object
-	ctxObj, err := m.vm.Object(fmt.Sprintf(`(%s)`, context))
+	dataObj, err := m.vm.Object(fmt.Sprintf(`(%s)`, payload))
 	if err != nil {
 		return err
 	}
 
 	c := make(chan error, 1)
 
-	// call the callback
-	_, err = m.renderer.Call(*m.renderer, ctxObj, func(call otto.FunctionCall) otto.Value {
+	go func() {
 
-		// fetch params from the callback call
-		err := call.Argument(0)
+		// call the renderer
+		// we pass in data object and a callback
+		_, err = m.renderer.Call(*m.renderer, dataObj, func(call otto.FunctionCall) otto.Value {
 
-		// if there is an error, set it in the response
-		if !err.IsUndefined() {
-			c <- errors.New(err.String())
+			// fetch params from the callback call
+			err := call.Argument(0)
+
+			// if there is an error, set it in the response
+			if !err.IsUndefined() {
+				c <- errors.New(err.String())
+				return otto.Value{}
+			}
+
+			c <- nil
+
 			return otto.Value{}
+
+		})
+
+		if err != nil {
+			m.logger.Error(err.Error())
 		}
 
-		c <- nil
-
-		return otto.Value{}
-
-	})
-
-	if err != nil {
-		return err
-	}
+	}()
 
 	return <-c
 }

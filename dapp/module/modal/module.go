@@ -43,7 +43,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		v.Set(2, &validator.TypeFunction)
 		if err := v.Validate(vm, call); err != nil {
 			m.logger.Error(err.String())
-			return otto.Value{}
+			return *err
 		}
 
 		// call callback

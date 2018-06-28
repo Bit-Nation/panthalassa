@@ -34,10 +34,10 @@ func (m *Module) Name() string {
 }
 
 // this will call the given function (identified by the id)
-// with the given args as an object and a callback
-// e.g. myRegisteredFunction(argsObj, cb)
+// with the given payload as an object and a callback
+// e.g. myRegisteredFunction(payloadObj, cb)
 // the callback must be called in order to "return" from the function
-func (m *Module) CallFunction(id uint, args string) error {
+func (m *Module) CallFunction(id uint, payload string) error {
 
 	// lock
 	m.lock.Lock()
@@ -50,7 +50,7 @@ func (m *Module) CallFunction(id uint, args string) error {
 	}
 
 	// parse params
-	objArgs, err := m.vm.Object(fmt.Sprintf(`(%s)`, args))
+	objArgs, err := m.vm.Object(fmt.Sprintf(`(%s)`, payload))
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		v := validator.New()
 		v.Set(0, &validator.TypeFunction)
 		if err := v.Validate(vm, call); err != nil {
-			vm.Run(fmt.Sprintf(`throw new Error("registerFunction needs a callback as it's first param' %s")`, err.String()))
+			vm.Run(fmt.Sprintf(`throw new Error("registerFunction needs a callback as it's first param %s")`, err.String()))
 			return *err
 		}
 

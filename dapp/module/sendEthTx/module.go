@@ -30,6 +30,8 @@ func (m *Module) Name() string {
 
 func (m *Module) Register(vm *otto.Otto) error {
 
+	// send an ethereum transaction
+	// musst be called with an object that holds value, to and data
 	return vm.Set("sendETHTransaction", func(call otto.FunctionCall) otto.Value {
 
 		// validate function call

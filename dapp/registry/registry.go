@@ -143,7 +143,7 @@ func (r *Registry) RenderMessage(id, msg, context string) (string, error) {
 	if _, exist := r.dAppInstances[id]; !exist {
 		return "", errors.New("it seems like that this app hasn't been started yet")
 	}
-	return r.dAppInstances[id].RenderMessage(msg, context)
+	return r.dAppInstances[id].RenderMessage(context)
 }
 
 // use this to connect to a development server

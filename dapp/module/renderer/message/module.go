@@ -25,7 +25,8 @@ func (m *Module) Name() string {
 // setOpenHandler must be called with a callback
 // the callback that is passed to `setOpenHandler`
 // should accept two parameters:
-// 1. The "context" will hold the context in which the DApp is opened
+// 1. The "data" will hold the data (object) passed into the open call
+//    (will e.g. hold the message and the context)
 // 2. The "callback" should be can be called with two parameters:
 // 		1. an error
 // 		2. the rendered layout
@@ -51,7 +52,9 @@ func (m *Module) Register(vm *otto.Otto) error {
 	})
 }
 
-func (m *Module) RenderMessage(message string, context string) (string, error) {
+// payload can be an arbitrary set of key value pairs
+// should contain the "message" and the "context" tho
+func (m *Module) RenderMessage(payload string) (string, error) {
 
 	// lock
 	m.lock.Lock()
@@ -63,11 +66,7 @@ func (m *Module) RenderMessage(message string, context string) (string, error) {
 	}
 
 	// convert context to otto js object
-	ctxObj, err := m.vm.Object(fmt.Sprintf(`(%s)`, context))
-	if err != nil {
-		return "", err
-	}
-	msgObj, err := m.vm.Object(fmt.Sprintf(`(%s)`, message))
+	payloadObj, err := m.vm.Object(fmt.Sprintf(`(%s)`, payload))
 	if err != nil {
 		return "", err
 	}
@@ -79,34 +78,38 @@ func (m *Module) RenderMessage(message string, context string) (string, error) {
 
 	c := make(chan resp, 1)
 
-	// call the callback
-	_, err = m.renderer.Call(*m.renderer, msgObj, ctxObj, func(call otto.FunctionCall) otto.Value {
+	go func() {
 
-		// fetch params from the callback call
-		err := call.Argument(0)
-		layout := call.Argument(1)
+		// call the message renderer
+		_, err = m.renderer.Call(*m.renderer, payloadObj, func(call otto.FunctionCall) otto.Value {
 
-		r := resp{}
+			// fetch params from the callback call
+			err := call.Argument(0)
+			layout := call.Argument(1)
 
-		// if there is an error, set it in the response
-		if !err.IsUndefined() {
-			r.error = errors.New(err.String())
+			r := resp{}
+
+			// if there is an error, set it in the response
+			if !err.IsUndefined() {
+				r.error = errors.New(err.String())
+			}
+
+			// set the layout in the response
+			if layout.IsString() {
+				r.layout = layout.String()
+			}
+
+			c <- r
+
+			return otto.Value{}
+
+		})
+
+		if err != nil {
+			m.logger.Error(err.Error())
 		}
 
-		// set the layout in the response
-		if layout.IsString() {
-			r.layout = layout.String()
-		}
-
-		c <- r
-
-		return otto.Value{}
-
-	})
-
-	if err != nil {
-		return "", err
-	}
+	}()
 
 	r := <-c
 

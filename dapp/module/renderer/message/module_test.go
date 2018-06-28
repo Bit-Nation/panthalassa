@@ -17,16 +17,7 @@ func TestModule_RenderMessageError(t *testing.T) {
 	m := New(l)
 	require.Nil(t, m.Register(vm))
 
-	vm.Call("setMessageHandler", vm, func(msg otto.Value, context otto.Value, cb otto.Value) otto.Value {
-
-		v, err := context.Object().Get("key")
-		if err != nil {
-			panic(err)
-		}
-
-		if v.String() != "value" {
-			panic("Expected value of key to be: value")
-		}
+	vm.Call("setMessageHandler", vm, func(payload otto.Value, cb otto.Value) otto.Value {
 
 		cb.Call(cb, "I am an error")
 
@@ -34,7 +25,7 @@ func TestModule_RenderMessageError(t *testing.T) {
 
 	})
 
-	_, err := m.RenderMessage(`{sender: "0x0"}`, `{key: "value"}`)
+	_, err := m.RenderMessage(`{}`)
 	require.EqualError(t, err, "I am an error")
 
 }
@@ -48,15 +39,15 @@ func TestModule_RenderMessageSuccess(t *testing.T) {
 	m := New(l)
 	require.Nil(t, m.Register(vm))
 
-	vm.Call("setMessageHandler", vm, func(msg otto.Value, context otto.Value, cb otto.Value) otto.Value {
+	vm.Call("setMessageHandler", vm, func(payload otto.Value, cb otto.Value) otto.Value {
 
-		v, err := context.Object().Get("key")
+		msg, err := payload.Object().Get("message")
 		if err != nil {
 			panic(err)
 		}
 
-		if v.String() != "value" {
-			panic("Expected value of key to be: value")
+		if !msg.IsObject() {
+			panic("Expected message to be an object")
 		}
 
 		cb.Call(cb, nil, "{}")
@@ -65,7 +56,7 @@ func TestModule_RenderMessageSuccess(t *testing.T) {
 
 	})
 
-	layout, err := m.RenderMessage(`{from: "0x0"}`, `{key: "value"}`)
+	layout, err := m.RenderMessage(`{message: {}, context: {}}`)
 	require.Nil(t, err)
 	require.Equal(t, "{}", layout)
 

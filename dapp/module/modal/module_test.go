@@ -59,7 +59,7 @@ func TestFirstParamString(t *testing.T) {
 	require.Nil(t, modalModule.Register(vm))
 
 	// try to display modal
-	showModalError, err := vm.Call(`showModal`, vm)
+	showModalError, err := vm.Call(`showModal`, vm, nil)
 	require.Nil(t, err)
 	require.Equal(t, "ValidationError: expected parameter 0 to be of type string", showModalError.String())
 
@@ -86,6 +86,27 @@ func TestSecondParamString(t *testing.T) {
 
 }
 
+func TestThirdParamCallback(t *testing.T) {
+
+	// get test logger
+	logger := log.MustGetLogger("")
+
+	// create VM
+	vm := otto.New()
+
+	// create modal module
+	modalModule := New(logger, nil)
+
+	// register show modal functionality
+	require.Nil(t, modalModule.Register(vm))
+
+	// try to display modal
+	showModalError, err := vm.Call(`showModal`, vm, ``, ``)
+	require.Nil(t, err)
+	require.Equal(t, "ValidationError: expected parameter 2 to be of type function", showModalError.String())
+
+}
+
 func TestErrorForwarding(t *testing.T) {
 
 	// get test logger
@@ -105,16 +126,7 @@ func TestErrorForwarding(t *testing.T) {
 	// register show modal functionality
 	require.Nil(t, modalModule.Register(vm))
 
-	c := make(chan bool)
-
-	go func() {
-		select {
-		case <-c:
-			return
-		case <-time.After(time.Second * 1):
-			require.FailNow(t, "time out")
-		}
-	}()
+	c := make(chan bool, 1)
 
 	// try to display modal
 	_, err := vm.Call(`showModal`, vm, "", "", func(err string) {
@@ -126,6 +138,13 @@ func TestErrorForwarding(t *testing.T) {
 		c <- true
 
 	})
+
+	select {
+	case <-c:
+	case <-time.After(time.Second * 1):
+		require.FailNow(t, "time out")
+	}
+
 	require.Nil(t, err)
 
 }

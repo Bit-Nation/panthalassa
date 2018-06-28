@@ -2,7 +2,6 @@ package ethWebSocket
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"testing"
 	"time"
 
@@ -16,19 +15,25 @@ func TestWS(t *testing.T) {
 
 	c := make(chan bool)
 
+	logger := log.MustGetLogger("")
+
 	ethWS := ethws.New(ethws.Config{
 		Retry: time.Second,
 		WSUrl: "wss://mainnet.infura.io/_ws",
 	})
 
-	m := EthWS{
-		ethWS: ethWS,
-	}
+	ethWsModule := New(logger, ethWS)
 
 	vm := otto.New()
 
-	require.Nil(t, m.Register(vm))
-	_, err := vm.Call(`ethereumRequest`, vm, `{"jsonrpc":"2.0","method":"eth_protocolVersion","params":[]}`, func(response string) {
+	require.Nil(t, ethWsModule.Register(vm))
+	_, err := vm.Call(`ethereumRequest`, vm, `{"jsonrpc":"2.0","method":"eth_protocolVersion","params":[]}`, func(call otto.FunctionCall) otto.Value {
+
+		if !call.Argument(0).IsUndefined() {
+			panic("first argument is the error which should be undefined")
+		}
+
+		response := call.Argument(1).String()
 
 		var resp ethws.Response
 		if err := json.Unmarshal([]byte(response), &resp); err != nil {
@@ -40,6 +45,8 @@ func TestWS(t *testing.T) {
 		}
 
 		c <- true
+
+		return otto.Value{}
 
 	})
 	require.Nil(t, err)
@@ -56,16 +63,17 @@ func TestWS(t *testing.T) {
 func TestWSFunctionSignatureValidation(t *testing.T) {
 
 	logger := log.MustGetLogger("")
-	backend := log.NewLogBackend(ioutil.Discard, "", 0)
-	logger.SetBackend(log.AddModuleLevel(backend))
 
-	m := EthWS{
-		logger: logger,
-	}
+	ethWS := ethws.New(ethws.Config{
+		Retry: time.Second,
+		WSUrl: "wss://mainnet.infura.io/_ws",
+	})
+
+	ethWsModule := New(logger, ethWS)
 
 	vm := otto.New()
 
-	m.Register(vm)
+	ethWsModule.Register(vm)
 
 	vmErr, err := vm.Call(`ethereumRequest`, vm, nil)
 	require.Nil(t, err)
