@@ -7,7 +7,7 @@ import (
 	"time"
 
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
-	"github.com/Bit-Nation/panthalassa/keyManager"
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	uuid "github.com/satori/go.uuid"
@@ -147,8 +147,9 @@ func (a *API) request(req *pb.Request, timeOut time.Duration) (*Response, error)
 		// for our request
 		if res.Error != nil {
 			res.Closer <- nil
+			return nil, res.Error
 		}
-		return nil, res.Error
+		return res, nil
 	case <-time.After(timeOut):
 		// remove request from stack
 		_, err := a.cutRequest(requestId.String())

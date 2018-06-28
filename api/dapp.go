@@ -39,7 +39,7 @@ func (a *DAppApi) ShowModal(title, layout string) error {
 	if err != nil {
 		resp.Closer <- nil
 	}
-	
+
 	return err
 
 }
