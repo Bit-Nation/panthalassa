@@ -10,6 +10,9 @@ import (
 	otto "github.com/robertkrimen/otto"
 )
 
+// with this module it's possible to register functions
+// from inside of the vm and call them by there id
+
 func New(l *logger.Logger) *Module {
 	return &Module{
 		lock:      sync.Mutex{},
@@ -57,6 +60,7 @@ func (m *Module) CallFunction(id uint, args string) error {
 		// check if callback has already been called
 		if alreadyCalled {
 			m.logger.Error("Already called callback")
+			return m.vm.MakeCustomError("Callback", "Already called callback")
 		}
 		alreadyCalled = true
 
@@ -95,6 +99,11 @@ func (m *Module) Register(vm *otto.Otto) error {
 		// add function
 		m.counter++
 		fn := call.Argument(0)
+		if _, exist := m.functions[m.counter]; exist {
+			vm.Run(fmt.Sprintf(`throw new Error("Failed to register function. Id (%d) already in use")`, m.counter))
+			return otto.Value{}
+		}
+
 		m.functions[m.counter] = &fn
 
 		functionId, err := otto.ToValue(m.counter)

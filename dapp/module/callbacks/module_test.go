@@ -3,7 +3,7 @@ package callbacks
 import (
 	"testing"
 
-	"fmt"
+	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
 )
@@ -16,10 +16,14 @@ func TestFuncRegistration(t *testing.T) {
 
 	require.Nil(t, m.Register(vm))
 
-	_, err := vm.Call(`registerFunction`, vm, func(call otto.FunctionCall) otto.Value {
+	funcId, err := vm.Call(`registerFunction`, vm, func(call otto.FunctionCall) otto.Value {
 		return otto.Value{}
 	})
 	require.Nil(t, err)
+
+	id, err := funcId.ToInteger()
+	require.Nil(t, err)
+	require.Equal(t, int64(1), id)
 
 	fn, exist := m.functions[1]
 	require.True(t, exist)
@@ -114,7 +118,7 @@ func TestFuncCallError(t *testing.T) {
 
 func TestFuncCallBackTwice(t *testing.T) {
 
-	m := New(nil)
+	m := New(log.MustGetLogger(""))
 
 	vm := otto.New()
 
@@ -137,12 +141,24 @@ func TestFuncCallBackTwice(t *testing.T) {
 			panic("expected second argument to be a callback")
 		}
 
-		_, err = cb.Call(cb, "I am an error")
-		_, err = cb.Call(cb, "I am an error")
+		val, err := cb.Call(cb)
+		if err != nil {
+			panic(err)
+		}
+		if !val.IsUndefined() {
+			panic("expected value to be undefined")
+		}
 
-		fmt.Println(err)
+		val, err = cb.Call(cb)
+		if err != nil {
+			panic(err)
+		}
+		if val.String() != "Callback: Already called callback" {
+			panic("Expected an error that tells me that I alrady called the callback")
+		}
 
 		return otto.Value{}
+
 	})
 
 	require.Nil(t, err)
@@ -150,6 +166,6 @@ func TestFuncCallBackTwice(t *testing.T) {
 	require.True(t, exist)
 	require.True(t, fn.IsFunction())
 
-	require.Equal(t, "I am an error", m.CallFunction(1, `{key: "value"}`).Error())
+	m.CallFunction(1, `{key: "value"}`)
 
 }
