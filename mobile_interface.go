@@ -301,7 +301,7 @@ func StartDApp(dApp string) error {
 	}
 
 	dAppResp := dapp.JsonRepresentation{}
-	if err := json.Unmarshal([]byte(dApp), dAppResp); err != nil {
+	if err := json.Unmarshal([]byte(dApp), &dAppResp); err != nil {
 		return err
 	}
 
