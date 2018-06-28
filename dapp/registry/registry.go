@@ -62,6 +62,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 			WSUrl: conf.EthWSEndpoint,
 		}),
 		api: api,
+		km:  km,
 	}
 
 	// add worker to remove DApps
