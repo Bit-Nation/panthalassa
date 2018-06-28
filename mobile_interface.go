@@ -89,7 +89,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		chat:     &c,
 		dAppReg: dAppReg.NewDAppRegistry(m.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
-		}, api),
+		}, api, km),
 	}
 
 	return nil

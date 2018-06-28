@@ -11,6 +11,7 @@ import (
 	api "github.com/Bit-Nation/panthalassa/api"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
+	ethAddrMod "github.com/Bit-Nation/panthalassa/dapp/module/ethAddress"
 	ethWSMod "github.com/Bit-Nation/panthalassa/dapp/module/ethWebSocket"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
 	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
@@ -18,6 +19,7 @@ import (
 	sendEthTxMod "github.com/Bit-Nation/panthalassa/dapp/module/sendEthTx"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
+	"github.com/Bit-Nation/panthalassa/keyManager"
 	log "github.com/ipfs/go-log"
 	host "github.com/libp2p/go-libp2p-host"
 	net "github.com/libp2p/go-libp2p-net"
@@ -38,6 +40,7 @@ type Registry struct {
 	conf           Config
 	ethWS          *ethws.EthereumWS
 	api            *api.API
+	km             *keyManager.KeyManager
 }
 
 type Config struct {
@@ -45,7 +48,7 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, conf Config, api *api.API) *Registry {
+func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager) *Registry {
 
 	r := &Registry{
 		host:           h,
@@ -93,6 +96,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 		modalMod.New(l, r.api),
 		sendEthTxMod.New(r.api, l),
 		randBytes.New(l),
+		ethAddrMod.New(r.km),
 	}
 
 	// if there is a stream for this DApp
