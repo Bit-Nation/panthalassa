@@ -87,7 +87,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 	}
 
 	vmModules := []module.Module{
-		&uuidv4Mod.UUIDV4{},
+		uuidv4Mod.New(l),
 		ethWSMod.New(l, r.ethWS),
 		modalMod.New(l, r.api),
 		sendEthTxMod.New(r.api, l),
