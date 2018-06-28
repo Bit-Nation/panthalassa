@@ -20,6 +20,7 @@ type Message struct {
 	DoubleratchetMessage doubleratchet.Message `json:"doubleratchet_message"`
 	Signature            []byte                `json:"signature"`
 	IDPubKey             string                `json:"id_public_key"`
+	Receiver             string                `json:"receiver"`
 }
 
 // hash the message data. Exclude signature

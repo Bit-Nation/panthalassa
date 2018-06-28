@@ -93,9 +93,9 @@ func InitializeChat(identityPublicKey, preKeyBundle string) (string, error) {
 
 }
 
-// create message
+// create a dapp message
 // secret should be a aes cipher text as string
-func CreateHumanMessage(rawMsg, secretID, secret string) (string, error) {
+func CreateDAppMessage(rawMsg, secretID, secret string, receiverIdKey string) (string, error) {
 
 	if panthalassaInstance == nil {
 		return "", errors.New("please start panthalassa first")
@@ -113,8 +113,56 @@ func CreateHumanMessage(rawMsg, secretID, secret string) (string, error) {
 		return "", err
 	}
 
+	// receiver public key
+	receiverRawIdKey, err := hex.DecodeString(receiverIdKey)
+	if err != nil {
+		return "", err
+	}
+
 	// create message
-	msg, err := panthalassaInstance.chat.CreateHumanMessage(rawMsg, secretID, sharedSecret)
+	msg, err := panthalassaInstance.chat.CreateDAppMessage(rawMsg, secretID, sharedSecret, receiverRawIdKey)
+	if err != nil {
+		return "", err
+	}
+
+	// marshal message
+	m, err := msg.Marshal()
+	if err != nil {
+		return "", err
+	}
+
+	return string(m), nil
+
+}
+
+// create message
+// secret should be a aes cipher text as string
+func CreateHumanMessage(rawMsg, secretID, secret string, receiverIdKey string) (string, error) {
+
+	if panthalassaInstance == nil {
+		return "", errors.New("please start panthalassa first")
+	}
+
+	// unmarshal raw secret (secret is a cipher text)
+	cipherText, err := aes.Unmarshal([]byte(rawMsg))
+	if err != nil {
+		return "", err
+	}
+
+	// shared secret
+	sharedSecret, err := chat.DecryptX3DHSecret(cipherText, panthalassaInstance.km)
+	if err != nil {
+		return "", err
+	}
+
+	// receiver public key
+	receiverRawIdKey, err := hex.DecodeString(receiverIdKey)
+	if err != nil {
+		return "", err
+	}
+
+	// create message
+	msg, err := panthalassaInstance.chat.CreateHumanMessage(rawMsg, secretID, sharedSecret, receiverRawIdKey)
 	if err != nil {
 		return "", err
 	}

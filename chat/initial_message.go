@@ -37,6 +37,12 @@ func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, pubPreKeyBundle PreKey
 		return Message{}, x3dh.InitializedProtocol{}, err
 	}
 
+	// my id key
+	myIdKey, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return Message{}, x3dh.InitializedProtocol{}, err
+	}
+
 	// construct message
 	m := Message{
 		Type:          "PROTOCOL_INITIALISATION",
@@ -48,7 +54,8 @@ func (c *Chat) InitializeChat(idPubKey ed25519.PublicKey, pubPreKeyBundle PreKey
 			"ephemeral_key":         hex.EncodeToString(ip.EphemeralKey[:]),
 		},
 		DoubleratchetMessage: msg,
-		IDPubKey:             hex.EncodeToString(idPubKey),
+		IDPubKey:             myIdKey,
+		Receiver:             hex.EncodeToString(idPubKey),
 	}
 
 	// sign message
