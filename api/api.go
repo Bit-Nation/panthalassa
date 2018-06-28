@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"sync"
@@ -136,7 +137,7 @@ func (a *API) request(req *pb.Request, timeOut time.Duration) (*Response, error)
 		return nil, err
 	}
 	logger.Info("going to send this: " + string(rawData) + " to upstream")
-	go a.client.Send(string(rawData))
+	go a.client.Send(base64.StdEncoding.EncodeToString(rawData))
 
 	// wait for the response
 	// or time out

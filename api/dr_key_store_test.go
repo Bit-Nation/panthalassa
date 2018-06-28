@@ -16,14 +16,6 @@ import (
 	dr "github.com/tiabc/doubleratchet"
 )
 
-type UpStreamTestImpl struct {
-	f func(data string)
-}
-
-func (u *UpStreamTestImpl) Send(data string) {
-	u.f(data)
-}
-
 func mustBeEqual(expected interface{}, got interface{}) {
 
 	if expected != got {
@@ -74,8 +66,8 @@ func TestDoubleRatchetKeyStore_GetSuccess(t *testing.T) {
 	api := API{
 		lock:     sync.Mutex{},
 		requests: map[string]chan *Response{},
-		client: &UpStreamTestImpl{
-			f: func(data string) {
+		client: &testUpStream{
+			sendFn: func(data string) {
 				c <- data
 			},
 		},
@@ -134,8 +126,8 @@ func TestDoubleRatchetKeyStore_PutSuccess(t *testing.T) {
 	api := API{
 		lock:     sync.Mutex{},
 		requests: map[string]chan *Response{},
-		client: &UpStreamTestImpl{
-			f: func(data string) {
+		client: &testUpStream{
+			sendFn: func(data string) {
 				c <- data
 			},
 		},
@@ -199,8 +191,8 @@ func TestDoubleRatchetKeyStore_DeleteMessageKeySuccess(t *testing.T) {
 	api := API{
 		lock:     sync.Mutex{},
 		requests: map[string]chan *Response{},
-		client: &UpStreamTestImpl{
-			f: func(data string) {
+		client: &testUpStream{
+			sendFn: func(data string) {
 				c <- data
 			},
 		},
@@ -250,8 +242,8 @@ func TestDoubleRatchetKeyStore_DeleteIndexKeySuccess(t *testing.T) {
 	api := API{
 		lock:     sync.Mutex{},
 		requests: map[string]chan *Response{},
-		client: &UpStreamTestImpl{
-			f: func(data string) {
+		client: &testUpStream{
+			sendFn: func(data string) {
 				c <- data
 			},
 		},
@@ -298,8 +290,8 @@ func TestDoubleRatchetKeyStore_CountSuccess(t *testing.T) {
 	api := API{
 		lock:     sync.Mutex{},
 		requests: map[string]chan *Response{},
-		client: &UpStreamTestImpl{
-			f: func(data string) {
+		client: &testUpStream{
+			sendFn: func(data string) {
 				c <- data
 			},
 		},
@@ -358,8 +350,8 @@ func TestDoubleRatchetKeyStore_FetchAllKeysSuccess(t *testing.T) {
 	api := API{
 		lock:     sync.Mutex{},
 		requests: map[string]chan *Response{},
-		client: &UpStreamTestImpl{
-			f: func(data string) {
+		client: &testUpStream{
+			sendFn: func(data string) {
 				c <- data
 			},
 		},

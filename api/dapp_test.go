@@ -14,8 +14,8 @@ func TestAPI_ShowModal(t *testing.T) {
 
 	c := make(chan string)
 
-	api := New(&UpStreamTestImpl{
-		f: func(data string) {
+	api := New(&testUpStream{
+		sendFn: func(data string) {
 			c <- data
 		},
 	}, keyManagerFactory())
@@ -54,8 +54,8 @@ func TestAPI_SendEthereumTransaction(t *testing.T) {
 
 	c := make(chan string)
 
-	api := New(&UpStreamTestImpl{
-		f: func(data string) {
+	api := New(&testUpStream{
+		sendFn: func(data string) {
 			c <- data
 		},
 	}, keyManagerFactory())
@@ -104,8 +104,8 @@ func TestAPI_SaveDApp(t *testing.T) {
 
 	c := make(chan string)
 
-	api := New(&UpStreamTestImpl{
-		f: func(data string) {
+	api := New(&testUpStream{
+		sendFn: func(data string) {
 			c <- data
 		},
 	}, keyManagerFactory())

@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"encoding/base64"
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
 	proto "github.com/golang/protobuf/proto"
 	require "github.com/stretchr/testify/require"
@@ -14,7 +15,14 @@ type testUpStream struct {
 }
 
 func (u *testUpStream) Send(data string) {
-	u.sendFn(data)
+
+	// code base64 request
+	rawReq, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		panic(err)
+	}
+
+	u.sendFn(string(rawReq))
 }
 
 // make sure that requests are added / removed correct
