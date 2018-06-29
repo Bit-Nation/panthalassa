@@ -8,8 +8,10 @@ import (
 	cbModule "github.com/Bit-Nation/panthalassa/dapp/module/callbacks"
 	dAppRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/dapp"
 	msgRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/message"
+	"github.com/kataras/iris/core/errors"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
+	"time"
 )
 
 type DApp struct {
@@ -48,7 +50,7 @@ func (d *DApp) CallFunction(id uint, args string) error {
 
 // will start a DApp based on the given config file
 //
-func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, closer chan<- *JsonRepresentation) (*DApp, error) {
+func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, closer chan<- *JsonRepresentation, timeOut time.Duration) (*DApp, error) {
 
 	// check if app is valid
 	valid, err := app.VerifySignature()
@@ -98,13 +100,25 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 		cbMod:        cbm,
 	}
 
+	wait := make(chan error, 1)
+
+	// start the DApp async
 	go func() {
 		_, err := vm.Run(app.Code)
-		if err != nil {
-			l.Error(err.Error())
-			closer <- app
-		}
+		closer <- app
+		wait <- err
 	}()
+
+	// wait for the DApp with given timeout
+	select {
+	case err := <-wait:
+		if err != nil {
+			return nil, err
+		}
+		return dApp, nil
+	case <-time.After(timeOut):
+		return nil, errors.New("timeout - failed to start DApp")
+	}
 
 	return dApp, nil
 }

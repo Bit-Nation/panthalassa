@@ -293,7 +293,7 @@ func OpenDApp(id, context string) error {
 
 }
 
-func StartDApp(dApp string) error {
+func StartDApp(dApp string, timeout int) error {
 
 	//Exit if not started
 	if panthalassaInstance == nil {
@@ -305,7 +305,7 @@ func StartDApp(dApp string) error {
 		return err
 	}
 
-	return panthalassaInstance.dAppReg.StartDApp(&dAppResp)
+	return panthalassaInstance.dAppReg.StartDApp(&dAppResp, time.Second*time.Duration(timeout))
 
 }
 

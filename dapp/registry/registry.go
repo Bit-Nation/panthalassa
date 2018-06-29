@@ -83,7 +83,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 }
 
 // start a DApp
-func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
+func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation, timeOut time.Duration) error {
 
 	var l *golog.Logger
 	l, err := golog.GetLogger("app name")
@@ -120,7 +120,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation) error {
 		l.SetBackend(golog.AddModuleLevel(golog.NewLogBackend(ioutil.Discard, "", 0)))
 	}
 
-	app, err := dapp.New(l, dApp, vmModules, r.closeChan)
+	app, err := dapp.New(l, dApp, vmModules, r.closeChan, timeOut)
 	if err != nil {
 		return err
 	}
