@@ -3,6 +3,7 @@ package registry
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	pb "github.com/Bit-Nation/panthalassa/dapp/registry/pb"
@@ -26,6 +27,11 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 			msg := pb.Message{}
 			if err := decoder.Decode(&msg); err != nil {
 				logger.Error(err)
+				if err == io.EOF {
+					str.Close()
+				} else {
+					str.Reset()
+				}
 				continue
 			}
 
