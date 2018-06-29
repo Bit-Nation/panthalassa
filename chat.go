@@ -7,6 +7,7 @@ import (
 
 	chat "github.com/Bit-Nation/panthalassa/chat"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
+	"github.com/Bit-Nation/panthalassa/keyManager"
 )
 
 // create new pre key bundle
@@ -219,9 +220,21 @@ func HandleInitialMessage(message, preKeyBundlePrivatePart string) (string, erro
 		return "", err
 	}
 
+	// unmarshal private part CT
+	privPartCT, err := aes.Unmarshal([]byte(preKeyBundlePrivatePart))
+	if err != nil {
+		return "", err
+	}
+	
+	// decrypt private part
+	privPart, err := panthalassaInstance.km.AESDecrypt(privPartCT)
+	if err != nil {
+		return "", err
+	}
+	
 	// unmarshal pre key bundle private part
 	var p chat.PreKeyBundlePrivate
-	if err := json.Unmarshal([]byte(preKeyBundlePrivatePart), &p); err != nil {
+	if err := json.Unmarshal(privPart, &p); err != nil {
 		return "", err
 	}
 
