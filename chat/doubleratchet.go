@@ -1,8 +1,6 @@
 package chat
 
 import (
-	"errors"
-
 	x3dh "github.com/Bit-Nation/x3dh"
 	doubleratchet "github.com/tiabc/doubleratchet"
 )
@@ -49,14 +47,6 @@ func (c *Chat) encryptMessage(secret x3dh.SharedSecret, data []byte) (doubleratc
 
 // decrypt a message
 func (c *Chat) DecryptMessage(secret x3dh.SharedSecret, msg Message) (string, error) {
-
-	valid, err := msg.VerifySignature()
-	if err != nil {
-		return "", err
-	}
-	if !valid {
-		return "", errors.New("failed to verify message signature")
-	}
 
 	// chat partner chat id public key
 	chatIdKey := msg.DoubleratchetMessage.Header.DH
