@@ -105,6 +105,7 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 	// start the DApp async
 	go func() {
 		_, err := vm.Run(app.Code)
+		fmt.Println(err)
 		wait <- err
 	}()
 
@@ -116,9 +117,9 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 		}
 		return dApp, nil
 	case <-time.After(timeOut):
+		vm.Interrupt <- func() {}
 		closer <- app
 		return nil, errors.New("timeout - failed to start DApp")
 	}
 
-	return dApp, nil
 }
