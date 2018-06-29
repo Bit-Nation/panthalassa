@@ -117,6 +117,7 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 		}
 		return dApp, nil
 	case <-time.After(timeOut):
+		closer <- app
 		return nil, errors.New("timeout - failed to start DApp")
 	}
 
