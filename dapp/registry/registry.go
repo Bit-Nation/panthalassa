@@ -94,7 +94,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation, timeOut time.Duratio
 	vmModules := []module.Module{
 		uuidv4Mod.New(l),
 		ethWSMod.New(l, r.ethWS),
-		modalMod.New(l, r.api),
+		modalMod.New(l, r.api, dApp.SignaturePublicKey),
 		sendEthTxMod.New(r.api, l),
 		randBytes.New(l),
 		ethAddrMod.New(r.km),
