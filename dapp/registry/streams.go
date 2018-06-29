@@ -3,6 +3,7 @@ package registry
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	pb "github.com/Bit-Nation/panthalassa/dapp/registry/pb"
@@ -26,12 +27,18 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 			msg := pb.Message{}
 			if err := decoder.Decode(&msg); err != nil {
 				logger.Error(err)
-				continue
+				if err == io.EOF {
+					str.Close()
+				} else {
+					str.Reset()
+				}
+				break
 			}
 
 			if msg.Type != pb.Message_DApp {
 				logger.Error("i can only handle DApps")
 				continue
+
 			}
 
 			var app dapp.JsonRepresentation

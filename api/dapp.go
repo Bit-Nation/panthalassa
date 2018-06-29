@@ -1,13 +1,13 @@
 package api
 
 import (
-	"time"
-
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"time"
+
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
-	"github.com/Bit-Nation/panthalassa/dapp"
-	"github.com/kataras/iris/core/errors"
+	dapp "github.com/Bit-Nation/panthalassa/dapp"
 )
 
 func (a *API) ShowModal(title, layout string) error {
