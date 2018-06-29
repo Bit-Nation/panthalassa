@@ -38,12 +38,14 @@ func (a *DAppApi) ShowModal(title, layout string, dAppPubKey ed25519.PublicKey) 
 			Layout:        layout,
 		},
 	}, time.Second*20)
+	if err != nil {
+		return err
+	}
 
 	// close since we don't care about the response
 	resp.Closer <- nil
 
-	return err
-
+	return nil
 }
 
 // send an ethereum transaction to api
