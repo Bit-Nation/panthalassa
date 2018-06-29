@@ -2,16 +2,16 @@ package dapp
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"time"
 
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
 	cbModule "github.com/Bit-Nation/panthalassa/dapp/module/callbacks"
 	dAppRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/dapp"
 	msgRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/message"
-	"github.com/kataras/iris/core/errors"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
-	"time"
 )
 
 type DApp struct {
