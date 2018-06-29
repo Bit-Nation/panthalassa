@@ -16,12 +16,18 @@ func (c *Chat) CreateDAppMessage(msg string, secretID string, sec x3dh.SharedSec
 		return Message{}, err
 	}
 
+	myIdPubKey, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return Message{}, err
+	}
+
 	m := Message{
 		Type:                 "DAPP_MESSAGE",
 		SendAt:               time.Now(),
 		UsedSecretRef:        secretID,
 		DoubleratchetMessage: encryptedMessage,
 		Receiver:             hex.EncodeToString(receiver[:]),
+		IDPubKey:             myIdPubKey,
 	}
 
 	// sign message

@@ -74,15 +74,6 @@ func (c *Chat) HandleInitialMessage(m Message, keyBundlePrivate PreKeyBundlePriv
 		return x3dh.SharedSecret{}, errors.New("message must be of type PROTOCOL_INITIALISATION")
 	}
 
-	// verify signature of message
-	valid, err := m.VerifySignature()
-	if err != nil {
-		return x3dh.SharedSecret{}, err
-	}
-	if !valid {
-		return x3dh.SharedSecret{}, errors.New("invalid signature")
-	}
-
 	// get my ephemeral key
 	remoteEphemeralKeyStr, exist := m.AdditionalData["ephemeral_key"]
 	if !exist {

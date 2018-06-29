@@ -21,12 +21,18 @@ func (c *Chat) CreateHumanMessage(msg string, secretID string, sec x3dh.SharedSe
 		return Message{}, err
 	}
 
+	myId, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return Message{}, err
+	}
+
 	m := Message{
 		Type:                 "HUMAN_MESSAGE",
 		SendAt:               time.Now(),
 		UsedSecretRef:        secretID,
 		DoubleratchetMessage: encryptedMessage,
 		Receiver:             hex.EncodeToString(receiver[:]),
+		IDPubKey:             myId,
 	}
 
 	// sign message
