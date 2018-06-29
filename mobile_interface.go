@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"encoding/base64"
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
 	chat "github.com/Bit-Nation/panthalassa/chat"
@@ -170,17 +169,12 @@ func SendResponse(id string, data string, responseError string, timeout int) err
 		return errors.New("you have to start panthalassa")
 	}
 
-	// decode base64 response
-	rawProto, err := base64.StdEncoding.DecodeString(data)
-	if err != nil {
-		return err
-	}
-
 	resp := &apiPB.Response{}
-	if err := proto.Unmarshal(rawProto, resp); err != nil {
+	if err := proto.Unmarshal([]byte(data), resp); err != nil {
 		return err
 	}
 
+	var err error
 	if responseError != "" {
 		err = errors.New(responseError)
 	}
