@@ -4,10 +4,13 @@ import (
 	"testing"
 	"time"
 
+	"crypto/rand"
+	"encoding/hex"
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	proto "github.com/golang/protobuf/proto"
 	require "github.com/stretchr/testify/require"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 func TestAPI_ShowModal(t *testing.T) {
@@ -19,6 +22,9 @@ func TestAPI_ShowModal(t *testing.T) {
 			c <- data
 		},
 	}, keyManagerFactory())
+
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	require.Nil(t, err)
 
 	go func() {
 
@@ -36,6 +42,10 @@ func TestAPI_ShowModal(t *testing.T) {
 				panic("Expected layout to be '{}'")
 			}
 
+			if hex.EncodeToString(pub) != hex.EncodeToString(req.ShowModal.DAppPublicKey) {
+				panic("got wrong public key")
+			}
+
 			err := api.Respond(req.RequestID, &pb.Response{}, nil, time.Second*3)
 			if err != nil {
 				panic("expected error to be nil")
@@ -45,7 +55,7 @@ func TestAPI_ShowModal(t *testing.T) {
 
 	}()
 
-	err := api.ShowModal("Request Money", "{}")
+	err = api.ShowModal("Request Money", "{}", pub)
 	require.Nil(t, err)
 
 }

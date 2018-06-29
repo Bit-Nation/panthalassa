@@ -8,10 +8,11 @@ import (
 
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-func (a *API) ShowModal(title, layout string) error {
-	return a.dAppApi.ShowModal(title, layout)
+func (a *API) ShowModal(title, layout string, dAppIDKey ed25519.PublicKey) error {
+	return a.dAppApi.ShowModal(title, layout, dAppIDKey)
 }
 
 func (a *API) SendEthereumTransaction(value, to, data string) (string, error) {
@@ -27,13 +28,14 @@ type DAppApi struct {
 }
 
 // request to show a modal
-func (a *DAppApi) ShowModal(title, layout string) error {
+func (a *DAppApi) ShowModal(title, layout string, dAppPubKey ed25519.PublicKey) error {
 
 	// send request
 	resp, err := a.api.request(&pb.Request{
 		ShowModal: &pb.Request_ShowModal{
-			Title:  title,
-			Layout: layout,
+			DAppPublicKey: dAppPubKey,
+			Title:         title,
+			Layout:        layout,
 		},
 	}, time.Second*20)
 

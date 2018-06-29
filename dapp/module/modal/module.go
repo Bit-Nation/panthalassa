@@ -4,22 +4,25 @@ import (
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 type Device interface {
-	ShowModal(title, layout string) error
+	ShowModal(title, layout string, dAppIDKey ed25519.PublicKey) error
 }
 
 type Module struct {
-	device Device
-	logger *log.Logger
+	device    Device
+	logger    *log.Logger
+	dAppIDKey ed25519.PublicKey
 }
 
 // create new Modal Module
-func New(l *log.Logger, device Device) *Module {
+func New(l *log.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
 	return &Module{
-		logger: l,
-		device: device,
+		logger:    l,
+		device:    device,
+		dAppIDKey: dAppIDKey,
 	}
 }
 
@@ -56,6 +59,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			err := m.device.ShowModal(
 				call.Argument(0).String(),
 				call.Argument(1).String(),
+				m.dAppIDKey,
 			)
 
 			if err != nil {
