@@ -105,7 +105,6 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 	// start the DApp async
 	go func() {
 		_, err := vm.Run(app.Code)
-		closer <- app
 		wait <- err
 	}()
 
