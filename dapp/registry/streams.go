@@ -32,12 +32,13 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 				} else {
 					str.Reset()
 				}
-				continue
+				break
 			}
 
 			if msg.Type != pb.Message_DApp {
 				logger.Error("i can only handle DApps")
 				continue
+
 			}
 
 			var app dapp.JsonRepresentation
