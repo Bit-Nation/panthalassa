@@ -36,9 +36,9 @@ func (a *DAppApi) ShowModal(title, layout string) error {
 			Layout: layout,
 		},
 	}, time.Second*20)
-	if err != nil {
-		resp.Closer <- nil
-	}
+
+	// close since we don't care about the response
+	resp.Closer <- nil
 
 	return err
 
