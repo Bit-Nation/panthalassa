@@ -1,12 +1,14 @@
 package panthalassa
 
 import (
+	"encoding/hex"
 	"strings"
 
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	profile "github.com/Bit-Nation/panthalassa/profile"
+	ethc "github.com/ethereum/go-ethereum/crypto"
 	bip39 "github.com/tyler-smith/go-bip39"
 )
 
@@ -112,4 +114,18 @@ func SignProfileStandAlone(name, location, image, keyManagerStore, password stri
 
 	return string(rawProfile), nil
 
+}
+
+// converts an ethereum public key to address
+func EthPubToAddress(pub string) (string, error) {
+	pubRaw, err := hex.DecodeString(pub)
+	if err != nil {
+		return "", err
+	}
+	pubKey, err := ethc.DecompressPubkey(pubRaw)
+	if err != nil {
+		return "", err
+	}
+	addr := ethc.PubkeyToAddress(*pubKey)
+	return addr.String(), nil
 }
