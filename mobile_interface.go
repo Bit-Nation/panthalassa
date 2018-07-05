@@ -217,12 +217,20 @@ func SignProfile(name, location, image string) (string, error) {
 		return "", errors.New("you have to start panthalassa")
 	}
 
+	// sign profile
 	p, err := profile.SignProfile(name, location, image, *panthalassaInstance.km)
 	if err != nil {
 		return "", err
 	}
 
-	rawProfile, err := p.Marshal()
+	// export profile to protobuf
+	pp, err := p.ToProtobuf()
+	if err != nil {
+		return "", err
+	}
+
+	// marshal protobuf profile
+	rawProfile, err := proto.Marshal(pp)
 	if err != nil {
 		return "", err
 	}
