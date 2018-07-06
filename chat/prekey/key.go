@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"encoding/binary"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	pb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
@@ -15,7 +16,6 @@ import (
 
 var (
 	InvalidIdentityKey = errors.New("invalid identity key - expected length to be 32 bytes")
-	TimeFormat         = time.RFC850
 )
 
 type PreKey struct {
@@ -38,7 +38,11 @@ func (p *PreKey) hash() (mh.Multihash, error) {
 
 	b := bytes.NewBuffer(p.PublicKey[:])
 	b.Write(p.identityPublicKey[:])
-	b.Write([]byte(p.time.Format(TimeFormat)))
+
+	timeStamp := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutVarint(timeStamp, p.time.Unix())
+
+	b.Write(timeStamp[:n])
 	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
 }
 
@@ -96,15 +100,11 @@ func (p PreKey) ToProtobuf() (pb.PreKey, error) {
 		Key:                  p.PublicKey[:],
 		IdentityKey:          p.identityPublicKey[:],
 		IdentityKeySignature: p.signature,
-		TimeStamp:            p.time.Format(TimeFormat),
+		TimeStamp:            p.time.Unix(),
 	}, nil
 }
 
 func FromProtoBuf(preKey pb.PreKey) (PreKey, error) {
-	t, err := time.Parse(TimeFormat, preKey.TimeStamp)
-	if err != nil {
-		return PreKey{}, err
-	}
 	if len(preKey.Key) != 32 {
 		return PreKey{}, errors.New("pre key public key is invalid - expected be 32 bytes long")
 	}
@@ -113,7 +113,7 @@ func FromProtoBuf(preKey pb.PreKey) (PreKey, error) {
 	}
 	p := PreKey{
 		signature: preKey.IdentityKeySignature,
-		time:      t,
+		time:      time.Unix(preKey.TimeStamp, 0),
 	}
 	copy(p.PublicKey[:], preKey.Key[:32])
 	copy(p.identityPublicKey[:], preKey.IdentityKey[:32])

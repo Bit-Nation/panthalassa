@@ -60,7 +60,7 @@ func TestPreKey_ToProtobufAndBack(t *testing.T) {
 
 	require.Equal(t, hex.EncodeToString(k.identityPublicKey[:]), hex.EncodeToString(pp.IdentityKey))
 	require.Equal(t, k.signature, pp.IdentityKeySignature)
-	require.Equal(t, k.time.Format(TimeFormat), pp.TimeStamp)
+	require.Equal(t, k.time.Unix(), pp.TimeStamp)
 	require.Equal(t, hex.EncodeToString(k.PublicKey[:]), hex.EncodeToString(pp.Key))
 
 	k, err = FromProtoBuf(pp)
@@ -68,7 +68,7 @@ func TestPreKey_ToProtobufAndBack(t *testing.T) {
 
 	require.Equal(t, hex.EncodeToString(pp.IdentityKey), hex.EncodeToString(k.identityPublicKey[:]))
 	require.Equal(t, pp.IdentityKeySignature, k.signature)
-	require.Equal(t, pp.TimeStamp, k.time.Format(TimeFormat))
+	require.Equal(t, pp.TimeStamp, k.time.Unix())
 	require.Equal(t, hex.EncodeToString(pp.Key), hex.EncodeToString(k.PublicKey[:]))
 
 }
