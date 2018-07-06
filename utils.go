@@ -9,6 +9,7 @@ import (
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	ethc "github.com/ethereum/go-ethereum/crypto"
+	"github.com/gogo/protobuf/proto"
 	bip39 "github.com/tyler-smith/go-bip39"
 )
 
@@ -107,7 +108,12 @@ func SignProfileStandAlone(name, location, image, keyManagerStore, password stri
 		return "", err
 	}
 
-	rawProfile, err := p.Marshal()
+	pp, err := p.ToProtobuf()
+	if err != nil {
+		return "", err
+	}
+
+	rawProfile, err := proto.Marshal(pp)
 	if err != nil {
 		return "", err
 	}
