@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	"encoding/binary"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	pb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
@@ -18,7 +19,6 @@ import (
 
 const (
 	profileVersion = 2
-	TimeFormat     = time.UnixDate
 )
 
 var (
@@ -65,11 +65,6 @@ func ProtobufToProfile(prof *pb.Profile) (*Profile, error) {
 	chatIDPubKey := x3dh.PublicKey{}
 	copy(chatIDPubKey[:], prof.ChatIdentityPubKey[:32])
 
-	timeStamp, err := time.Parse(TimeFormat, prof.Timestamp)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Profile{
 		Information: Information{
 			Name:           prof.Name,
@@ -78,7 +73,7 @@ func ProtobufToProfile(prof *pb.Profile) (*Profile, error) {
 			IdentityPubKey: prof.IdentityPubKey,
 			EthereumPubKey: prof.EthereumPubKey,
 			ChatIDKey:      chatIDPubKey,
-			Timestamp:      timeStamp,
+			Timestamp:      time.Unix(prof.Timestamp, 0),
 			Version:        uint8(prof.Version),
 		},
 		Signatures: Signatures{
@@ -93,13 +88,16 @@ func ProtobufToProfile(prof *pb.Profile) (*Profile, error) {
 func (p *Profile) Hash() (mh.Multihash, error) {
 	b := bytes.NewBuffer([]byte(p.Information.Name))
 
+	timeStamp := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutVarint(timeStamp, p.Information.Timestamp.Unix())
+
 	toWrite := [][]byte{
 		[]byte(p.Information.Location),
 		[]byte(p.Information.Image),
 		p.Information.IdentityPubKey,
 		p.Information.EthereumPubKey,
 		p.Information.ChatIDKey[:],
-		[]byte(p.Information.Timestamp.Format(TimeFormat)),
+		timeStamp[:n],
 	}
 
 	for _, tw := range toWrite {
@@ -203,7 +201,7 @@ func (p *Profile) ToProtobuf() (*pb.Profile, error) {
 	pp.IdentityPubKey = p.Information.IdentityPubKey
 	pp.EthereumPubKey = p.Information.EthereumPubKey
 	pp.ChatIdentityPubKey = p.Information.ChatIDKey[:]
-	pp.Timestamp = p.Information.Timestamp.Format(TimeFormat)
+	pp.Timestamp = p.Information.Timestamp.Unix()
 	pp.Version = uint32(p.Information.Version)
 
 	pp.IdentityKeySignature = p.Signatures.IdentityKey

@@ -51,7 +51,7 @@ func TestProfile(t *testing.T) {
 	require.Equal(t, pp.Image, prof.Information.Image)
 	require.Equal(t, pp.Location, prof.Information.Location)
 	require.Equal(t, hex.EncodeToString(pp.ChatIdentityPubKey), hex.EncodeToString(prof.Information.ChatIDKey[:]))
-	require.Equal(t, pp.Timestamp, prof.Information.Timestamp.Format(TimeFormat))
+	require.Equal(t, pp.Timestamp, prof.Information.Timestamp.Unix())
 	require.Equal(t, uint8(pp.Version), prof.Information.Version)
 	require.Equal(t, pp.EthereumKeySignature, prof.Signatures.EthereumKey)
 	require.Equal(t, pp.IdentityKeySignature, prof.Signatures.IdentityKey)
@@ -65,7 +65,7 @@ func TestProfile(t *testing.T) {
 	require.Equal(t, pp.Image, prof.Information.Image)
 	require.Equal(t, pp.Location, prof.Information.Location)
 	require.Equal(t, hex.EncodeToString(pp.ChatIdentityPubKey), hex.EncodeToString(prof.Information.ChatIDKey[:]))
-	require.Equal(t, pp.Timestamp, prof.Information.Timestamp.Format(TimeFormat))
+	require.Equal(t, pp.Timestamp, prof.Information.Timestamp.Unix())
 	require.Equal(t, uint8(pp.Version), prof.Information.Version)
 	require.Equal(t, pp.EthereumKeySignature, prof.Signatures.EthereumKey)
 	require.Equal(t, pp.IdentityKeySignature, prof.Signatures.IdentityKey)
@@ -87,8 +87,7 @@ func TestProfile(t *testing.T) {
 
 func TestHash(t *testing.T) {
 
-	timeStamp, err := time.Parse(TimeFormat, "Mon Jan  1 00:00:00 UTC 0001")
-	require.Nil(t, err)
+	timeStamp := time.Unix(1530874493, 0)
 
 	// create profile
 	prof := Profile{
@@ -106,6 +105,6 @@ func TestHash(t *testing.T) {
 
 	h, err := prof.Hash()
 	require.Nil(t, err)
-	require.Equal(t, "12207877aff128d20141ff49d90fc9ca2eb4c47536d52d5753c926f137aab4903ced", h.String())
+	require.Equal(t, "1220b5081e1476192853cf9dfd0ed371275572e3b66e34af8fc89f0868b42ef0c3b4", h.String())
 
 }
