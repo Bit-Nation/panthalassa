@@ -22,9 +22,9 @@ const (
 )
 
 var (
-	IdentityPublicKeyTooShort = errors.New("identity public key too short - must have 32 bytes")
-	EthereumPublicKeyTooShort = errors.New("ethereum public key too short - must have 33 bytes")
-	ChatIDKeyTooShort         = errors.New("chat identity key too short - must have 32 bytes")
+	InvalidIdentityPublicKey = errors.New("identity public key invalid - must have 32 bytes")
+	InvalidEthereumPublicKey = errors.New("ethereum public key invalid - must have 33 bytes")
+	InvalidChatIDKey         = errors.New("chat identity key invalid - must have 32 bytes")
 )
 
 type Information struct {
@@ -51,15 +51,15 @@ type Profile struct {
 func ProtobufToProfile(prof *pb.Profile) (*Profile, error) {
 
 	if len(prof.IdentityPubKey) != 32 {
-		return nil, IdentityPublicKeyTooShort
+		return nil, InvalidIdentityPublicKey
 	}
 
 	if len(prof.EthereumPubKey) != 33 {
-		return nil, EthereumPublicKeyTooShort
+		return nil, InvalidEthereumPublicKey
 	}
 
 	if len(prof.ChatIdentityPubKey) != 32 {
-		return nil, ChatIDKeyTooShort
+		return nil, InvalidChatIDKey
 	}
 
 	chatIDPubKey := x3dh.PublicKey{}
@@ -118,14 +118,14 @@ func (p *Profile) Hash() (mh.Multihash, error) {
 
 func (p *Profile) IdentityPublicKey() (ed25519.PublicKey, error) {
 	if len(p.Information.IdentityPubKey) != 32 {
-		return nil, IdentityPublicKeyTooShort
+		return nil, InvalidIdentityPublicKey
 	}
 	return p.Information.IdentityPubKey, nil
 }
 
 func (p *Profile) EthereumPublicKey() ([]byte, error) {
 	if len(p.Information.EthereumPubKey) != 33 {
-		return nil, EthereumPublicKeyTooShort
+		return nil, InvalidEthereumPublicKey
 	}
 	return p.Information.EthereumPubKey, nil
 }
@@ -185,15 +185,15 @@ func (p Profile) SignaturesValid() (bool, error) {
 func (p *Profile) ToProtobuf() (*pb.Profile, error) {
 
 	if len(p.Information.IdentityPubKey) != 32 {
-		return nil, IdentityPublicKeyTooShort
+		return nil, InvalidIdentityPublicKey
 	}
 
 	if len(p.Information.EthereumPubKey) != 33 {
-		return nil, EthereumPublicKeyTooShort
+		return nil, InvalidEthereumPublicKey
 	}
 
 	if len(p.Information.ChatIDKey) != 32 {
-		return nil, ChatIDKeyTooShort
+		return nil, InvalidChatIDKey
 	}
 
 	pp := pb.Profile{}
