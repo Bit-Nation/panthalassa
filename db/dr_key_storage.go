@@ -12,7 +12,7 @@ import (
 	dr "github.com/tiabc/doubleratchet"
 )
 
-type Store struct {
+type DRKeyStorage struct {
 	db *bolt.DB
 	km *km.KeyManager
 }
@@ -33,7 +33,7 @@ func bytesToUint(uint []byte) uint64 {
 	return binary.LittleEndian.Uint64(uint)
 }
 
-func (s *Store) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) {
+func (s *DRKeyStorage) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) {
 
 	exist := false
 	key := dr.Key{}
@@ -80,7 +80,7 @@ func (s *Store) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) {
 
 }
 
-func (s *Store) Put(k dr.Key, msgNum uint, mk dr.Key) {
+func (s *DRKeyStorage) Put(k dr.Key, msgNum uint, mk dr.Key) {
 
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		// get double ratchet key store
@@ -112,7 +112,7 @@ func (s *Store) Put(k dr.Key, msgNum uint, mk dr.Key) {
 
 }
 
-func (s *Store) DeleteMk(k dr.Key, msgNum uint) {
+func (s *DRKeyStorage) DeleteMk(k dr.Key, msgNum uint) {
 
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		drKeyStore := tx.Bucket(doubleRatchetKeyStoreBucket)
@@ -133,7 +133,7 @@ func (s *Store) DeleteMk(k dr.Key, msgNum uint) {
 
 }
 
-func (s *Store) DeletePk(k dr.Key) {
+func (s *DRKeyStorage) DeletePk(k dr.Key) {
 
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		drKeyStore := tx.Bucket(doubleRatchetKeyStoreBucket)
@@ -150,7 +150,7 @@ func (s *Store) DeletePk(k dr.Key) {
 
 }
 
-func (s *Store) Count(k dr.Key) uint {
+func (s *DRKeyStorage) Count(k dr.Key) uint {
 
 	count := 0
 
@@ -177,7 +177,7 @@ func (s *Store) Count(k dr.Key) uint {
 
 }
 
-func (s *Store) All() map[dr.Key]map[uint]dr.Key {
+func (s *DRKeyStorage) All() map[dr.Key]map[uint]dr.Key {
 
 	keys := map[dr.Key]map[uint]dr.Key{}
 

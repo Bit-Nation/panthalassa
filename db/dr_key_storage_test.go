@@ -18,7 +18,7 @@ func TestStore_Put(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := Store{
+	s := DRKeyStorage{
 		db: db,
 		km: km,
 	}
@@ -60,7 +60,7 @@ func TestStore_Get(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := Store{
+	s := DRKeyStorage{
 		db: db,
 		km: km,
 	}
@@ -116,7 +116,7 @@ func TestStore_DeleteMk(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := Store{
+	s := DRKeyStorage{
 		db: db,
 		km: km,
 	}
@@ -181,7 +181,7 @@ func TestStore_DeletePk(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := Store{
+	s := DRKeyStorage{
 		db: db,
 		km: km,
 	}
@@ -240,7 +240,7 @@ func TestStore_Count(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := Store{
+	s := DRKeyStorage{
 		db: db,
 		km: km,
 	}
@@ -279,7 +279,7 @@ func TestStore_AllSuccess(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := Store{
+	s := DRKeyStorage{
 		db: db,
 		km: km,
 	}
