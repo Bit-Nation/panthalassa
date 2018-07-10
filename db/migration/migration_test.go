@@ -3,7 +3,6 @@ package migration
 import (
 	"encoding/binary"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -128,7 +127,10 @@ func TestMigrationDBDoesNotExist(t *testing.T) {
 
 func TestMigrateTimeoutOnOpen(t *testing.T) {
 
-	db, err := bolt.Open(os.TempDir()+time.Now().String(), dbFileMode, &bolt.Options{Timeout: time.Second})
+	path, err := randomTempDBPath()
+	require.Nil(t, err)
+	
+	db, err := bolt.Open(path, dbFileMode, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
 
 	migrations := []Migration{
