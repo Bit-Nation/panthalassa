@@ -41,7 +41,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		if err != nil {
 			return handleSendError(err)
 		}
-		// run key exchange
+		// run key agreement
 		initializedProtocol, err := c.x3dh.CalculateSecret(preKeyBundle)
 		if err != nil {
 			return handleSendError(err)
@@ -58,8 +58,27 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		return handleSendError(err)
 	}
 
+	hasSignedPreKey, err := c.signedPreKeyStorage.HasActive()
+	if err != nil {
+		return handleSendError(err)
+	}
+	if !hasSignedPreKey {
+		signedPreKey, err := c.x3dh.NewKeyPair()
+		if err != nil {
+			return handleSendError(err)
+		}
+		if err := c.signedPreKeyStorage.Put(signedPreKey); err != nil {
+			return handleSendError(err)
+		}
+	}
+
+	signedPreKey, err := c.signedPreKeyStorage.GetActive()
+	if err != nil {
+		return handleSendError(err)
+	}
+
 	// create double ratchet session
-	drSession, err := c.km.CreateDoubleRatchet(ss.X3dhSS, c.drKeyStorage)
+	drSession, err := c.km.CreateDoubleRatchet(ss.X3dhSS, c.drKeyStorage, signedPreKey)
 	if err != nil {
 		return handleSendError(err)
 	}

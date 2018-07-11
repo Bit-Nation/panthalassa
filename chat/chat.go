@@ -17,12 +17,13 @@ type Backend interface {
 }
 
 type Chat struct {
-	messageDB        db.ChatMessageStorage
-	backend          Backend
-	sharedSecStorage db.SharedSecretStorage
-	x3dh             x3dh.X3dh
-	km               *keyManager.KeyManager
-	drKeyStorage     dr.KeysStorage
+	messageDB           db.ChatMessageStorage
+	backend             Backend
+	sharedSecStorage    db.SharedSecretStorage
+	x3dh                x3dh.X3dh
+	km                  *keyManager.KeyManager
+	drKeyStorage        dr.KeysStorage
+	signedPreKeyStorage db.SignedPreKeyStorage
 }
 
 func NewChat(msgDB db.ChatMessageStorage) *Chat {
