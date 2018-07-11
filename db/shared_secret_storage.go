@@ -19,6 +19,7 @@ type SharedSecret struct {
 
 type SharedSecretStorage interface {
 	HasAny(key ed25519.PublicKey) (bool, error)
+	// must return an error if no shared secret found
 	GetYoungest(key ed25519.PublicKey) (SharedSecret, error)
 	Put(key ed25519.PublicKey, proto x3dh.InitializedProtocol) error
 }

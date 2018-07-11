@@ -16,7 +16,7 @@ type Status uint
 
 const (
 	StatusSent           Status = 100
-	StatusFailedToSend          = 200
+	StatusFailedToSend   Status = 200
 	StatusDelivered      Status = 300
 	StatusFailedToHandle Status = 400
 )
