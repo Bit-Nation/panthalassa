@@ -129,7 +129,7 @@ func TestMigrateTimeoutOnOpen(t *testing.T) {
 
 	path, err := randomTempDBPath()
 	require.Nil(t, err)
-	
+
 	db, err := bolt.Open(path, dbFileMode, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
 

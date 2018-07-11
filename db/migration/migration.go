@@ -75,13 +75,12 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 	}
 
 	// open production database
-	prodDB, err := bolt.Open(prodDBPath, dbFileMode, &bolt.Options{Timeout: time.Second})
+	prodDB, err := bolt.Open(prodDBPath, dbFileMode, &bolt.Options{Timeout: time.Second * 1})
 	if err != nil {
 		return err
 	}
 
 	// migration database
-	// @todo maybe a more random value should be used
 	migrationDBFile, err := randomTempDBPath()
 	if err != nil {
 		return err
