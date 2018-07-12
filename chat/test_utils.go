@@ -1,7 +1,11 @@
 package chat
 
 import (
+	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
+	km "github.com/Bit-Nation/panthalassa/keyManager"
+	ks "github.com/Bit-Nation/panthalassa/keyStore"
+	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	ed25519 "golang.org/x/crypto/ed25519"
@@ -21,6 +25,19 @@ type testSharedSecretStorage struct {
 type testBackend struct {
 	fetchPreKeyBundle func(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error)
 	submitMessage     func(msg bpb.ChatMessage) error
+	fetchSignedPreKey func(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error)
+}
+
+type testSignedPreKeyStore struct {
+	hasActive func() (bool, error)
+	getActive func() (x3dh.KeyPair, error)
+	put       func(signedPreKey x3dh.KeyPair) error
+}
+
+type testUserStorage struct {
+	getSignedPreKey func(idKey ed25519.PublicKey) (preKey.PreKey, error)
+	hasSignedPreKey func(idKey ed25519.PublicKey) (bool, error)
+	putSignedPreKey func(idKey ed25519.PublicKey, key preKey.PreKey) error
 }
 
 type testPreKeyBundle struct {
@@ -29,6 +46,18 @@ type testPreKeyBundle struct {
 	preKeySignature []byte
 	oneTimePreKey   *x3dh.PublicKey
 	validSignature  bool
+}
+
+func (s *testSignedPreKeyStore) HasActive() (bool, error) {
+	return s.hasActive()
+}
+
+func (s *testSignedPreKeyStore) GetActive() (x3dh.KeyPair, error) {
+	return s.getActive()
+}
+
+func (s *testSignedPreKeyStore) Put(signedPreKey x3dh.KeyPair) error {
+	return s.put(signedPreKey)
 }
 
 func (b testPreKeyBundle) IdentityKey() x3dh.PublicKey {
@@ -73,4 +102,36 @@ func (b *testBackend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.Pr
 
 func (b *testBackend) SubmitMessage(msg bpb.ChatMessage) error {
 	return b.submitMessage(msg)
+}
+
+func (b *testBackend) FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error) {
+	return b.fetchSignedPreKey(userIdPubKey)
+}
+
+func (s *testUserStorage) GetSignedPreKey(idKey ed25519.PublicKey) (preKey.PreKey, error) {
+	return s.getSignedPreKey(idKey)
+}
+
+func (s *testUserStorage) HasSignedPreKey(idKey ed25519.PublicKey) (bool, error) {
+	return s.hasSignedPreKey(idKey)
+}
+
+func (s *testUserStorage) PutSignedPreKey(idKey ed25519.PublicKey, key preKey.PreKey) error {
+	return s.putSignedPreKey(idKey, key)
+}
+
+func createKeyManager() *km.KeyManager {
+
+	mne, err := mnemonic.New()
+	if err != nil {
+		panic(err)
+	}
+
+	keyStore, err := ks.NewFromMnemonic(mne)
+	if err != nil {
+		panic(err)
+	}
+
+	return km.CreateFromKeyStore(keyStore)
+
 }
