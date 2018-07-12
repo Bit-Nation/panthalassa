@@ -72,3 +72,10 @@ func TestPreKey_ToProtobufAndBack(t *testing.T) {
 	require.Equal(t, hex.EncodeToString(pp.Key), hex.EncodeToString(k.PublicKey[:]))
 
 }
+
+func TestPreKey_OlderThen(t *testing.T) {
+	k := PreKey{
+		time: time.Now().Truncate(time.Second * 10),
+	}
+	require.False(t, k.OlderThen(time.Second*30))
+}
