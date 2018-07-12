@@ -10,8 +10,8 @@ import (
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	pb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	mh "github.com/multiformats/go-multihash"
-	ed25519 "golang.org/x/crypto/ed25519"
+	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	ed25519 "gx/ipfs/QmaPHkZLbQQbvcyavn8q1GFHg6o6yeceyHFSJ3Pjf3p3TQ/go-crypto/ed25519"
 )
 
 var (
@@ -121,7 +121,6 @@ func FromProtoBuf(preKey pb.PreKey) (PreKey, error) {
 }
 
 // check if pre key is older than given date
-func (p PreKey) OlderThen(date time.Duration) bool {
-	validTill := time.Now().Truncate(date)
-	return p.time.After(validTill)
+func (p PreKey) OlderThen(past time.Duration) bool {
+	return p.time.After(time.Now().Truncate(past))
 }

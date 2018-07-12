@@ -2,12 +2,13 @@ package prekey
 
 import (
 	"encoding/hex"
+	"testing"
+	"time"
+
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	require "github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestHashInvalidIdPublicKey(t *testing.T) {
@@ -77,5 +78,5 @@ func TestPreKey_OlderThen(t *testing.T) {
 	k := PreKey{
 		time: time.Now().Truncate(time.Second * 10),
 	}
-	require.False(t, k.OlderThen(time.Second*30))
+	require.False(t, k.OlderThen(time.Second*5))
 }
