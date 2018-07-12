@@ -38,7 +38,7 @@ func TestSign(t *testing.T) {
 
 	require.Nil(t, k.Sign(*km))
 
-	valid, err := k.VerifySignature()
+	valid, err := k.VerifySignature(k.identityPublicKey[:])
 	require.Nil(t, err)
 	require.True(t, valid)
 

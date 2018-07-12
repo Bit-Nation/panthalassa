@@ -84,7 +84,7 @@ func (p *PreKey) Sign(km km.KeyManager) error {
 
 }
 
-func (p PreKey) VerifySignature() (bool, error) {
+func (p PreKey) VerifySignature(publicKey ed25519.PublicKey) (bool, error) {
 	hash, err := p.hash()
 	if err != nil {
 		return false, err
@@ -92,7 +92,7 @@ func (p PreKey) VerifySignature() (bool, error) {
 	if len(p.identityPublicKey) != 32 {
 		return false, InvalidIdentityKey
 	}
-	return ed25519.Verify(p.identityPublicKey[:], hash, p.signature), nil
+	return ed25519.Verify(publicKey, hash, p.signature), nil
 }
 
 func (p PreKey) ToProtobuf() (pb.PreKey, error) {
@@ -118,4 +118,10 @@ func FromProtoBuf(preKey pb.PreKey) (PreKey, error) {
 	copy(p.PublicKey[:], preKey.Key[:32])
 	copy(p.identityPublicKey[:], preKey.IdentityKey[:32])
 	return p, nil
+}
+
+// check if pre key is older than given date
+func (p PreKey) OlderThen(date time.Duration) bool {
+	validTill := time.Now().Truncate(date)
+	return p.time.After(validTill)
 }
