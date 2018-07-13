@@ -6,8 +6,8 @@ import (
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	bolt "github.com/coreos/bbolt"
 	"os"
-	"time"
 	"path/filepath"
+	"time"
 )
 
 func createKeyManager() *km.KeyManager {
@@ -27,7 +27,7 @@ func createKeyManager() *km.KeyManager {
 }
 
 func createDB() *bolt.DB {
-	dbPath, err := filepath.Abs(os.TempDir()+"/"+time.Now().String())
+	dbPath, err := filepath.Abs(os.TempDir() + "/" + time.Now().String())
 	if err != nil {
 		panic(err)
 	}

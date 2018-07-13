@@ -2,11 +2,11 @@ package prekey
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"time"
-	"encoding/binary"
-  
+
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	pb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
