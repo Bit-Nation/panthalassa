@@ -74,7 +74,7 @@ func TestPreKey_ToProtobufAndBack(t *testing.T) {
 
 }
 
-func TestPreKey_OlderThen(t *testing.T) {
+func TestPreKey_OlderThan(t *testing.T) {
 	k := PreKey{
 		time: time.Now().Truncate(time.Second * 10),
 	}
