@@ -7,6 +7,7 @@ import (
 	bolt "github.com/coreos/bbolt"
 	"os"
 	"time"
+	"path/filepath"
 )
 
 func createKeyManager() *km.KeyManager {
@@ -26,7 +27,11 @@ func createKeyManager() *km.KeyManager {
 }
 
 func createDB() *bolt.DB {
-	db, err := bolt.Open(os.TempDir()+time.Now().String(), 0600, &bolt.Options{Timeout: time.Second})
+	dbPath, err := filepath.Abs(os.TempDir()+"/"+time.Now().String())
+	if err != nil {
+		panic(err)
+	}
+	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
 	if err != nil {
 		panic(err)
 	}
