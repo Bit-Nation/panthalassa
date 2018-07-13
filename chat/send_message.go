@@ -8,6 +8,7 @@ import (
 	prekey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
 	bpb "github.com/Bit-Nation/protobuffers"
+	x3dh "github.com/Bit-Nation/x3dh"
 	proto "github.com/golang/protobuf/proto"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
@@ -30,7 +31,6 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 			return prekey.PreKey{}, handleSendError(err)
 		}
 
-		
 		// validate signature of signed pre key
 		validSignature, err := signedPreKey.VerifySignature(userIDPubKey)
 		if err != nil {
@@ -154,12 +154,29 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 	// attach information to message that will allow receiver
 	// to derive shared secret
 	if !ss.Accepted {
-		// @todo validate byte slice
-		msgToSend.EphemeralKey = ss.EphemeralKey[:]
+		validX3dhPub := func(pub x3dh.PublicKey) error {
+			if pub == [32]byte{} {
+				return errors.New("got invalid x3dh public key - seems to be empty")
+			}
+			if len(pub) != 32 {
+				return errors.New("go invalid x3dh public key - length MUST be 32")
+			}
+			return nil
+		}
 		if ss.UsedOneTimePreKey != nil {
+			if err := validX3dhPub(*ss.UsedOneTimePreKey); err != nil {
+				return err
+			}
 			msgToSend.OneTimePreKey = ss.UsedOneTimePreKey[:]
 		}
+		if err := validX3dhPub(ss.UsedSignedPreKey); err != nil {
+			return err
+		}
+		if err := validX3dhPub(ss.EphemeralKey); err != nil {
+			return err
+		}
 		msgToSend.SignedPreKey = ss.UsedSignedPreKey[:]
+		msgToSend.EphemeralKey = ss.EphemeralKey[:]
 		msgToSend.EphemeralKeySignature = ss.EphemeralKeySignature
 		msgToSend.SharedSecretCreationDate = ss.CreatedAt.Unix()
 	}
