@@ -34,9 +34,3 @@ type Chat struct {
 	signedPreKeyStorage db.SignedPreKeyStorage
 	userStorage         db.UserStorage
 }
-
-func NewChat(msgDB db.ChatMessageStorage) *Chat {
-	return &Chat{
-		messageDB: msgDB,
-	}
-}
