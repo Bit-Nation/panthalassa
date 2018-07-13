@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	prekey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
 	bpb "github.com/Bit-Nation/protobuffers"
 	proto "github.com/golang/protobuf/proto"
+	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
@@ -20,6 +22,24 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 			return errors.New(fmt.Sprintf("failed to update status with error: %s - original error: %s", updateError, err))
 		}
 		return err
+	}
+
+	var fetchSignedPreKey = func(userIDPubKey ed25519.PublicKey) (prekey.PreKey, error) {
+		signedPreKey, err := c.userStorage.GetSignedPreKey(receiver)
+		if err != nil {
+			return prekey.PreKey{}, handleSendError(err)
+		}
+
+		
+		// validate signature of signed pre key
+		validSignature, err := signedPreKey.VerifySignature(userIDPubKey)
+		if err != nil {
+			return prekey.PreKey{}, handleSendError(err)
+		}
+		if !validSignature {
+			return prekey.PreKey{}, handleSendError(errors.New("received invalid signature for pre key bundle"))
+		}
+		return signedPreKey, nil
 	}
 
 	// marshal message
@@ -58,27 +78,46 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		return handleSendError(err)
 	}
 
-	hasSignedPreKey, err := c.signedPreKeyStorage.HasActive()
+	hasSignedPreKey, err := c.userStorage.HasSignedPreKey(receiver)
 	if err != nil {
 		return handleSendError(err)
 	}
+
+	// fetch signed pre key of chat partner if we don't have it locally
 	if !hasSignedPreKey {
-		signedPreKey, err := c.x3dh.NewKeyPair()
+		err = c.refreshSignedPreKey(receiver)
 		if err != nil {
 			return handleSendError(err)
 		}
-		if err := c.signedPreKeyStorage.Put(signedPreKey); err != nil {
-			return handleSendError(err)
-		}
 	}
 
-	signedPreKey, err := c.signedPreKeyStorage.GetActive()
+	// fetch signed pre key from storage
+	signedPreKey, err := fetchSignedPreKey(receiver)
 	if err != nil {
 		return handleSendError(err)
 	}
 
+	// check if signed pre key expired
+	expired := signedPreKey.OlderThen(SignedPreKeyValidTimeFrame)
+	if expired {
+		err = c.refreshSignedPreKey(receiver)
+		if err != nil {
+			return handleSendError(err)
+		}
+		// fetch signed pre key from storage
+		signedPreKey, err = fetchSignedPreKey(receiver)
+		if err != nil {
+			return handleSendError(err)
+		}
+	}
+
 	// create double ratchet session
-	drSession, err := c.km.CreateDoubleRatchet(ss.X3dhSS, c.drKeyStorage, signedPreKey)
+	var drSS dr.Key
+	copy(drSS[:], ss.X3dhSS[:])
+	var drRK dr.Key
+	copy(drRK[:], signedPreKey.PublicKey[:])
+
+	drSession, err := dr.NewWithRemoteKey(drSS, drRK)
 	if err != nil {
 		return handleSendError(err)
 	}
@@ -115,16 +154,13 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 	// attach information to message that will allow receiver
 	// to derive shared secret
 	if !ss.Accepted {
+		// @todo validate byte slice
 		msgToSend.EphemeralKey = ss.EphemeralKey[:]
 		if ss.UsedOneTimePreKey != nil {
 			msgToSend.OneTimePreKey = ss.UsedOneTimePreKey[:]
 		}
 		msgToSend.SignedPreKey = ss.UsedSignedPreKey[:]
-		eks, err := c.km.IdentitySign(ss.EphemeralKey[:])
-		if err != nil {
-			return handleSendError(err)
-		}
-		msgToSend.EphemeralKeySignature = eks
+		msgToSend.EphemeralKeySignature = ss.EphemeralKeySignature
 		msgToSend.SharedSecretCreationDate = ss.CreatedAt.Unix()
 	}
 
