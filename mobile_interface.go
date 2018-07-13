@@ -7,7 +7,6 @@ import (
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
-	chat "github.com/Bit-Nation/panthalassa/chat"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
@@ -70,23 +69,12 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		}
 	}()
 
-	chatKeyPair, err := km.ChatIdKeyPair()
-	if err != nil {
-		return err
-	}
-
-	c, err := chat.New(chatKeyPair, km, api)
-	if err != nil {
-		return err
-	}
-
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:       km,
 		upStream: client,
 		api:      api,
 		mesh:     m,
-		chat:     &c,
 		dAppReg: dAppReg.NewDAppRegistry(m.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
 		}, api, km),

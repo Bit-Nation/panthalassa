@@ -159,7 +159,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 				return errors.New("got invalid x3dh public key - seems to be empty")
 			}
 			if len(pub) != 32 {
-				return errors.New("go invalid x3dh public key - length MUST be 32")
+				return errors.New("got invalid x3dh public key - length MUST be 32")
 			}
 			return nil
 		}
