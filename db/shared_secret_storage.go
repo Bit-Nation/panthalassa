@@ -8,13 +8,14 @@ import (
 )
 
 type SharedSecret struct {
-	X3dhSS            x3dh.SharedSecret
-	Accepted          bool
-	CreatedAt         time.Time
-	DestroyAt         time.Time
-	EphemeralKey      x3dh.PublicKey
-	UsedSignedPreKey  x3dh.PublicKey
-	UsedOneTimePreKey *x3dh.PublicKey
+	X3dhSS                x3dh.SharedSecret
+	Accepted              bool
+	CreatedAt             time.Time
+	DestroyAt             time.Time
+	EphemeralKey          x3dh.PublicKey
+	EphemeralKeySignature []byte
+	UsedSignedPreKey      x3dh.PublicKey
+	UsedOneTimePreKey     *x3dh.PublicKey
 }
 
 type SharedSecretStorage interface {
