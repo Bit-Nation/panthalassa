@@ -78,5 +78,5 @@ func TestPreKey_OlderThen(t *testing.T) {
 	k := PreKey{
 		time: time.Now().Truncate(time.Second * 10),
 	}
-	require.False(t, k.OlderThen(time.Second*5))
+	require.False(t, k.OlderThan(time.Second*5))
 }

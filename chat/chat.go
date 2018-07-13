@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	SignedPreKeyValidTimeFrame = time.Second * 3600 * 24 * 60
+	SignedPreKeyValidTimeFrame = time.Hour * 24 * 60
 )
 
 // represents the source were we get things

@@ -121,6 +121,6 @@ func FromProtoBuf(preKey pb.PreKey) (PreKey, error) {
 }
 
 // check if pre key is older than given date
-func (p PreKey) OlderThen(past time.Duration) bool {
+func (p PreKey) OlderThan(past time.Duration) bool {
 	return p.time.After(time.Now().Truncate(past))
 }
