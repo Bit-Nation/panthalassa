@@ -8,6 +8,7 @@ import (
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
+	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
@@ -46,6 +47,23 @@ type testPreKeyBundle struct {
 	preKeySignature []byte
 	oneTimePreKey   *x3dh.PublicKey
 	validSignature  bool
+}
+
+type drDhPair struct {
+	pub  x3dh.PublicKey
+	priv x3dh.PrivateKey
+}
+
+func (p drDhPair) PrivateKey() dr.Key {
+	var k dr.Key
+	copy(k[:], p.priv[:])
+	return k
+}
+
+func (p drDhPair) PublicKey() dr.Key {
+	var k dr.Key
+	copy(k[:], p.pub[:])
+	return k
 }
 
 func (s *testSignedPreKeyStore) HasActive() (bool, error) {
