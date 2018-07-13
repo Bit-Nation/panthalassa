@@ -2,6 +2,8 @@ package max_count
 
 import "sync"
 
+// a simple increase and decrease
+// request limitation.
 type Count struct {
 	lock              sync.Mutex
 	count             uint
