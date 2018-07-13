@@ -98,7 +98,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 	}
 
 	// check if signed pre key expired
-	expired := signedPreKey.OlderThen(SignedPreKeyValidTimeFrame)
+	expired := signedPreKey.OlderThan(SignedPreKeyValidTimeFrame)
 	if expired {
 		err = c.refreshSignedPreKey(receiver)
 		if err != nil {

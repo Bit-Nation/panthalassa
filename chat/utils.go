@@ -25,7 +25,7 @@ func (c *Chat) refreshSignedPreKey(idPubKey ed25519.PublicKey) error {
 	}
 
 	// check if signed pre key didn't expire
-	expired := signedPreKey.OlderThen(SignedPreKeyValidTimeFrame)
+	expired := signedPreKey.OlderThan(SignedPreKeyValidTimeFrame)
 	if expired {
 		return errors.New("signed pre key expired")
 	}
