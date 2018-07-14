@@ -1,4 +1,4 @@
-package max_count
+package request_limitation
 
 import "sync"
 
@@ -11,7 +11,7 @@ type Count struct {
 	canNotIncreaseErr error
 }
 
-func New(max uint, canNotIncreaseErr error) *Count {
+func NewCount(max uint, canNotIncreaseErr error) *Count {
 	return &Count{
 		lock:              sync.Mutex{},
 		max:               max,
