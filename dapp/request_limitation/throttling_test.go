@@ -1,6 +1,7 @@
 package request_limitation
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 
 func TestThrottling_Exec(t *testing.T) {
 
-	throttling := NewThrottling(0, time.Second, 1)
+	throttling := NewThrottling(0, time.Second, 1, errors.New("queue is full"))
 
 	require.Nil(t, throttling.Exec(func() {}))
 	require.EqualError(t, throttling.Exec(func() {}), "queue is full")
@@ -18,7 +19,7 @@ func TestThrottling_Exec(t *testing.T) {
 
 func TestThrottling_ExecCoolDown(t *testing.T) {
 
-	throttling := NewThrottling(2, time.Second, 10)
+	throttling := NewThrottling(2, time.Second, 10, nil)
 
 	// add to stack
 	require.Nil(t, throttling.Exec(func() {}))

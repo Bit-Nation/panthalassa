@@ -1,28 +1,30 @@
 package request_limitation
 
 import (
-	"errors"
 	"sync"
 	"time"
 )
 
 type Throttling struct {
-	concurrency uint
-	coolDown    time.Duration
-	stack       chan func()
-	lock        sync.Mutex
-	maxQueue    uint
-	inWork      uint
+	concurrency    uint
+	coolDown       time.Duration
+	stack          chan func()
+	lock           sync.Mutex
+	maxQueue       uint
+	inWork         uint
+	queueFullError error
 }
 
-func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint) *Throttling {
+// create new throttling request limitation
+func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint, queueFullError error) *Throttling {
 
 	t := &Throttling{
-		concurrency: concurrency,
-		coolDown:    coolDown,
-		stack:       make(chan func(), maxQueue),
-		lock:        sync.Mutex{},
-		maxQueue:    maxQueue,
+		concurrency:    concurrency,
+		coolDown:       coolDown,
+		stack:          make(chan func(), maxQueue),
+		lock:           sync.Mutex{},
+		maxQueue:       maxQueue,
+		queueFullError: queueFullError,
 	}
 
 	go func() {
@@ -54,7 +56,7 @@ func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint) *Thr
 
 func (t *Throttling) Exec(cb func()) error {
 	if len(t.stack) >= int(t.maxQueue) {
-		return errors.New("queue is full")
+		return t.queueFullError
 	}
 	t.stack <- cb
 	return nil
