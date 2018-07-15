@@ -25,22 +25,6 @@ type KeyManager struct {
 	account  Store
 }
 
-type drDhPair struct {
-	x3dhPair x3dh.KeyPair
-}
-
-func (p drDhPair) PrivateKey() dr.Key {
-	var k dr.Key
-	copy(k[:], p.x3dhPair.PrivateKey[:])
-	return k
-}
-
-func (p drDhPair) PublicKey() dr.Key {
-	var k dr.Key
-	copy(k[:], p.x3dhPair.PublicKey[:])
-	return k
-}
-
 type Store struct {
 	// the password is encrypted with the mnemonic
 	Password          scrypt.CipherText `json:"password"`
@@ -334,13 +318,6 @@ func (km KeyManager) ChatIdKeyPair() (x3dh.KeyPair, error) {
 		PrivateKey: priv,
 		PublicKey:  pub,
 	}, nil
-}
-
-// create my double ratchet session with
-func (km KeyManager) CreateDoubleRatchet(sharedSec x3dh.SharedSecret, keyStorage dr.KeysStorage, signedPreKey x3dh.KeyPair) (dr.Session, error) {
-	var k dr.Key
-	copy(k[:], sharedSec[:])
-	return dr.New(k, drDhPair{x3dhPair: signedPreKey}, dr.WithKeysStorage(keyStorage))
 }
 
 //Create new key manager from key store
