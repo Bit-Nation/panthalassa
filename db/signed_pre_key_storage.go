@@ -12,4 +12,6 @@ type SignedPreKeyStorage interface {
 	// persist the signed pre key
 	// @todo don't forget to give the option to register a listener in the put function
 	Put(signedPreKey x3dh.KeyPair) error
+	Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error)
+	All() []*x3dh.KeyPair
 }

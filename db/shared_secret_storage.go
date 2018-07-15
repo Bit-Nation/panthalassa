@@ -3,6 +3,7 @@ package db
 import (
 	"time"
 
+	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -22,5 +23,7 @@ type SharedSecretStorage interface {
 	HasAny(key ed25519.PublicKey) (bool, error)
 	// must return an error if no shared secret found
 	GetYoungest(key ed25519.PublicKey) (SharedSecret, error)
-	Put(key ed25519.PublicKey, proto x3dh.InitializedProtocol) error
+	Put(key ed25519.PublicKey, proto SharedSecret) error
+	// check if a secret for a chat initialization message exists
+	SecretForChatInitMsg(msg *bpb.ChatMessage) (*SharedSecret, error)
 }
