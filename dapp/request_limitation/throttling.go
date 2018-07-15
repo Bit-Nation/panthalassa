@@ -32,6 +32,7 @@ func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint, queu
 			t.lock.Lock()
 			if t.inWork >= t.concurrency {
 				t.lock.Unlock()
+				time.Sleep(time.Second)
 				continue
 			}
 			t.lock.Unlock()
