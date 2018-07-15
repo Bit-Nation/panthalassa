@@ -33,5 +33,8 @@ func (c *Count) Increase() error {
 func (c *Count) Decrease() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	if c.count == 0 {
+		return
+	}
 	c.count--
 }
