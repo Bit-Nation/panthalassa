@@ -2,12 +2,13 @@ package prekey
 
 import (
 	"encoding/hex"
+	"testing"
+	"time"
+
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	require "github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestHashInvalidIdPublicKey(t *testing.T) {
@@ -38,7 +39,7 @@ func TestSign(t *testing.T) {
 
 	require.Nil(t, k.Sign(*km))
 
-	valid, err := k.VerifySignature()
+	valid, err := k.VerifySignature(k.identityPublicKey[:])
 	require.Nil(t, err)
 	require.True(t, valid)
 
@@ -71,4 +72,11 @@ func TestPreKey_ToProtobufAndBack(t *testing.T) {
 	require.Equal(t, pp.TimeStamp, k.time.Unix())
 	require.Equal(t, hex.EncodeToString(pp.Key), hex.EncodeToString(k.PublicKey[:]))
 
+}
+
+func TestPreKey_OlderThan(t *testing.T) {
+	k := PreKey{
+		time: time.Now().Truncate(time.Second * 10),
+	}
+	require.False(t, k.OlderThan(time.Second*5))
 }
