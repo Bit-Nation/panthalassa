@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
@@ -18,6 +19,7 @@ func New(l *logger.Logger) *Module {
 		lock:      sync.Mutex{},
 		functions: map[uint]*otto.Value{},
 		logger:    l,
+		reqLim:    reqLim.NewCount(10000, errors.New("can't register more functions")),
 	}
 }
 
@@ -27,6 +29,7 @@ type Module struct {
 	functions map[uint]*otto.Value
 	counter   uint
 	vm        *otto.Otto
+	reqLim    *reqLim.Count
 }
 
 func (m *Module) Name() string {
@@ -93,7 +96,7 @@ func (m *Module) CallFunction(id uint, payload string) error {
 // "return"
 func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
-	return vm.Set("registerFunction", func(call otto.FunctionCall) otto.Value {
+	err := vm.Set("registerFunction", func(call otto.FunctionCall) otto.Value {
 		// validate function call
 		v := validator.New()
 		v.Set(0, &validator.TypeFunction)
@@ -108,6 +111,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 
 		// add function
 		m.counter++
+		// increase amount of registered functions
+		m.reqLim.Increase()
 		fn := call.Argument(0)
 		if _, exist := m.functions[m.counter]; exist {
 			vm.Run(fmt.Sprintf(`throw new Error("Failed to register function. Id (%d) already in use")`, m.counter))
@@ -124,4 +129,47 @@ func (m *Module) Register(vm *otto.Otto) error {
 		return functionId
 
 	})
+	if err != nil {
+		return err
+	}
+
+	return vm.Set("unRegisterFunction", func(call otto.FunctionCall) otto.Value {
+
+		// lock
+		m.lock.Lock()
+		defer m.lock.Unlock()
+
+		// validate function call
+		v := validator.New()
+		v.Set(0, &validator.TypeNumber)
+		if err := v.Validate(vm, call); err != nil {
+			return *err
+		}
+
+		// function id
+		funcID := call.Argument(0)
+		id, err := funcID.ToInteger()
+		if err != nil {
+			m.logger.Error(err)
+			return otto.Value{}
+		}
+
+		// check if has been registered to make sure that
+		// dapp are not able to decrease the counter by
+		// calling unRegisterFunction with functions that
+		// don't exist
+		_, registered := m.functions[uint(id)]
+		if !registered {
+			return otto.Value{}
+		}
+
+		// delete function
+		delete(m.functions, uint(id))
+
+		// decrease amount of registered functions
+		m.reqLim.Decrease()
+
+		return otto.Value{}
+	})
+
 }
