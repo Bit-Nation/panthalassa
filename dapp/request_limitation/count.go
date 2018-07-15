@@ -20,6 +20,13 @@ func NewCount(max uint, canNotIncreaseErr error) *Count {
 	}
 }
 
+// get current count of request limitation
+func (c *Count) Count() uint {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.count
+}
+
 func (c *Count) Increase() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
