@@ -49,23 +49,6 @@ type testPreKeyBundle struct {
 	validSignature  bool
 }
 
-type drDhPair struct {
-	pub  x3dh.PublicKey
-	priv x3dh.PrivateKey
-}
-
-func (p drDhPair) PrivateKey() dr.Key {
-	var k dr.Key
-	copy(k[:], p.priv[:])
-	return k
-}
-
-func (p drDhPair) PublicKey() dr.Key {
-	var k dr.Key
-	copy(k[:], p.pub[:])
-	return k
-}
-
 func (s *testSignedPreKeyStore) HasActive() (bool, error) {
 	return s.hasActive()
 }
