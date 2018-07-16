@@ -45,11 +45,10 @@ type CallValidator struct {
 }
 
 // add validation rule
-func (v *CallValidator) Set(index int, validator *Validator) error {
+func (v *CallValidator) Set(index int, validator *Validator) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.rules[index] = validator
-	return nil
 }
 
 func (v *CallValidator) Validate(vm *otto.Otto, call otto.FunctionCall) *otto.Value {

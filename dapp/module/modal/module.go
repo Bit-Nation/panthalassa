@@ -1,6 +1,10 @@
 package modal
 
 import (
+	"errors"
+	"time"
+
+	throttling "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
@@ -15,6 +19,7 @@ type Module struct {
 	device    Device
 	logger    *log.Logger
 	dAppIDKey ed25519.PublicKey
+	reqLim    *throttling.Throttling
 }
 
 // create new Modal Module
@@ -23,6 +28,7 @@ func New(l *log.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
 		logger:    l,
 		device:    device,
 		dAppIDKey: dAppIDKey,
+		reqLim:    throttling.NewThrottling(10, time.Minute, 70, errors.New("can't put more show modal requests in queue")),
 	}
 }
 
@@ -52,8 +58,9 @@ func (m *Module) Register(vm *otto.Otto) error {
 		// call callback
 		cb := call.Argument(2)
 
-		// do the request to show modal async
-		go func() {
+		// execute show modal action in
+		// context of request limitation
+		m.reqLim.Exec(func() {
 
 			// request to show modal
 			err := m.device.ShowModal(
@@ -69,7 +76,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 
 			cb.Call(cb)
 
-		}()
+		})
 
 		return otto.Value{}
 
