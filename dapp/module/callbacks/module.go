@@ -150,7 +150,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		funcID := call.Argument(0)
 		id, err := funcID.ToInteger()
 		if err != nil {
-			m.logger.Error(err)
+			m.logger.Error(err.Error())
 			return otto.Value{}
 		}
 
