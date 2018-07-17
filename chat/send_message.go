@@ -12,6 +12,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
+	"time"
 )
 
 // send a message
@@ -66,8 +67,16 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		if err != nil {
 			return handleSendError(err)
 		}
+
+		// construct shared secret
+		ss := db.SharedSecret{
+			X3dhSS:    initializedProtocol.SharedSecret,
+			Accepted:  false,
+			CreatedAt: time.Now(),
+		}
+
 		// persist shared secret
-		if err := c.sharedSecStorage.Put(receiver, initializedProtocol); err != nil {
+		if err := c.sharedSecStorage.Put(receiver, ss); err != nil {
 			return handleSendError(err)
 		}
 	}

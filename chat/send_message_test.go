@@ -103,8 +103,8 @@ func TestChat_SendMessageNoSharedSecretThoWeShould(t *testing.T) {
 		hasAny: func(key ed25519.PublicKey) (bool, error) {
 			return true, nil
 		},
-		getYoungest: func(key ed25519.PublicKey) (db.SharedSecret, error) {
-			return db.SharedSecret{}, errors.New("no shared secret found test error")
+		getYoungest: func(key ed25519.PublicKey) (*db.SharedSecret, error) {
+			return nil, errors.New("no shared secret found test error")
 		},
 	}
 
@@ -189,9 +189,11 @@ func TestChat_SendMessage(t *testing.T) {
 			// make sure encrypted messages is correct
 			// by decrypting it and comparing the
 			// original plain message with the received message
-			drSession, err := dr.New([32]byte{1}, drDhPair{
-				pub:  signedPreKeyBob.PublicKey,
-				priv: signedPreKeyBob.PrivateKey,
+			drSession, err := dr.New([32]byte{1}, &drDhPair{
+				x3dhPair: x3dh.KeyPair{
+					PublicKey:  signedPreKeyBob.PublicKey,
+					PrivateKey: signedPreKeyBob.PrivateKey,
+				},
 			})
 			decryptedRawMessage, err := drSession.RatchetDecrypt(drMsg, nil)
 			require.Nil(t, err)
@@ -208,8 +210,8 @@ func TestChat_SendMessage(t *testing.T) {
 		hasAny: func(key ed25519.PublicKey) (bool, error) {
 			return true, nil
 		},
-		getYoungest: func(key ed25519.PublicKey) (db.SharedSecret, error) {
-			return db.SharedSecret{X3dhSS: x3dh.SharedSecret{1}, Accepted: true}, nil
+		getYoungest: func(key ed25519.PublicKey) (*db.SharedSecret, error) {
+			return &db.SharedSecret{X3dhSS: x3dh.SharedSecret{1}, Accepted: true}, nil
 		},
 	}
 
@@ -313,9 +315,11 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 			// make sure encrypted messages is correct
 			// by decrypting it and comparing the
 			// original plain message with the received message
-			drSession, err := dr.New([32]byte{1}, drDhPair{
-				pub:  signedPreKeyBob.PublicKey,
-				priv: signedPreKeyBob.PrivateKey,
+			drSession, err := dr.New([32]byte{1}, &drDhPair{
+				x3dhPair: x3dh.KeyPair{
+					PublicKey:  signedPreKeyBob.PublicKey,
+					PrivateKey: signedPreKeyBob.PrivateKey,
+				},
 			})
 			decryptedRawMessage, err := drSession.RatchetDecrypt(drMsg, nil)
 			require.Nil(t, err)
@@ -332,8 +336,8 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 		hasAny: func(key ed25519.PublicKey) (bool, error) {
 			return true, nil
 		},
-		getYoungest: func(key ed25519.PublicKey) (db.SharedSecret, error) {
-			return db.SharedSecret{
+		getYoungest: func(key ed25519.PublicKey) (*db.SharedSecret, error) {
+			return &db.SharedSecret{
 				X3dhSS:                x3dh.SharedSecret{1},
 				Accepted:              false,
 				CreatedAt:             time.Unix(4, 0),
