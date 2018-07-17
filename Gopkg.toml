@@ -101,10 +101,6 @@
   version = "0.1.0"
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/nanobox-io/golang-scribble"
-
-[[constraint]]
   name = "github.com/op/go-logging"
   version = "1.0.0"
 
@@ -135,10 +131,6 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/crypto"
-
-[[constraint]]
-  name = "gopkg.in/abiosoft/ishell.v2"
-  version = "2.0.0"
 
 [prune]
   go-tests = true
