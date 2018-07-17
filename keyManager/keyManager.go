@@ -16,7 +16,6 @@ import (
 	x3dh "github.com/Bit-Nation/x3dh"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
-	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
