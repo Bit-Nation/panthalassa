@@ -22,6 +22,7 @@ const (
 )
 
 type ChatMessageStorage interface {
-	PersistMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
+	PersistSentMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
+	PersistReceivedMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
 	UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus Status) error
 }
