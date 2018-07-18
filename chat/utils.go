@@ -2,6 +2,7 @@ package chat
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 
 	bpb "github.com/Bit-Nation/protobuffers"
@@ -92,4 +93,71 @@ func sharedSecretInitID(sender, receiver ed25519.PublicKey, msg bpb.ChatMessage)
 		return nil, err
 	}
 	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
+}
+
+// hash message
+func hashChatMessage(msg bpb.ChatMessage) (mh.Multihash, error) {
+
+	b := bytes.NewBuffer(nil)
+
+	writes := []func(b *bytes.Buffer) (int, error){
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.OneTimePreKey)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.SignedPreKey)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.EphemeralKey)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.EphemeralKeySignature)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.SenderChatIDKey)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.SenderChatIDKeySignature)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			date := make([]byte, 8)
+			binary.BigEndian.PutUint64(date, uint64(msg.SharedSecretCreationDate))
+			return b.Write(date)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.Message.DoubleRatchetPK)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			n := make([]byte, 4)
+			binary.BigEndian.PutUint32(n, uint32(msg.Message.N))
+			return b.Write(n)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			pn := make([]byte, 4)
+			binary.BigEndian.PutUint32(pn, uint32(msg.Message.Pn))
+			return b.Write(pn)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.Message.CipherText)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.Receiver)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.Sender)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.MessageID)
+		},
+		func(b *bytes.Buffer) (int, error) {
+			return b.Write(msg.UsedSharedSecret)
+		},
+	}
+
+	for _, action := range writes {
+		action(b)
+	}
+
+	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
+
 }
