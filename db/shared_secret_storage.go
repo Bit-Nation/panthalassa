@@ -9,25 +9,23 @@ import (
 )
 
 type SharedSecret struct {
-	X3dhSS                 x3dh.SharedSecret
-	Accepted               bool
-	CreatedAt              time.Time
-	DestroyAt              *time.Time
-	EphemeralKey           x3dh.PublicKey
-	EphemeralKeySignature  []byte
-	UsedSignedPreKey       x3dh.PublicKey
-	UsedOneTimePreKey      *x3dh.PublicKey
-	SharedSecretID         []byte
-	ComputedSharedSecretID []byte
-	// id based on init params
-	SharedSecretInitID []byte
+	X3dhSS                x3dh.SharedSecret
+	Accepted              bool
+	CreatedAt             time.Time
+	DestroyAt             *time.Time
+	EphemeralKey          x3dh.PublicKey
+	EphemeralKeySignature []byte
+	UsedSignedPreKey      x3dh.PublicKey
+	UsedOneTimePreKey     *x3dh.PublicKey
+	ID                    []byte
+	IDInitParams          []byte
 }
 
 type SharedSecretStorage interface {
 	HasAny(key ed25519.PublicKey) (bool, error)
 	// must return an error if no shared secret found
 	GetYoungest(key ed25519.PublicKey) (*SharedSecret, error)
-	Put(key ed25519.PublicKey, ss SharedSecret) error
+	Put(chatPartner ed25519.PublicKey, ss SharedSecret) error
 	// check if a secret for a chat initialization message exists
 	SecretForChatInitMsg(msg *bpb.ChatMessage) (*SharedSecret, error)
 	// accept will mark the given shared secret as accepted

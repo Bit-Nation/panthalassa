@@ -6,5 +6,5 @@ import (
 )
 
 type OneTimePreKeyStorage interface {
-	Get(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error)
+	Cut(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error)
 }
