@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"testing"
-	"time"
 
 	db "github.com/Bit-Nation/panthalassa/db"
 	bpb "github.com/Bit-Nation/protobuffers"
@@ -176,7 +175,6 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 		EphemeralKeySignature:    ed25519.Sign(senderPriv, make([]byte, 32)),
 		SignedPreKey:             bobSignedPreKey.PublicKey[:],
 		Sender:                   senderPub,
-		SharedSecretCreationDate: 1,
 		UsedSharedSecret:         make([]byte, 32),
 	}
 
@@ -249,8 +247,9 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 
 	// marshal message
 	rawPlainMsg, err := proto.Marshal(&bpb.PlainChatMessage{
-		Message:        []byte("hi bob"),
-		SharedSecretID: sharedSecretIDRef,
+		Message:                  []byte("hi bob"),
+		SharedSecretBaseID:       sharedSecretIDRef,
+		SharedSecretCreationDate: 4,
 	})
 	require.Nil(t, err)
 
@@ -270,7 +269,6 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 		EphemeralKeySignature:    ed25519.Sign(senderPriv, aliceInitializedProto.EphemeralKey[:]),
 		SignedPreKey:             bobSignedPreKeyPair.PublicKey[:],
 		Sender:                   senderPub,
-		SharedSecretCreationDate: 1,
 		UsedSharedSecret:         make([]byte, 32),
 	}
 
@@ -316,7 +314,6 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 				require.Equal(t, hex.EncodeToString(sharedSec[:]), hex.EncodeToString(sharedSecret.X3dhSS[:]))
 				require.Equal(t, x3dh.PublicKey{}, sharedSecret.EphemeralKey)
 				require.Equal(t, []byte(nil), sharedSecret.EphemeralKeySignature)
-				require.Equal(t, time.Unix(msg.SharedSecretCreationDate, 0), sharedSecret.CreatedAt)
 				require.Nil(t, sharedSecret.UsedOneTimePreKey)
 				require.Nil(t, sharedSecret.DestroyAt)
 				return nil
@@ -326,7 +323,7 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 			persistReceivedMessage: func(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
 				require.Equal(t, senderPub, partner)
 				require.Equal(t, "hi bob", string(msg.Message))
-				require.Equal(t, sharedSecretIDRef, msg.SharedSecretID)
+				require.Equal(t, sharedSecretIDRef, msg.SharedSecretBaseID)
 				return nil
 			},
 		},
@@ -430,8 +427,8 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 
 	// marshal message
 	rawPlainMsg, err := proto.Marshal(&bpb.PlainChatMessage{
-		Message:        []byte("hi bob"),
-		SharedSecretID: sharedSecretIDRef,
+		Message:            []byte("hi bob"),
+		SharedSecretBaseID: sharedSecretIDRef,
 	})
 	require.Nil(t, err)
 
@@ -497,7 +494,7 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 			persistReceivedMessage: func(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
 				require.Equal(t, senderPub, partner)
 				require.Equal(t, "hi bob", string(msg.Message))
-				require.Equal(t, sharedSecretIDRef, msg.SharedSecretID)
+				require.Equal(t, sharedSecretIDRef, msg.SharedSecretBaseID)
 				return nil
 			},
 		},

@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/rand"
+	"time"
 
 	prekey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
@@ -12,8 +14,6 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
-	"math/rand"
-	"time"
 )
 
 // send a message
@@ -42,12 +42,6 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 			return prekey.PreKey{}, handleSendError(errors.New("received invalid signature for pre key bundle"))
 		}
 		return signedPreKey, nil
-	}
-
-	// marshal message
-	rawPlainMessage, err := proto.Marshal(&msg)
-	if err != nil {
-		return handleSendError(err)
 	}
 
 	// check if there is a shared secret for the receiver
@@ -155,6 +149,12 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 	copy(drRK[:], signedPreKey.PublicKey[:])
 
 	drSession, err := dr.NewWithRemoteKey(drSS, drRK)
+	if err != nil {
+		return handleSendError(err)
+	}
+
+	// marshal message
+	rawPlainMessage, err := proto.Marshal(&msg)
 	if err != nil {
 		return handleSendError(err)
 	}

@@ -231,7 +231,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 		// make sure creation date is valid
 		if plainMsg.SharedSecretCreationDate == 0 {
-			return errors.New("about chat initialization - invalid shared secret creation date")
+			return errors.New("abort chat initialization - invalid shared secret creation date")
 		}
 
 		// persist shared secret in accepted mode

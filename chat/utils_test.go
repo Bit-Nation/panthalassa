@@ -130,7 +130,6 @@ func TestHashChatMessage(t *testing.T) {
 		EphemeralKeySignature:    []byte("ephemeral key signature"),
 		SenderChatIDKey:          []byte("sender chat id key"),
 		SenderChatIDKeySignature: []byte("sender chat id key signature"),
-		SharedSecretCreationDate: 34564,
 		Message: &bpb.DoubleRatchedMsg{
 			DoubleRatchetPK: []byte("double ratchet pk"),
 			N:               uint32(3),
@@ -158,12 +157,6 @@ func TestHashChatMessage(t *testing.T) {
 	_, err = manHash.Write([]byte("sender chat id key"))
 	require.Nil(t, err)
 	_, err = manHash.Write([]byte("sender chat id key signature"))
-	require.Nil(t, err)
-
-	// write time stamp
-	ssCreationDate := make([]byte, 8)
-	binary.BigEndian.PutUint64(ssCreationDate, uint64(34564))
-	_, err = manHash.Write(ssCreationDate)
 	require.Nil(t, err)
 
 	// write message data

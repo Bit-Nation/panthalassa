@@ -167,7 +167,6 @@ func TestChat_SendMessage(t *testing.T) {
 			require.Equal(t, []byte(nil), msg.SignedPreKey)
 			require.Equal(t, []byte(nil), msg.EphemeralKey)
 			require.Equal(t, []byte(nil), msg.EphemeralKeySignature)
-			require.Equal(t, int64(0), msg.SharedSecretCreationDate)
 
 			// make sure that the receiver and sender are correct
 			require.Equal(t, rawIdPubKeyBob, msg.Receiver)
@@ -264,6 +263,10 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 	signedPreKeyBob.PublicKey = drKeyPair.PublicKey
 	require.Nil(t, signedPreKeyBob.Sign(*kmBob))
 
+	// shared secret base id
+	sharedSecretBaseID := make([]byte, 32)
+	sharedSecretBaseID[6] = 0x42
+
 	plainMsgToSend := bpb.PlainChatMessage{
 		MessageID: "i am the message ID of the message to send",
 		Message:   []byte("hi there"),
@@ -293,7 +296,6 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 			require.Equal(t, arrToSlice([32]byte{4, 5, 3, 2}), msg.SignedPreKey)
 			require.Equal(t, arrToSlice([32]byte{4, 3, 4}), msg.EphemeralKey)
 			require.Equal(t, []byte{1, 3, 0, 3, 5}, msg.EphemeralKeySignature)
-			require.Equal(t, int64(4), msg.SharedSecretCreationDate)
 
 			// make sure that the receiver and sender are correct
 			require.Equal(t, rawIdPubKeyBob, msg.Receiver)
@@ -325,7 +327,20 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 			require.Nil(t, err)
 			plainMsg := bpb.PlainChatMessage{}
 			require.Nil(t, proto.Unmarshal(decryptedRawMessage, &plainMsg))
-			require.Equal(t, plainMsgToSend, plainMsg)
+
+			// shared secret must be added since our shared secret haven't
+			// been accepted
+			require.Equal(t, sharedSecretBaseID, plainMsg.SharedSecretBaseID)
+
+			// make sure the shared secret creation date is the one from
+			// the shared secret
+			require.Equal(t, int64(4), plainMsg.SharedSecretCreationDate)
+
+			// make sure message id is the same as the one we have chosen
+			require.Equal(t, plainMsgToSend.MessageID, plainMsg.MessageID)
+
+			// make sure message is the name as the one we have chosen
+			require.Equal(t, plainMsgToSend.Message, plainMsg.Message)
 
 			calledBackend = true
 			return nil
@@ -345,6 +360,7 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 				EphemeralKeySignature: []byte{1, 3, 0, 3, 5},
 				UsedSignedPreKey:      x3dh.PublicKey{4, 5, 3, 2},
 				UsedOneTimePreKey:     &x3dh.PublicKey{3, 2, 4, 3, 2, 1},
+				BaseID:                sharedSecretBaseID,
 			}, nil
 		},
 	}

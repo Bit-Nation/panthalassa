@@ -120,11 +120,6 @@ func hashChatMessage(msg bpb.ChatMessage) (mh.Multihash, error) {
 			return b.Write(msg.SenderChatIDKeySignature)
 		},
 		func(b *bytes.Buffer) (int, error) {
-			date := make([]byte, 8)
-			binary.BigEndian.PutUint64(date, uint64(msg.SharedSecretCreationDate))
-			return b.Write(date)
-		},
-		func(b *bytes.Buffer) (int, error) {
 			return b.Write(msg.Message.DoubleRatchetPK)
 		},
 		func(b *bytes.Buffer) (int, error) {
