@@ -1,9 +1,12 @@
 package chat
 
 import (
+	"bytes"
 	"errors"
 
+	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
+	mh "github.com/multiformats/go-multihash"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -50,4 +53,43 @@ func (c *Chat) refreshSignedPreKey(idPubKey ed25519.PublicKey) error {
 
 	return c.userStorage.PutSignedPreKey(idPubKey, signedPreKey)
 
+}
+
+// generate shared secret id
+func sharedSecretID(sender, receiver ed25519.PublicKey, sharedSecretID []byte) (mh.Multihash, error) {
+	b := bytes.NewBuffer(sender)
+	if _, err := b.Write(receiver); err != nil {
+		return nil, err
+	}
+	if _, err := b.Write(sharedSecretID); err != nil {
+		return nil, err
+	}
+	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
+}
+
+// create identification
+func sharedSecretInitID(sender, receiver ed25519.PublicKey, msg bpb.ChatMessage) (mh.Multihash, error) {
+	if len(sender) != 32 {
+		return nil, errors.New("sender must be 32 bytes long")
+	}
+	if len(receiver) != 32 {
+		return nil, errors.New("receiver must be 32 bytes long")
+	}
+	b := bytes.Buffer{}
+	if _, err := b.Write(sender); err != nil {
+		return nil, err
+	}
+	if _, err := b.Write(receiver); err != nil {
+		return nil, err
+	}
+	if _, err := b.Write(msg.SenderChatIDKey); err != nil {
+		return nil, err
+	}
+	if _, err := b.Write(msg.SignedPreKey); err != nil {
+		return nil, err
+	}
+	if _, err := b.Write(msg.OneTimePreKey); err != nil {
+		return nil, err
+	}
+	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
 }

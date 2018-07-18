@@ -33,9 +33,10 @@ type testBackend struct {
 }
 
 type testSignedPreKeyStore struct {
-	hasActive func() (bool, error)
-	getActive func() (x3dh.KeyPair, error)
+	getActive func() (*x3dh.KeyPair, error)
 	put       func(signedPreKey x3dh.KeyPair) error
+	get       func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error)
+	all       func() []*x3dh.KeyPair
 }
 
 type testUserStorage struct {
@@ -52,16 +53,28 @@ type testPreKeyBundle struct {
 	validSignature  bool
 }
 
-func (s *testSignedPreKeyStore) HasActive() (bool, error) {
-	return s.hasActive()
+type testOneTimePreKeyStorage struct {
+	cut func(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error)
 }
 
-func (s *testSignedPreKeyStore) GetActive() (x3dh.KeyPair, error) {
+func (t *testOneTimePreKeyStorage) Cut(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error) {
+	return t.cut(pubKey)
+}
+
+func (s *testSignedPreKeyStore) GetActive() (*x3dh.KeyPair, error) {
 	return s.getActive()
 }
 
 func (s *testSignedPreKeyStore) Put(signedPreKey x3dh.KeyPair) error {
 	return s.put(signedPreKey)
+}
+
+func (s *testSignedPreKeyStore) Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
+	return s.get(publicKey)
+}
+
+func (s *testSignedPreKeyStore) All() []*x3dh.KeyPair {
+	return s.all()
 }
 
 func (b testPreKeyBundle) IdentityKey() x3dh.PublicKey {
