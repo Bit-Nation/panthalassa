@@ -12,6 +12,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
+	"math/rand"
 	"time"
 )
 
@@ -68,11 +69,28 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 			return handleSendError(err)
 		}
 
+		// ephemeral key signature
+		eks, err := c.km.IdentitySign(initializedProtocol.EphemeralKey[:])
+		if err != nil {
+			return err
+		}
+
+		// shared secret base ID
+		ssBaseID := make([]byte, 32)
+		if _, err := rand.Read(ssBaseID); err != nil {
+			return err
+		}
+
 		// construct shared secret
 		ss := db.SharedSecret{
-			X3dhSS:    initializedProtocol.SharedSecret,
-			Accepted:  false,
-			CreatedAt: time.Now(),
+			X3dhSS:                initializedProtocol.SharedSecret,
+			Accepted:              false,
+			CreatedAt:             time.Now(),
+			UsedOneTimePreKey:     initializedProtocol.UsedOneTimePreKey,
+			UsedSignedPreKey:      initializedProtocol.UsedSignedPreKey,
+			EphemeralKey:          initializedProtocol.EphemeralKey,
+			EphemeralKeySignature: eks,
+			BaseID:                ssBaseID,
 		}
 
 		// persist shared secret
@@ -118,6 +136,16 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		if err != nil {
 			return handleSendError(err)
 		}
+	}
+
+	// in the case the shared secret has not been accepted
+	// we need to attach the shared secret base id
+	if !ss.Accepted {
+		if len(ss.BaseID) != 32 {
+			return handleSendError(errors.New("base it is invalid - must have 32 bytes"))
+		}
+		msg.SharedSecretBaseID = ss.BaseID
+		msg.SharedSecretCreationDate = ss.CreatedAt.Unix()
 	}
 
 	// create double ratchet session
@@ -185,9 +213,20 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 			return err
 		}
 		msgToSend.SignedPreKey = ss.UsedSignedPreKey[:]
+
+		chatIDKeyPair, err := c.km.ChatIdKeyPair()
+		if err != nil {
+			return err
+		}
+		chatIDKeySignature, err := c.km.IdentitySign(chatIDKeyPair.PublicKey[:])
+		if err != nil {
+			return err
+		}
+		msgToSend.SenderChatIDKey = chatIDKeyPair.PublicKey[:]
+		msgToSend.SenderChatIDKeySignature = chatIDKeySignature
+
 		msgToSend.EphemeralKey = ss.EphemeralKey[:]
 		msgToSend.EphemeralKeySignature = ss.EphemeralKeySignature
-		msgToSend.SharedSecretCreationDate = ss.CreatedAt.Unix()
 	}
 
 	// send message to the backend

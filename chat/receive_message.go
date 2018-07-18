@@ -122,11 +122,6 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return errors.New("aborted chat initialization - invalid signed pre key")
 		}
 
-		// make sure creation date is valid
-		if msg.SharedSecretCreationDate == 0 {
-			return errors.New("about chat initialization - invalid shared secret creation date")
-		}
-
 		// fetch shared secret based on chat init params
 		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg)
 		if err != nil {
@@ -208,7 +203,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// make sure used share secret id exist
-		if len(plainMsg.SharedSecretID) != 32 {
+		if len(plainMsg.SharedSecretBaseID) != 32 {
 			return errors.New("invalid used shared secret id")
 		}
 
@@ -223,7 +218,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// generate shared secret id
-		ssID, err := sharedSecretID(sender, ourIDPubKey, plainMsg.SharedSecretID)
+		ssID, err := sharedSecretID(sender, ourIDPubKey, plainMsg.SharedSecretBaseID)
 		if err != nil {
 			return err
 		}
@@ -234,12 +229,17 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 
+		// make sure creation date is valid
+		if plainMsg.SharedSecretCreationDate == 0 {
+			return errors.New("about chat initialization - invalid shared secret creation date")
+		}
+
 		// persist shared secret in accepted mode
 		err = c.sharedSecStorage.Put(sender, db.SharedSecret{
 			X3dhSS: sharedX3dhSec,
 			// safe as accepted since the sender initialized the chat
 			Accepted:     true,
-			CreatedAt:    time.Unix(msg.SharedSecretCreationDate, 0),
+			CreatedAt:    time.Unix(plainMsg.SharedSecretCreationDate, 0),
 			ID:           ssID,
 			IDInitParams: idInitParams,
 		})
