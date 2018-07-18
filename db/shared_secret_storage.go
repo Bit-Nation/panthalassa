@@ -17,6 +17,7 @@ type SharedSecret struct {
 	EphemeralKeySignature []byte
 	UsedSignedPreKey      x3dh.PublicKey
 	UsedOneTimePreKey     *x3dh.PublicKey
+	BaseID                []byte
 	ID                    []byte
 	IDInitParams          []byte
 }
