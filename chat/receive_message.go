@@ -76,11 +76,9 @@ func (c *Chat) decryptMessage(msg dr.Message, sharedSecret x3dh.SharedSecret, si
 
 }
 
-// @todo when to delete private keys
-// @todo receive
 func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
-	// HERE would message authentication happen if we decide to implement it
+	// @todo HERE would message authentication happen if we decide to implement it
 
 	// make sure sender is a valid ed25519 public key
 	sender := msg.Sender
@@ -130,10 +128,6 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// fetch shared secret based on chat init params
-		// @todo I am thinking about if that is really a good idea could be an attack vector
-		// @todo since we re init if we don't have an secret and we failed to fetch the private keys from a chat init message
-		// @todo the danger is that we spam our FS with invalid shared secrets
-		// @todo an option would be to keep only the last X keys
 		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg)
 		if err != nil {
 			return err
@@ -229,7 +223,6 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// generate shared secret id
-		// @todo make sure  plainMsg.SharedSecretID is legit
 		ssID, err := sharedSecretID(sender, ourIDPubKey, plainMsg.SharedSecretID)
 		if err != nil {
 			return err
@@ -254,7 +247,6 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 
-		// @todo publish status update that message was persisted
 		return c.messageDB.PersistReceivedMessage(sender, plainMsg)
 
 	}
@@ -282,8 +274,6 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	if err != nil {
 		return err
 	}
-
-	// @todo check if shared secret id matches
 
 	// persist message
 	if err := c.messageDB.PersistReceivedMessage(msg.Sender, plainMsg); err != nil {
