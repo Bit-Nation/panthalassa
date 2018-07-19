@@ -157,6 +157,10 @@ func TestChat_SendMessage(t *testing.T) {
 		},
 	}
 
+	sharedSecretBaseID := make([]byte, 32)
+	_, err = rand.Read(sharedSecretBaseID)
+	require.Nil(t, err)
+
 	calledBackend := false
 	backend := testBackend{
 		submitMessage: func(msg bpb.ChatMessage) error {
@@ -172,6 +176,23 @@ func TestChat_SendMessage(t *testing.T) {
 			require.Equal(t, rawIdPubKeyBob, msg.Receiver)
 			require.Equal(t, rawIdPubAliceBob, msg.Sender)
 			require.Equal(t, "i am the message ID of the message to send", string(msg.MessageID))
+
+			// make sure used shared secret is correct
+			senderIDPubRaw, err := kmAlice.IdentityPublicKey()
+			require.Nil(t, err)
+			senderIDPub, err := hex.DecodeString(senderIDPubRaw)
+			require.Nil(t, err)
+
+			receiverIDPubRaw, err := kmBob.IdentityPublicKey()
+			require.Nil(t, err)
+			receiverIDPub, err := hex.DecodeString(receiverIDPubRaw)
+			require.Nil(t, err)
+
+			expectedSharedSecID, err := sharedSecretID(senderIDPub, receiverIDPub, sharedSecretBaseID)
+			require.Nil(t, err)
+
+			// make sure shared secret got attached
+			require.Equal(t, hex.EncodeToString(expectedSharedSecID), hex.EncodeToString(msg.UsedSharedSecret))
 
 			// get double ratchet message from protobuf
 			var dh dr.Key
@@ -210,7 +231,7 @@ func TestChat_SendMessage(t *testing.T) {
 			return true, nil
 		},
 		getYoungest: func(key ed25519.PublicKey) (*db.SharedSecret, error) {
-			return &db.SharedSecret{X3dhSS: x3dh.SharedSecret{1}, Accepted: true}, nil
+			return &db.SharedSecret{X3dhSS: x3dh.SharedSecret{1}, Accepted: true, BaseID: sharedSecretBaseID}, nil
 		},
 	}
 

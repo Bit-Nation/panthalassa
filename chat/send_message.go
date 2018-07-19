@@ -229,6 +229,14 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		msgToSend.EphemeralKeySignature = ss.EphemeralKeySignature
 	}
 
+	// make sure the base id is OK
+	if len(ss.BaseID) != 32 {
+		return errors.New("invalid base id - expected to be 32 bytes long")
+	}
+
+	// attach shared secret id to message
+	msgToSend.UsedSharedSecret, err = sharedSecretID(sender, receiver, ss.BaseID)
+
 	// send message to the backend
 	err = c.backend.SubmitMessage(msgToSend)
 	if err != nil {

@@ -131,13 +131,13 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 		signedPreKey.PrivateKey = *signedPreKeyPriv
-		
+
 		// fetch shared secret based on chat init params
 		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg)
 		if err != nil {
 			return err
 		}
-		
+
 		// decrypt the message
 		if sharedSecret != nil {
 			decryptedMsg, err := c.decryptMessage(drMessage, sharedSecret.X3dhSS, &signedPreKey)
