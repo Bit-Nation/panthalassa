@@ -260,7 +260,8 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	// fetch shared secret
 	sharedSec, err := c.sharedSecStorage.Get(sender, msg.UsedSharedSecret)
 	if err != nil {
-		// @todo we should re init the chat
+		// @todo publish status that we failed to decrypt this message
+		// @todo it's something that is not supposed to happen
 		return err
 	}
 
