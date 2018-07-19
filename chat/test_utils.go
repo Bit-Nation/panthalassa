@@ -8,19 +8,22 @@ import (
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 type testMessageStorage struct {
-	persistMessage func(to ed25519.PublicKey, msg bpb.PlainChatMessage) error
-	updateStatus   func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error
+	persistSentMessage     func(to ed25519.PublicKey, msg bpb.PlainChatMessage) error
+	persistReceivedMessage func(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
+	updateStatus           func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error
 }
 
 type testSharedSecretStorage struct {
-	hasAny      func(key ed25519.PublicKey) (bool, error)
-	getYoungest func(key ed25519.PublicKey) (db.SharedSecret, error)
-	put         func(key ed25519.PublicKey, proto x3dh.InitializedProtocol) error
+	hasAny               func(key ed25519.PublicKey) (bool, error)
+	getYoungest          func(key ed25519.PublicKey) (*db.SharedSecret, error)
+	put                  func(key ed25519.PublicKey, sharedSecret db.SharedSecret) error
+	secretForChatInitMsg func(msg *bpb.ChatMessage) (*db.SharedSecret, error)
+	accept               func(sharedSec *db.SharedSecret) error
+	get                  func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error)
 }
 
 type testBackend struct {
@@ -30,9 +33,10 @@ type testBackend struct {
 }
 
 type testSignedPreKeyStore struct {
-	hasActive func() (bool, error)
-	getActive func() (x3dh.KeyPair, error)
+	getActive func() (*x3dh.KeyPair, error)
 	put       func(signedPreKey x3dh.KeyPair) error
+	get       func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error)
+	all       func() []*x3dh.KeyPair
 }
 
 type testUserStorage struct {
@@ -49,33 +53,28 @@ type testPreKeyBundle struct {
 	validSignature  bool
 }
 
-type drDhPair struct {
-	pub  x3dh.PublicKey
-	priv x3dh.PrivateKey
+type testOneTimePreKeyStorage struct {
+	cut func(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error)
 }
 
-func (p drDhPair) PrivateKey() dr.Key {
-	var k dr.Key
-	copy(k[:], p.priv[:])
-	return k
+func (t *testOneTimePreKeyStorage) Cut(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error) {
+	return t.cut(pubKey)
 }
 
-func (p drDhPair) PublicKey() dr.Key {
-	var k dr.Key
-	copy(k[:], p.pub[:])
-	return k
-}
-
-func (s *testSignedPreKeyStore) HasActive() (bool, error) {
-	return s.hasActive()
-}
-
-func (s *testSignedPreKeyStore) GetActive() (x3dh.KeyPair, error) {
+func (s *testSignedPreKeyStore) GetActive() (*x3dh.KeyPair, error) {
 	return s.getActive()
 }
 
 func (s *testSignedPreKeyStore) Put(signedPreKey x3dh.KeyPair) error {
 	return s.put(signedPreKey)
+}
+
+func (s *testSignedPreKeyStore) Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
+	return s.get(publicKey)
+}
+
+func (s *testSignedPreKeyStore) All() []*x3dh.KeyPair {
+	return s.all()
 }
 
 func (b testPreKeyBundle) IdentityKey() x3dh.PublicKey {
@@ -98,20 +97,36 @@ func (s *testSharedSecretStorage) HasAny(key ed25519.PublicKey) (bool, error) {
 	return s.hasAny(key)
 }
 
-func (s *testSharedSecretStorage) GetYoungest(key ed25519.PublicKey) (db.SharedSecret, error) {
+func (s *testSharedSecretStorage) GetYoungest(key ed25519.PublicKey) (*db.SharedSecret, error) {
 	return s.getYoungest(key)
 }
 
-func (s *testSharedSecretStorage) Put(key ed25519.PublicKey, proto x3dh.InitializedProtocol) error {
-	return s.put(key, proto)
+func (s *testSharedSecretStorage) Put(key ed25519.PublicKey, sharedSecret db.SharedSecret) error {
+	return s.put(key, sharedSecret)
 }
 
-func (s *testMessageStorage) PersistMessage(to ed25519.PublicKey, msg bpb.PlainChatMessage) error {
-	return s.persistMessage(to, msg)
+func (s *testSharedSecretStorage) SecretForChatInitMsg(msg *bpb.ChatMessage) (*db.SharedSecret, error) {
+	return s.secretForChatInitMsg(msg)
+}
+
+func (s *testSharedSecretStorage) Accept(sharedSec *db.SharedSecret) error {
+	return s.accept(sharedSec)
+}
+
+func (s *testSharedSecretStorage) Get(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error) {
+	return s.get(key, sharedSecretID)
+}
+
+func (s *testMessageStorage) PersistSentMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+	return s.persistSentMessage(partner, msg)
 }
 
 func (s *testMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus db.Status) error {
 	return s.updateStatus(partner, msgID, newStatus)
+}
+
+func (s *testMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+	return s.persistReceivedMessage(partner, msg)
 }
 
 func (b *testBackend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error) {

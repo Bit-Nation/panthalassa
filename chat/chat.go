@@ -25,12 +25,13 @@ type Backend interface {
 }
 
 type Chat struct {
-	messageDB           db.ChatMessageStorage
-	backend             Backend
-	sharedSecStorage    db.SharedSecretStorage
-	x3dh                *x3dh.X3dh
-	km                  *keyManager.KeyManager
-	drKeyStorage        dr.KeysStorage
-	signedPreKeyStorage db.SignedPreKeyStorage
-	userStorage         db.UserStorage
+	messageDB            db.ChatMessageStorage
+	backend              Backend
+	sharedSecStorage     db.SharedSecretStorage
+	x3dh                 *x3dh.X3dh
+	km                   *keyManager.KeyManager
+	drKeyStorage         dr.KeysStorage
+	signedPreKeyStorage  db.SignedPreKeyStorage
+	oneTimePreKeyStorage db.OneTimePreKeyStorage
+	userStorage          db.UserStorage
 }

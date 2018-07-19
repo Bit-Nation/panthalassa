@@ -1,13 +1,17 @@
 package chat
 
 import (
+	"bytes"
 	"crypto/rand"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"testing"
 
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
+	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
+	mh "github.com/multiformats/go-multihash"
 	require "github.com/stretchr/testify/require"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -114,5 +118,80 @@ func TestChatRefreshSignedSuccess(t *testing.T) {
 	err = c.refreshSignedPreKey(idPubKey)
 	require.Nil(t, err)
 	require.True(t, calledStore)
+
+}
+
+func TestHashChatMessage(t *testing.T) {
+
+	msg := bpb.ChatMessage{
+		OneTimePreKey:            []byte("one time pre key"),
+		SignedPreKey:             []byte("signed pre key"),
+		EphemeralKey:             []byte("ephemeral key"),
+		EphemeralKeySignature:    []byte("ephemeral key signature"),
+		SenderChatIDKey:          []byte("sender chat id key"),
+		SenderChatIDKeySignature: []byte("sender chat id key signature"),
+		Message: &bpb.DoubleRatchedMsg{
+			DoubleRatchetPK: []byte("double ratchet pk"),
+			N:               uint32(3),
+			Pn:              uint32(4544),
+			CipherText:      []byte("cipher text"),
+		},
+		Receiver:         []byte("receiver"),
+		Sender:           []byte("sender"),
+		MessageID:        []byte("message id"),
+		UsedSharedSecret: []byte("used shared secret"),
+	}
+
+	// manual hash
+	manHash := bytes.NewBuffer(nil)
+
+	// first block of metadata
+	_, err := manHash.Write([]byte("one time pre key"))
+	require.Nil(t, err)
+	_, err = manHash.Write([]byte("signed pre key"))
+	require.Nil(t, err)
+	_, err = manHash.Write([]byte("ephemeral key"))
+	require.Nil(t, err)
+	_, err = manHash.Write([]byte("ephemeral key signature"))
+	require.Nil(t, err)
+	_, err = manHash.Write([]byte("sender chat id key"))
+	require.Nil(t, err)
+	_, err = manHash.Write([]byte("sender chat id key signature"))
+	require.Nil(t, err)
+
+	// write message data
+	_, err = manHash.Write([]byte("double ratchet pk"))
+	require.Nil(t, err)
+
+	n := make([]byte, 4)
+	binary.BigEndian.PutUint32(n, uint32(3))
+	_, err = manHash.Write(n)
+	require.Nil(t, err)
+
+	pn := make([]byte, 4)
+	binary.BigEndian.PutUint32(pn, uint32(4544))
+	_, err = manHash.Write(pn)
+	require.Nil(t, err)
+
+	_, err = manHash.Write([]byte("cipher text"))
+	require.Nil(t, err)
+
+	// second block of metadata
+	_, err = manHash.Write([]byte("receiver"))
+	require.Nil(t, err)
+	_, err = manHash.Write([]byte("sender"))
+	require.Nil(t, err)
+	_, err = manHash.Write([]byte("message id"))
+	require.Nil(t, err)
+	_, err = manHash.Write([]byte("used shared secret"))
+	require.Nil(t, err)
+
+	mhManHash, err := mh.Sum(manHash.Bytes(), mh.SHA3_256, -1)
+	require.Nil(t, err)
+
+	msgHash, err := hashChatMessage(msg)
+	require.Nil(t, err)
+
+	require.Equal(t, mhManHash, msgHash)
 
 }

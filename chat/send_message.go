@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/rand"
+	"time"
 
 	prekey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
@@ -42,12 +44,6 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		return signedPreKey, nil
 	}
 
-	// marshal message
-	rawPlainMessage, err := proto.Marshal(&msg)
-	if err != nil {
-		return handleSendError(err)
-	}
-
 	// check if there is a shared secret for the receiver
 	exist, err := c.sharedSecStorage.HasAny(receiver)
 	if err != nil {
@@ -66,8 +62,33 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		if err != nil {
 			return handleSendError(err)
 		}
+
+		// ephemeral key signature
+		eks, err := c.km.IdentitySign(initializedProtocol.EphemeralKey[:])
+		if err != nil {
+			return err
+		}
+
+		// shared secret base ID
+		ssBaseID := make([]byte, 32)
+		if _, err := rand.Read(ssBaseID); err != nil {
+			return err
+		}
+
+		// construct shared secret
+		ss := db.SharedSecret{
+			X3dhSS:                initializedProtocol.SharedSecret,
+			Accepted:              false,
+			CreatedAt:             time.Now(),
+			UsedOneTimePreKey:     initializedProtocol.UsedOneTimePreKey,
+			UsedSignedPreKey:      initializedProtocol.UsedSignedPreKey,
+			EphemeralKey:          initializedProtocol.EphemeralKey,
+			EphemeralKeySignature: eks,
+			BaseID:                ssBaseID,
+		}
+
 		// persist shared secret
-		if err := c.sharedSecStorage.Put(receiver, initializedProtocol); err != nil {
+		if err := c.sharedSecStorage.Put(receiver, ss); err != nil {
 			return handleSendError(err)
 		}
 	}
@@ -111,6 +132,16 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		}
 	}
 
+	// in the case the shared secret has not been accepted
+	// we need to attach the shared secret base id
+	if !ss.Accepted {
+		if len(ss.BaseID) != 32 {
+			return handleSendError(errors.New("base it is invalid - must have 32 bytes"))
+		}
+		msg.SharedSecretBaseID = ss.BaseID
+		msg.SharedSecretCreationDate = ss.CreatedAt.Unix()
+	}
+
 	// create double ratchet session
 	var drSS dr.Key
 	copy(drSS[:], ss.X3dhSS[:])
@@ -118,6 +149,12 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 	copy(drRK[:], signedPreKey.PublicKey[:])
 
 	drSession, err := dr.NewWithRemoteKey(drSS, drRK)
+	if err != nil {
+		return handleSendError(err)
+	}
+
+	// marshal message
+	rawPlainMessage, err := proto.Marshal(&msg)
 	if err != nil {
 		return handleSendError(err)
 	}
@@ -176,10 +213,29 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 			return err
 		}
 		msgToSend.SignedPreKey = ss.UsedSignedPreKey[:]
+
+		chatIDKeyPair, err := c.km.ChatIdKeyPair()
+		if err != nil {
+			return err
+		}
+		chatIDKeySignature, err := c.km.IdentitySign(chatIDKeyPair.PublicKey[:])
+		if err != nil {
+			return err
+		}
+		msgToSend.SenderChatIDKey = chatIDKeyPair.PublicKey[:]
+		msgToSend.SenderChatIDKeySignature = chatIDKeySignature
+
 		msgToSend.EphemeralKey = ss.EphemeralKey[:]
 		msgToSend.EphemeralKeySignature = ss.EphemeralKeySignature
-		msgToSend.SharedSecretCreationDate = ss.CreatedAt.Unix()
 	}
+
+	// make sure the base id is OK
+	if len(ss.BaseID) != 32 {
+		return errors.New("invalid base id - expected to be 32 bytes long")
+	}
+
+	// attach shared secret id to message
+	msgToSend.UsedSharedSecret, err = sharedSecretID(sender, receiver, ss.BaseID)
 
 	// send message to the backend
 	err = c.backend.SubmitMessage(msgToSend)

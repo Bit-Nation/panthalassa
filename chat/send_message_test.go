@@ -103,8 +103,8 @@ func TestChat_SendMessageNoSharedSecretThoWeShould(t *testing.T) {
 		hasAny: func(key ed25519.PublicKey) (bool, error) {
 			return true, nil
 		},
-		getYoungest: func(key ed25519.PublicKey) (db.SharedSecret, error) {
-			return db.SharedSecret{}, errors.New("no shared secret found test error")
+		getYoungest: func(key ed25519.PublicKey) (*db.SharedSecret, error) {
+			return nil, errors.New("no shared secret found test error")
 		},
 	}
 
@@ -157,6 +157,10 @@ func TestChat_SendMessage(t *testing.T) {
 		},
 	}
 
+	sharedSecretBaseID := make([]byte, 32)
+	_, err = rand.Read(sharedSecretBaseID)
+	require.Nil(t, err)
+
 	calledBackend := false
 	backend := testBackend{
 		submitMessage: func(msg bpb.ChatMessage) error {
@@ -167,12 +171,28 @@ func TestChat_SendMessage(t *testing.T) {
 			require.Equal(t, []byte(nil), msg.SignedPreKey)
 			require.Equal(t, []byte(nil), msg.EphemeralKey)
 			require.Equal(t, []byte(nil), msg.EphemeralKeySignature)
-			require.Equal(t, int64(0), msg.SharedSecretCreationDate)
 
 			// make sure that the receiver and sender are correct
 			require.Equal(t, rawIdPubKeyBob, msg.Receiver)
 			require.Equal(t, rawIdPubAliceBob, msg.Sender)
 			require.Equal(t, "i am the message ID of the message to send", string(msg.MessageID))
+
+			// make sure used shared secret is correct
+			senderIDPubRaw, err := kmAlice.IdentityPublicKey()
+			require.Nil(t, err)
+			senderIDPub, err := hex.DecodeString(senderIDPubRaw)
+			require.Nil(t, err)
+
+			receiverIDPubRaw, err := kmBob.IdentityPublicKey()
+			require.Nil(t, err)
+			receiverIDPub, err := hex.DecodeString(receiverIDPubRaw)
+			require.Nil(t, err)
+
+			expectedSharedSecID, err := sharedSecretID(senderIDPub, receiverIDPub, sharedSecretBaseID)
+			require.Nil(t, err)
+
+			// make sure shared secret got attached
+			require.Equal(t, hex.EncodeToString(expectedSharedSecID), hex.EncodeToString(msg.UsedSharedSecret))
 
 			// get double ratchet message from protobuf
 			var dh dr.Key
@@ -189,9 +209,11 @@ func TestChat_SendMessage(t *testing.T) {
 			// make sure encrypted messages is correct
 			// by decrypting it and comparing the
 			// original plain message with the received message
-			drSession, err := dr.New([32]byte{1}, drDhPair{
-				pub:  signedPreKeyBob.PublicKey,
-				priv: signedPreKeyBob.PrivateKey,
+			drSession, err := dr.New([32]byte{1}, &drDhPair{
+				x3dhPair: x3dh.KeyPair{
+					PublicKey:  signedPreKeyBob.PublicKey,
+					PrivateKey: signedPreKeyBob.PrivateKey,
+				},
 			})
 			decryptedRawMessage, err := drSession.RatchetDecrypt(drMsg, nil)
 			require.Nil(t, err)
@@ -208,8 +230,8 @@ func TestChat_SendMessage(t *testing.T) {
 		hasAny: func(key ed25519.PublicKey) (bool, error) {
 			return true, nil
 		},
-		getYoungest: func(key ed25519.PublicKey) (db.SharedSecret, error) {
-			return db.SharedSecret{X3dhSS: x3dh.SharedSecret{1}, Accepted: true}, nil
+		getYoungest: func(key ed25519.PublicKey) (*db.SharedSecret, error) {
+			return &db.SharedSecret{X3dhSS: x3dh.SharedSecret{1}, Accepted: true, BaseID: sharedSecretBaseID}, nil
 		},
 	}
 
@@ -262,6 +284,10 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 	signedPreKeyBob.PublicKey = drKeyPair.PublicKey
 	require.Nil(t, signedPreKeyBob.Sign(*kmBob))
 
+	// shared secret base id
+	sharedSecretBaseID := make([]byte, 32)
+	sharedSecretBaseID[6] = 0x42
+
 	plainMsgToSend := bpb.PlainChatMessage{
 		MessageID: "i am the message ID of the message to send",
 		Message:   []byte("hi there"),
@@ -291,7 +317,6 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 			require.Equal(t, arrToSlice([32]byte{4, 5, 3, 2}), msg.SignedPreKey)
 			require.Equal(t, arrToSlice([32]byte{4, 3, 4}), msg.EphemeralKey)
 			require.Equal(t, []byte{1, 3, 0, 3, 5}, msg.EphemeralKeySignature)
-			require.Equal(t, int64(4), msg.SharedSecretCreationDate)
 
 			// make sure that the receiver and sender are correct
 			require.Equal(t, rawIdPubKeyBob, msg.Receiver)
@@ -313,15 +338,30 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 			// make sure encrypted messages is correct
 			// by decrypting it and comparing the
 			// original plain message with the received message
-			drSession, err := dr.New([32]byte{1}, drDhPair{
-				pub:  signedPreKeyBob.PublicKey,
-				priv: signedPreKeyBob.PrivateKey,
+			drSession, err := dr.New([32]byte{1}, &drDhPair{
+				x3dhPair: x3dh.KeyPair{
+					PublicKey:  signedPreKeyBob.PublicKey,
+					PrivateKey: signedPreKeyBob.PrivateKey,
+				},
 			})
 			decryptedRawMessage, err := drSession.RatchetDecrypt(drMsg, nil)
 			require.Nil(t, err)
 			plainMsg := bpb.PlainChatMessage{}
 			require.Nil(t, proto.Unmarshal(decryptedRawMessage, &plainMsg))
-			require.Equal(t, plainMsgToSend, plainMsg)
+
+			// shared secret must be added since our shared secret haven't
+			// been accepted
+			require.Equal(t, sharedSecretBaseID, plainMsg.SharedSecretBaseID)
+
+			// make sure the shared secret creation date is the one from
+			// the shared secret
+			require.Equal(t, int64(4), plainMsg.SharedSecretCreationDate)
+
+			// make sure message id is the same as the one we have chosen
+			require.Equal(t, plainMsgToSend.MessageID, plainMsg.MessageID)
+
+			// make sure message is the name as the one we have chosen
+			require.Equal(t, plainMsgToSend.Message, plainMsg.Message)
 
 			calledBackend = true
 			return nil
@@ -332,8 +372,8 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 		hasAny: func(key ed25519.PublicKey) (bool, error) {
 			return true, nil
 		},
-		getYoungest: func(key ed25519.PublicKey) (db.SharedSecret, error) {
-			return db.SharedSecret{
+		getYoungest: func(key ed25519.PublicKey) (*db.SharedSecret, error) {
+			return &db.SharedSecret{
 				X3dhSS:                x3dh.SharedSecret{1},
 				Accepted:              false,
 				CreatedAt:             time.Unix(4, 0),
@@ -341,6 +381,7 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 				EphemeralKeySignature: []byte{1, 3, 0, 3, 5},
 				UsedSignedPreKey:      x3dh.PublicKey{4, 5, 3, 2},
 				UsedOneTimePreKey:     &x3dh.PublicKey{3, 2, 4, 3, 2, 1},
+				BaseID:                sharedSecretBaseID,
 			}, nil
 		},
 	}
