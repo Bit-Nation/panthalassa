@@ -132,8 +132,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 		signedPreKey.PrivateKey = *signedPreKeyPriv
 		
-		// fetch shared
-		// secret based on chat init params
+		// fetch shared secret based on chat init params
 		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg)
 		if err != nil {
 			return err
