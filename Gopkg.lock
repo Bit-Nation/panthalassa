@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/Bit-Nation/protobuffers"
   packages = ["."]
-  revision = "a496b52ee82fcfddce3fe8323439fd8b3cae4030"
+  revision = "424aa70d27ebfa790c880a4db54ef986f545c4ff"
 
 [[projects]]
   branch = "master"
