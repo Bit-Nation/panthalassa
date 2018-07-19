@@ -122,12 +122,6 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return errors.New("aborted chat initialization - invalid signed pre key")
 		}
 
-		// fetch shared secret based on chat init params
-		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg)
-		if err != nil {
-			return err
-		}
-
 		var signedPreKey x3dh.KeyPair
 		copy(signedPreKey.PublicKey[:], msg.SignedPreKey)
 
@@ -137,7 +131,14 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 		signedPreKey.PrivateKey = *signedPreKeyPriv
-
+		
+		// fetch shared
+		// secret based on chat init params
+		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg)
+		if err != nil {
+			return err
+		}
+		
 		// decrypt the message
 		if sharedSecret != nil {
 			decryptedMsg, err := c.decryptMessage(drMessage, sharedSecret.X3dhSS, &signedPreKey)
