@@ -6,4 +6,5 @@ type Transport interface {
 	Send(msg *bpb.BackendMessage) error
 	OnMessage(func(msg *bpb.BackendMessage) error)
 	Close() error
+	Start() error
 }
