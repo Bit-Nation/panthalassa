@@ -21,7 +21,7 @@ type ServerConfig struct {
 	BearerToken  string
 }
 
-type ServerBackend struct {
+type Backend struct {
 	transport Transport
 	// all outgoing requests
 	outReqQueue    chan *request
@@ -33,23 +33,23 @@ type ServerBackend struct {
 }
 
 // Add request handler that will be executed
-func (b *ServerBackend) AddRequestHandler(handler RequestHandler) {
+func (b *Backend) AddRequestHandler(handler RequestHandler) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.requestHandler = append(b.requestHandler, handler)
 }
 
-func (b *ServerBackend) Start() error {
+func (b *Backend) Start() error {
 	return b.transport.Start()
 }
 
-func (b *ServerBackend) Close() error {
+func (b *Backend) Close() error {
 	return b.transport.Close()
 }
 
 func NewServerBackend(trans Transport, km *km.KeyManager) (*ServerBackend, error) {
 
-	b := &ServerBackend{
+	b := &Backend{
 		outReqQueue: make(chan *request, 150),
 		transport:   trans,
 		lock:        sync.Mutex{},

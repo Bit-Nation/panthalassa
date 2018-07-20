@@ -20,7 +20,7 @@ type request struct {
 }
 
 // will request the chat backend
-func (b *ServerBackend) request(req bpb.BackendMessage_Request, timeOut time.Duration) (*bpb.BackendMessage_Response, error) {
+func (b *Backend) request(req bpb.BackendMessage_Request, timeOut time.Duration) (*bpb.BackendMessage_Response, error) {
 
 	respChan := make(chan *response)
 

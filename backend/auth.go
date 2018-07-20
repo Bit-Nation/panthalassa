@@ -8,7 +8,7 @@ import (
 )
 
 // authentication request handler
-func (b *ServerBackend) auth() RequestHandler {
+func (b *Backend) auth() RequestHandler {
 
 	fn := func(req *bpb.BackendMessage_Request) (*bpb.BackendMessage_Response, error) {
 

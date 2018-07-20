@@ -12,7 +12,7 @@ import (
 )
 
 // fetch pre key bundle from backend
-func (b *ServerBackend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error) {
+func (b *Backend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error) {
 
 	// request pre key bundle
 	resp, err := b.request(bpb.BackendMessage_Request{}, time.Second*4)
@@ -26,13 +26,13 @@ func (b *ServerBackend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.
 }
 
 // submit messages
-func (b *ServerBackend) SubmitMessages(messages []*bpb.ChatMessage) error {
+func (b *Backend) SubmitMessages(messages []*bpb.ChatMessage) error {
 	_, err := b.request(bpb.BackendMessage_Request{Messages: messages}, time.Second*4)
 	return err
 }
 
 // fetch signed pre key of person
-func (b *ServerBackend) FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error) {
+func (b *Backend) FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error) {
 	// request signed pre key of user from backend
 	resp, err := b.request(bpb.BackendMessage_Request{SignedPreKey: userIdPubKey}, time.Second*4)
 	if err != nil {
