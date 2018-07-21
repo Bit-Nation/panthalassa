@@ -2,11 +2,11 @@ package backend
 
 import (
 	"sync"
+	"time"
 
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bpb "github.com/Bit-Nation/protobuffers"
 	log "github.com/ipfs/go-log"
-	"time"
 )
 
 var logger = log.Logger("backend")
@@ -47,7 +47,7 @@ func (b *Backend) Close() error {
 	return b.transport.Close()
 }
 
-func NewServerBackend(trans Transport, km *km.KeyManager) (*ServerBackend, error) {
+func NewServerBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 
 	b := &Backend{
 		outReqQueue: make(chan *request, 150),
@@ -62,37 +62,42 @@ func NewServerBackend(trans Transport, km *km.KeyManager) (*ServerBackend, error
 	trans.OnMessage(func(msg *bpb.BackendMessage) error {
 		b.lock.Lock()
 		defer b.lock.Unlock()
-		for _, handler := range b.requestHandler {
-			// handler
-			h := *handler
-			resp, err := h(msg.Request)
-			// exit on error
-			if err != nil {
-				return b.transport.Send(&bpb.BackendMessage{
+
+		// handle requests
+		if msg.Request != nil {
+			for _, handler := range b.requestHandler {
+				// handler
+				h := *handler
+				resp, err := h(msg.Request)
+				// exit on error
+				if err != nil {
+					return b.transport.Send(&bpb.BackendMessage{
+						RequestID: msg.RequestID,
+						Error:     err.Error(),
+					})
+				}
+				// if resp is nil we know that the handler didn't handle the request
+				if resp == nil {
+					continue
+				}
+				// send response
+				err = b.transport.Send(&bpb.BackendMessage{
+					Response:  resp,
 					RequestID: msg.RequestID,
-					Error:     err.Error(),
 				})
-			}
-			// if resp is nil we know that the handler didn't handle the request
-			if resp == nil {
-				continue
-			}
-			// send response
-			err = b.transport.Send(&bpb.BackendMessage{
-				Response:  resp,
-				RequestID: msg.RequestID,
-			})
-			if err != nil {
-				return err
-			}
-			// in the case this was a auth request we need to apply some special logic
-			// this will only be executed when this message was a auth request
-			if msg.Request != nil {
-				if msg.Response.Auth != nil {
-					b.authenticated = true
+				if err != nil {
+					return err
+				}
+				// in the case this was a auth request we need to apply some special logic
+				// this will only be executed when this message was a auth request
+				if msg.Request != nil {
+					if msg.Response.Auth != nil {
+						b.authenticated = true
+					}
 				}
 			}
 		}
+
 		return nil
 	})
 
