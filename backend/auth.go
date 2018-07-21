@@ -8,40 +8,35 @@ import (
 )
 
 // authentication request handler
-func (b *Backend) auth() RequestHandler {
+func (b *Backend) auth(req *bpb.BackendMessage_Request) (*bpb.BackendMessage_Response, error) {
 
-	fn := func(req *bpb.BackendMessage_Request) (*bpb.BackendMessage_Response, error) {
+	auth := req.Auth
 
-		auth := req.Auth
-
-		if auth != nil {
-			// sign data
-			signature, err := b.km.IdentitySign(auth.ToSign)
-			if err != nil {
-				return nil, errors.New("failed to sign data")
-			}
-			// get identity public key
-			idPubStr, err := b.km.IdentityPublicKey()
-			if err != nil {
-				return nil, err
-			}
-			rawIDKey, err := hex.DecodeString(idPubStr)
-			if err != nil {
-				return nil, err
-			}
-
-			return &bpb.BackendMessage_Response{
-				Auth: &bpb.BackendMessage_Auth{
-					Signature:         signature,
-					IdentityPublicKey: rawIDKey,
-					ToSign:            auth.ToSign,
-				},
-			}, nil
+	if auth != nil {
+		// sign data
+		signature, err := b.km.IdentitySign(auth.ToSign)
+		if err != nil {
+			return nil, errors.New("failed to sign data")
+		}
+		// get identity public key
+		idPubStr, err := b.km.IdentityPublicKey()
+		if err != nil {
+			return nil, err
+		}
+		rawIDKey, err := hex.DecodeString(idPubStr)
+		if err != nil {
+			return nil, err
 		}
 
-		return nil, nil
+		return &bpb.BackendMessage_Response{
+			Auth: &bpb.BackendMessage_Auth{
+				Signature:         signature,
+				IdentityPublicKey: rawIDKey,
+				ToSign:            auth.ToSign,
+			},
+		}, nil
 	}
 
-	return &fn
+	return nil, nil
 
 }

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	chat "github.com/Bit-Nation/panthalassa/chat"
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
@@ -17,17 +16,34 @@ func (b *Backend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKey
 	// request pre key bundle
 	resp, err := b.request(bpb.BackendMessage_Request{}, time.Second*4)
 	if err != nil {
-		return &chat.PreKeyBundle{}, err
+		return &PreKeyBundle{}, err
+	}
+
+	// unmarshal protobuf
+	bundle, err := PreKeyBundleFromProto(userIDPubKey, resp.PreKeyBundle)
+	if err != nil {
+		return &PreKeyBundle{}, err
+	}
+
+	// validate signatures
+	valid, err := bundle.ValidSignature()
+	if err != nil {
+		return &PreKeyBundle{}, err
+	}
+
+	// exit if invalid signature
+	if !valid {
+		return &PreKeyBundle{}, errors.New("invalid pre key bundle signatures")
 	}
 
 	// parse pre key bundle
-	return chat.PreKeyBundleFromProto(resp.PreKeyBundle)
+	return bundle, nil
 
 }
 
 // submit messages
 func (b *Backend) SubmitMessages(messages []*bpb.ChatMessage) error {
-	_, err := b.request(bpb.BackendMessage_Request{Messages: messages}, time.Second*4)
+	_, err := b.request(bpb.BackendMessage_Request{Messages: messages}, time.Second*20)
 	return err
 }
 

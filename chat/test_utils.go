@@ -1,6 +1,7 @@
 package chat
 
 import (
+	backend "github.com/Bit-Nation/panthalassa/backend"
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
@@ -28,8 +29,9 @@ type testSharedSecretStorage struct {
 
 type testBackend struct {
 	fetchPreKeyBundle func(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error)
-	submitMessage     func(msg bpb.ChatMessage) error
+	submitMessages    func(msg []*bpb.ChatMessage) error
 	fetchSignedPreKey func(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error)
+	addRequestHandler func(backend.RequestHandler)
 }
 
 type testSignedPreKeyStore struct {
@@ -50,7 +52,7 @@ type testPreKeyBundle struct {
 	signedPreKey    x3dh.PublicKey
 	preKeySignature []byte
 	oneTimePreKey   *x3dh.PublicKey
-	validSignature  bool
+	validSignature  func() (bool, error)
 }
 
 type testOneTimePreKeyStorage struct {
@@ -89,8 +91,8 @@ func (b testPreKeyBundle) OneTimePreKey() *x3dh.PublicKey {
 	return b.oneTimePreKey
 }
 
-func (b testPreKeyBundle) ValidSignature() bool {
-	return b.validSignature
+func (b testPreKeyBundle) ValidSignature() (bool, error) {
+	return b.validSignature()
 }
 
 func (s *testSharedSecretStorage) HasAny(key ed25519.PublicKey) (bool, error) {
@@ -133,12 +135,16 @@ func (b *testBackend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.Pr
 	return b.fetchPreKeyBundle(userIDPubKey)
 }
 
-func (b *testBackend) SubmitMessage(msg bpb.ChatMessage) error {
-	return b.submitMessage(msg)
+func (b *testBackend) SubmitMessages(messages []*bpb.ChatMessage) error {
+	return b.submitMessages(messages)
 }
 
 func (b *testBackend) FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error) {
 	return b.fetchSignedPreKey(userIdPubKey)
+}
+
+func (b testBackend) AddRequestHandler(handler backend.RequestHandler) {
+	b.addRequestHandler(handler)
 }
 
 func (s *testUserStorage) GetSignedPreKey(idKey ed25519.PublicKey) (preKey.PreKey, error) {

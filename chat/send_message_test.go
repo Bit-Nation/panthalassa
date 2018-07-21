@@ -64,7 +64,9 @@ func TestChat_SendMessageX3dhError(t *testing.T) {
 
 	backend := testBackend{
 		fetchPreKeyBundle: func(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error) {
-			return testPreKeyBundle{validSignature: false}, nil
+			return testPreKeyBundle{validSignature: func() (bool, error) {
+				return false, nil
+			}}, nil
 		},
 	}
 
@@ -163,7 +165,10 @@ func TestChat_SendMessage(t *testing.T) {
 
 	calledBackend := false
 	backend := testBackend{
-		submitMessage: func(msg bpb.ChatMessage) error {
+		submitMessages: func(messages []*bpb.ChatMessage) error {
+
+			msg := messages[0]
+			require.NotNil(t, msg)
 
 			// all of those checks relate to the if a
 			// shared secret was accepted or not
@@ -305,7 +310,10 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 
 	calledBackend := false
 	backend := testBackend{
-		submitMessage: func(msg bpb.ChatMessage) error {
+		submitMessages: func(messages []*bpb.ChatMessage) error {
+
+			msg := messages[0]
+			require.NotNil(t, msg)
 
 			arrToSlice := func(arr [32]byte) []byte {
 				return arr[:]

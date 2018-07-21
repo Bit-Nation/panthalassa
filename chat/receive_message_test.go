@@ -222,9 +222,11 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 
 	aliceX3dh := x3dh.New(&curve25519, sha256.New(), "proto", aliceIDKeyPair)
 	aliceInitializedProto, err := aliceX3dh.CalculateSecret(testPreKeyBundle{
-		identityKey:    bobChatIDKeyPair.PublicKey,
-		signedPreKey:   bobSignedPreKeyPair.PublicKey,
-		validSignature: true,
+		identityKey:  bobChatIDKeyPair.PublicKey,
+		signedPreKey: bobSignedPreKeyPair.PublicKey,
+		validSignature: func() (bool, error) {
+			return true, nil
+		},
 	})
 	require.Nil(t, err)
 
@@ -402,9 +404,11 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 
 	aliceX3dh := x3dh.New(&curve25519, sha256.New(), "proto", aliceIDKeyPair)
 	aliceInitializedProto, err := aliceX3dh.CalculateSecret(testPreKeyBundle{
-		identityKey:    bobChatIDKeyPair.PublicKey,
-		signedPreKey:   bobSignedPreKeyPair.PublicKey,
-		validSignature: true,
+		identityKey:  bobChatIDKeyPair.PublicKey,
+		signedPreKey: bobSignedPreKeyPair.PublicKey,
+		validSignature: func() (bool, error) {
+			return true, nil
+		},
 	})
 	require.Nil(t, err)
 

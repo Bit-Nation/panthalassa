@@ -6,6 +6,7 @@ import (
 
 	bpb "github.com/Bit-Nation/protobuffers"
 	uuid "github.com/satori/go.uuid"
+	"sync"
 )
 
 type response struct {
@@ -19,6 +20,31 @@ type request struct {
 	RespChan chan *response
 }
 
+// stack of requests
+type requestStack struct {
+	stack map[string]chan *response
+	lock  sync.Mutex
+}
+
+// add response channel to stack
+func (s *requestStack) Add(reqID string, responseChan chan *response) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.stack[reqID] = responseChan
+}
+
+// remove request id from stack
+func (s *requestStack) Remove(reqID string) {
+	delete(s.stack, reqID)
+}
+
+// cut response chanel from stack
+func (s *requestStack) Cut(reqID string) chan *response {
+	responseChan := s.stack[reqID]
+	delete(s.stack, reqID)
+	return responseChan
+}
+
 // will request the chat backend
 func (b *Backend) request(req bpb.BackendMessage_Request, timeOut time.Duration) (*bpb.BackendMessage_Response, error) {
 
@@ -30,7 +56,7 @@ func (b *Backend) request(req bpb.BackendMessage_Request, timeOut time.Duration)
 		return nil, err
 	}
 
-	// add request to stack
+	// add request to queue
 	b.outReqQueue <- &request{
 		Req:      &req,
 		RespChan: respChan,
@@ -41,8 +67,8 @@ func (b *Backend) request(req bpb.BackendMessage_Request, timeOut time.Duration)
 	case resp := <-respChan:
 		return resp.resp, resp.err
 	case <-time.After(timeOut):
-		// remove request
-		delete(b.stack, id.String())
+		// remove request from stack
+		b.stack.Remove(id.String())
 		return nil, fmt.Errorf("request timed out after %d", timeOut)
 	}
 
