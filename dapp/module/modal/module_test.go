@@ -1,167 +1,129 @@
 package modal
 
 import (
-	"errors"
 	"testing"
 	"time"
 
-	"crypto/rand"
 	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
+	uuid "github.com/satori/go.uuid"
 	require "github.com/stretchr/testify/require"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 type testDevice struct {
-	handler func(title, layout string, dAppIDKey ed25519.PublicKey) error
+	handler func(uiID, layout, renderType string, dAppPubKey ed25519.PublicKey) error
 }
 
-func (d testDevice) ShowModal(title, layout string, dAppIDKey ed25519.PublicKey) error {
-	return d.handler(title, layout, dAppIDKey)
+func (d testDevice) RenderModal(uiID, layout, renderType string, dAppPubKey ed25519.PublicKey) error {
+	return d.handler(uiID, layout, renderType, dAppPubKey)
 }
 
-func TestWithoutCallback(t *testing.T) {
-
-	// get test logger
-	logger := log.MustGetLogger("")
-
-	// create VM
-	vm := otto.New()
-
-	pub, _, err := ed25519.GenerateKey(rand.Reader)
-	require.Nil(t, err)
+func TestModule_CloseModal(t *testing.T) {
 
 	// create modal module
-	modalModule := New(logger, testDevice{
-		handler: func(title, layout string, dAppIdKey ed25519.PublicKey) error {
-			require.Equal(t, "my title", title)
-			require.Equal(t, "{}", layout)
-			return nil
-		},
-	}, pub)
-
-	// register show modal functionality
-	require.Nil(t, modalModule.Register(vm))
-
-	// try to display modal
-	_, err = vm.Call(`showModal`, vm, "my title", "{}")
-	require.Nil(t, err)
-
-}
-
-func TestFirstParamString(t *testing.T) {
-
-	// get test logger
 	logger := log.MustGetLogger("")
-
-	// create VM
+	m := New(logger, nil, []byte(""))
 	vm := otto.New()
+	require.Nil(t, m.Register(vm))
 
-	pub, _, err := ed25519.GenerateKey(rand.Reader)
-	require.Nil(t, err)
-
-	// create modal module
-	modalModule := New(logger, nil, pub)
-
-	// register show modal functionality
-	require.Nil(t, modalModule.Register(vm))
-
-	// try to display modal
-	showModalError, err := vm.Call(`showModal`, vm, nil)
-	require.Nil(t, err)
-	require.Equal(t, "ValidationError: expected parameter 0 to be of type string", showModalError.String())
-
-}
-
-func TestSecondParamString(t *testing.T) {
-
-	// get test logger
-	logger := log.MustGetLogger("")
-
-	// create VM
-	vm := otto.New()
-
-	pub, _, err := ed25519.GenerateKey(rand.Reader)
-	require.Nil(t, err)
-
-	// create modal module
-	modalModule := New(logger, nil, pub)
-
-	// register show modal functionality
-	require.Nil(t, modalModule.Register(vm))
-
-	// try to display modal
-	showModalError, err := vm.Call(`showModal`, vm, ``)
-	require.Nil(t, err)
-	require.Equal(t, "ValidationError: expected parameter 1 to be of type string", showModalError.String())
-
-}
-
-func TestThirdParamCallback(t *testing.T) {
-
-	// get test logger
-	logger := log.MustGetLogger("")
-
-	// create VM
-	vm := otto.New()
-
-	pub, _, err := ed25519.GenerateKey(rand.Reader)
-	require.Nil(t, err)
-
-	// create modal module
-	modalModule := New(logger, nil, pub)
-
-	// register show modal functionality
-	require.Nil(t, modalModule.Register(vm))
-
-	// try to display modal
-	showModalError, err := vm.Call(`showModal`, vm, ``, ``)
-	require.Nil(t, err)
-	require.Equal(t, "ValidationError: expected parameter 2 to be of type function", showModalError.String())
-
-}
-
-func TestErrorForwarding(t *testing.T) {
-
-	// get test logger
-	logger := log.MustGetLogger("")
-
-	// create VM
-	vm := otto.New()
-
-	pub, _, err := ed25519.GenerateKey(rand.Reader)
-	require.Nil(t, err)
-
-	// create modal module
-	modalModule := New(logger, testDevice{
-		handler: func(title, layout string, key ed25519.PublicKey) error {
-			// return test error
-			return errors.New("test error")
-		},
-	}, pub)
-
-	// register show modal functionality
-	require.Nil(t, modalModule.Register(vm))
-
-	c := make(chan bool, 1)
-
-	// try to display modal
-	_, err = vm.Call(`showModal`, vm, "", "", func(err string) {
-
-		if err != "test error" {
-			panic("expected error")
-		}
-
-		c <- true
-
-	})
-
-	select {
-	case <-c:
-	case <-time.After(time.Second * 1):
-		require.FailNow(t, "time out")
+	// closer
+	closed := false
+	closer := func() {
+		closed = true
 	}
 
+	closeTest := make(chan struct{}, 1)
+
+	// create new uuid
+	_, err := vm.Call("newModalUIID", vm, closer, func(call otto.FunctionCall) otto.Value {
+
+		// fetch callback data
+		err := call.Argument(0)
+		modalID := call.Argument(1)
+
+		// error must be undefined
+		require.True(t, err.IsUndefined())
+
+		// convert returned id to uuid
+		id, convertErr := uuid.FromString(modalID.String())
+		require.Nil(t, convertErr)
+		require.Equal(t, modalID.String(), id.String())
+
+		// id must be registered in modal id map
+		_, exist := m.modalIDs[id.String()]
+		require.True(t, exist)
+
+		// close modal
+		m.CloseModal(id.String())
+
+		// id must NOT be registered in modal id map
+		_, exist = m.modalIDs[id.String()]
+		require.False(t, exist)
+
+		require.True(t, closed)
+
+		// close test
+		closeTest <- struct{}{}
+		return otto.Value{}
+	})
 	require.Nil(t, err)
+
+	select {
+	case <-closeTest:
+		require.Nil(t, err)
+	case <-time.After(time.Second * 3):
+		require.Fail(t, "timed out")
+	}
+
+}
+
+func TestModule_RenderModal(t *testing.T) {
+
+	uiID := "i_am_the_ui_id"
+
+	calledDevice := false
+	device := &testDevice{
+		handler: func(receivedUiID, layout, receivedRenderType string, dAppPubKey ed25519.PublicKey) error {
+			calledDevice = true
+			require.Equal(t, uiID, receivedUiID)
+			require.Equal(t, "{jsx: 'tree'}", layout)
+			require.Equal(t, renderType, receivedRenderType)
+			require.Equal(t, "id pub key", string(dAppPubKey))
+			return nil
+		},
+	}
+
+	// create module
+	logger := log.MustGetLogger("")
+	m := New(logger, device, []byte("id pub key"))
+	vm := otto.New()
+	require.Nil(t, m.Register(vm))
+
+	// we just register a fake it here to just
+	// make sure that we have an ID in the vm
+	m.lock.Lock()
+	m.modalIDs[uiID] = &otto.Value{}
+	m.lock.Unlock()
+
+	done := make(chan struct{}, 1)
+
+	_, err := vm.Call("renderModal", vm, uiID, "{jsx: 'tree'}", func(call otto.FunctionCall) otto.Value {
+
+		// make sure device has been called
+		require.True(t, calledDevice)
+
+		// close test
+		done <- struct{}{}
+
+		return otto.Value{}
+	})
+	require.Nil(t, err)
+
+	select {
+	case <-done:
+	case <-time.After(time.Second * 2):
+		require.Fail(t, "time out")
+	}
 
 }
