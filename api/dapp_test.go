@@ -1,11 +1,11 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"testing"
 	"time"
 
-	"crypto/rand"
-	"encoding/hex"
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	proto "github.com/golang/protobuf/proto"
@@ -34,7 +34,7 @@ func TestAPI_ShowModal(t *testing.T) {
 			req := pb.Request{}
 			requireNil(proto.Unmarshal([]byte(data), &req))
 
-			if req.ShowModal.Title != "Request Money" {
+			if req.ShowModal.UiID != "user_interface_id" {
 				panic("Expected title to be 'Request Money'")
 			}
 
@@ -55,7 +55,7 @@ func TestAPI_ShowModal(t *testing.T) {
 
 	}()
 
-	err = api.ShowModal("Request Money", "{}", pub)
+	err = api.RenderModal("user_interface_id", "{}", pub)
 	require.Nil(t, err)
 
 }

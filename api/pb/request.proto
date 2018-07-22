@@ -39,13 +39,13 @@ message Request {
     DRKeyStoreCount dRKeyStoreCount = 6;
     DRKeyStoreAll dRKeyStoreAll = 7;
 
-    message ShowModal {
+    message RenderModal {
         bytes dAppPublicKey = 1;
-        string title = 2;
+        string uiID = 2;
         string layout = 3;
     }
 
-    ShowModal showModal = 8;
+    RenderModal showModal = 8;
 
     message SendEthereumTransaction {
         string value = 1;
