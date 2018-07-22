@@ -9,6 +9,7 @@ import (
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
+	profile "github.com/Bit-Nation/panthalassa/profile"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	require "github.com/stretchr/testify/require"
@@ -134,8 +135,6 @@ func TestBackend_FetchSignedPreKeyInvalidSignature(t *testing.T) {
 
 func TestBackend_FetchPreKeyBundle(t *testing.T) {
 
-	/**
-	@todo stopped here
 	// key manager setup
 	mne, err := mnemonic.New()
 	require.Nil(t, err)
@@ -155,12 +154,16 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 	signedPreProto, err := signedPreKey.ToProtobuf()
 	require.Nil(t, err)
 
-	//
-
 	// identity key
 	identityKey, err := km.IdentityPublicKey()
 	require.Nil(t, err)
 	rawIdentityKey, err := hex.DecodeString(identityKey)
+	require.Nil(t, err)
+
+	// profile
+	prof, err := profile.SignProfile("Florian", "earth", "base64", *km)
+	require.Nil(t, err)
+	protoProf, err := prof.ToProtobuf()
 	require.Nil(t, err)
 
 	// transport
@@ -168,12 +171,15 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 	transport.send = func(msg *bpb.BackendMessage) error {
 		// should be not equal since we testing what happens if the
 		// returned signed pre key is not the one the client ask for
-		require.NotEqual(t, identityKey, hex.EncodeToString(msg.Request.SignedPreKey))
+		require.Equal(t, identityKey, hex.EncodeToString(msg.Request.PreKeyBundle))
 		// send response with signed protobuf back
 		return transport.onMessage(&bpb.BackendMessage{
 			RequestID: msg.RequestID,
 			Response: &bpb.BackendMessage_Response{
-				SignedPreKey: &signedPreProto,
+				PreKeyBundle: &bpb.BackendMessage_PreKeyBundle{
+					SignedPreKey: &signedPreProto,
+					Profile:      protoProf,
+				},
 			},
 		})
 	}
@@ -182,17 +188,11 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 	b.authenticated = true
 	require.Nil(t, err)
 
-	// fetched signed pre key
-	// chatPartner Must not be the same as the signer of the signed pre key
-	// since we want to test what happens if we receive an signed pre key
-	// of the wrong person
-	fetchedSignedPreKey, err := b.FetchSignedPreKey(rawIdentityKey)
-	require.EqualError(t, err, "invalid signed pre key signature")
+	fetchedSignedPreKey, err := b.FetchPreKeyBundle(rawIdentityKey)
+	require.Nil(t, err)
 
-
-	valid, err := fetchedSignedPreKey.VerifySignature(rawIdentityKey)
-	require.EqualError(t, err, "got invalid identity key public key")
-	require.False(t, valid)
-	*/
+	valid, err := fetchedSignedPreKey.ValidSignature()
+	require.Nil(t, err)
+	require.True(t, valid)
 
 }

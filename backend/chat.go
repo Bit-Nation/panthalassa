@@ -14,7 +14,9 @@ import (
 func (b *Backend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error) {
 
 	// request pre key bundle
-	resp, err := b.request(bpb.BackendMessage_Request{}, time.Second*4)
+	resp, err := b.request(bpb.BackendMessage_Request{
+		PreKeyBundle: userIDPubKey,
+	}, time.Second*4)
 	if err != nil {
 		return &PreKeyBundle{}, err
 	}
