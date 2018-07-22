@@ -18,8 +18,6 @@ var logger = log.Logger("backend")
 // have private information
 type RequestHandler *func(req *bpb.BackendMessage_Request) (*bpb.BackendMessage_Response, error)
 
-type ResponseHandler *func(resp *bpb.BackendMessage_Response) (*response, error)
-
 type ServerConfig struct {
 	WebSocketUrl string
 	BearerToken  string
@@ -28,13 +26,12 @@ type ServerConfig struct {
 type Backend struct {
 	transport Transport
 	// all outgoing requests
-	outReqQueue     chan *request
-	lock            sync.Mutex
-	stack           requestStack
-	requestHandler  []RequestHandler
-	responseHandler []ResponseHandler
-	km              *km.KeyManager
-	authenticated   bool
+	outReqQueue    chan *request
+	lock           sync.Mutex
+	stack          requestStack
+	requestHandler []RequestHandler
+	km             *km.KeyManager
+	authenticated  bool
 }
 
 // Add request handler that will be executed
@@ -42,13 +39,6 @@ func (b *Backend) AddRequestHandler(handler RequestHandler) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.requestHandler = append(b.requestHandler, handler)
-}
-
-// add response handler
-func (b *Backend) AddResponseHandler(handler ResponseHandler) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.responseHandler = append(b.responseHandler, handler)
 }
 
 func (b *Backend) Start() error {
@@ -130,49 +120,22 @@ func NewServerBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 				}
 				return nil
 			}
-			for _, handler := range b.responseHandler {
 
-				// if an handler return nil for an internalResponse
-				h := *handler
-				internalResponse, err := h(resp)
-				if err != nil {
-					return err
-				}
-
-				// if we got a response we send it to the response channel
-				if internalResponse != nil {
-					respChan <- internalResponse
-					return nil
-				}
-
+			// send received response to response channel
+			respChan <- &response{
+				resp: resp,
 			}
 
 		}
 
+		logger.Warning("dropping message: %s", msg)
+
 		return nil
 	})
 
-	// register request handlers
+	// auth request handler
 	authHandler := b.auth
 	b.AddRequestHandler(&authHandler)
-
-	// register signing key response handler
-	signingKeyHandler := func(resp *bpb.BackendMessage_Response) (*response, error) {
-		if resp.SignedPreKey != nil {
-			return &response{resp: resp}, nil
-		}
-		return nil, nil
-	}
-	b.AddResponseHandler(&signingKeyHandler)
-
-	// register pre key bundle response handler
-	preKeyBundleHandler := func(resp *bpb.BackendMessage_Response) (*response, error) {
-		if resp.PreKeyBundle != nil {
-			return &response{resp: resp}, nil
-		}
-		return nil, nil
-	}
-	b.AddResponseHandler(&preKeyBundleHandler)
 
 	// send outgoing requests to transport
 	go func() {

@@ -196,3 +196,31 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 	require.True(t, valid)
 
 }
+
+func TestBackend_SubmitMessage(t *testing.T) {
+
+	// transport
+	transport := testTransport{}
+	transport.send = func(msg *bpb.BackendMessage) error {
+		// should be not equal since we testing what happens if the
+		// returned signed pre key is not the one the client ask for
+		require.Equal(t, 2, len(msg.Request.Messages))
+
+		// send response with signed protobuf back
+		return transport.onMessage(&bpb.BackendMessage{
+			RequestID: msg.RequestID,
+			Response:  &bpb.BackendMessage_Response{},
+		})
+	}
+
+	b, err := NewServerBackend(&transport, nil)
+	b.authenticated = true
+	require.Nil(t, err)
+
+	err = b.SubmitMessages([]*bpb.ChatMessage{
+		&bpb.ChatMessage{},
+		&bpb.ChatMessage{},
+	})
+	require.Nil(t, err)
+
+}
