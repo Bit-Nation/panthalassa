@@ -169,8 +169,6 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 	// transport
 	transport := testTransport{}
 	transport.send = func(msg *bpb.BackendMessage) error {
-		// should be not equal since we testing what happens if the
-		// returned signed pre key is not the one the client ask for
 		require.Equal(t, identityKey, hex.EncodeToString(msg.Request.PreKeyBundle))
 		// send response with signed protobuf back
 		return transport.onMessage(&bpb.BackendMessage{
@@ -202,8 +200,6 @@ func TestBackend_SubmitMessage(t *testing.T) {
 	// transport
 	transport := testTransport{}
 	transport.send = func(msg *bpb.BackendMessage) error {
-		// should be not equal since we testing what happens if the
-		// returned signed pre key is not the one the client ask for
 		require.Equal(t, 2, len(msg.Request.Messages))
 
 		// send response with signed protobuf back

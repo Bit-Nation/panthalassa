@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 
@@ -13,11 +14,25 @@ func (b *Backend) auth(req *bpb.BackendMessage_Request) (*bpb.BackendMessage_Res
 	auth := req.Auth
 
 	if auth != nil {
+
+		if len(auth.ToSign) != 4 {
+			return nil, errors.New("got invalid amount of toSign bytes")
+		}
+
+		myBytes := make([]byte, 4)
+		_, err := rand.Read(myBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		toSign := append(myBytes, auth.ToSign...)
+
 		// sign data
-		signature, err := b.km.IdentitySign(auth.ToSign)
+		signature, err := b.km.IdentitySign(toSign)
 		if err != nil {
 			return nil, errors.New("failed to sign data")
 		}
+
 		// get identity public key
 		idPubStr, err := b.km.IdentityPublicKey()
 		if err != nil {
@@ -32,7 +47,7 @@ func (b *Backend) auth(req *bpb.BackendMessage_Request) (*bpb.BackendMessage_Res
 			Auth: &bpb.BackendMessage_Auth{
 				Signature:         signature,
 				IdentityPublicKey: rawIDKey,
-				ToSign:            auth.ToSign,
+				ToSign:            toSign,
 			},
 		}, nil
 	}
