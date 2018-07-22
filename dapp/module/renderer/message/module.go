@@ -22,7 +22,7 @@ func (m *Module) Name() string {
 
 // register module function in the VM
 // setOpenHandler must be called with a callback
-// the callback that is passed to `setMessageHandler`
+// the callback that is passed to `setMessageRenderer`
 // should accept two parameters:
 // 1. The "data" will hold the data (object) passed into the open call
 //    (will e.g. hold the message and the context)
@@ -31,7 +31,7 @@ func (m *Module) Name() string {
 // 		2. the rendered layout
 func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
-	return vm.Set("setMessageHandler", func(call otto.FunctionCall) otto.Value {
+	return vm.Set("setMessageRenderer", func(call otto.FunctionCall) otto.Value {
 
 		// validate function call
 		v := validator.New()
