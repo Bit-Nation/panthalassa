@@ -15,7 +15,7 @@ import (
 )
 
 type Device interface {
-	RenderModal(uiID, layout, renderType string, dAppPubKey ed25519.PublicKey) error
+	RenderModal(uiID, layout string, dAppPubKey ed25519.PublicKey) error
 }
 
 type Module struct {
@@ -91,7 +91,6 @@ func (m *Module) Register(vm *otto.Otto) error {
 			err := m.device.RenderModal(
 				uiID,
 				layout,
-				renderType,
 				m.dAppIDKey,
 			)
 

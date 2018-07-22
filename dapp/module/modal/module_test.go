@@ -12,11 +12,11 @@ import (
 )
 
 type testDevice struct {
-	handler func(uiID, layout, renderType string, dAppPubKey ed25519.PublicKey) error
+	handler func(uiID, layout string, dAppPubKey ed25519.PublicKey) error
 }
 
-func (d testDevice) RenderModal(uiID, layout, renderType string, dAppPubKey ed25519.PublicKey) error {
-	return d.handler(uiID, layout, renderType, dAppPubKey)
+func (d testDevice) RenderModal(uiID, layout string, dAppPubKey ed25519.PublicKey) error {
+	return d.handler(uiID, layout, dAppPubKey)
 }
 
 func TestModule_CloseModal(t *testing.T) {
@@ -84,11 +84,10 @@ func TestModule_RenderModal(t *testing.T) {
 
 	calledDevice := false
 	device := &testDevice{
-		handler: func(receivedUiID, layout, receivedRenderType string, dAppPubKey ed25519.PublicKey) error {
+		handler: func(receivedUIID, receivedLayout string, dAppPubKey ed25519.PublicKey) error {
 			calledDevice = true
-			require.Equal(t, uiID, receivedUiID)
-			require.Equal(t, "{jsx: 'tree'}", layout)
-			require.Equal(t, renderType, receivedRenderType)
+			require.Equal(t, uiID, receivedUIID)
+			require.Equal(t, "{jsx: 'tree'}", receivedLayout)
 			require.Equal(t, "id pub key", string(dAppPubKey))
 			return nil
 		},
