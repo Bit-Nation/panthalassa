@@ -32,6 +32,7 @@ type Backend struct {
 	requestHandler []RequestHandler
 	km             *km.KeyManager
 	authenticated  bool
+	closer         chan struct{}
 }
 
 // Add request handler that will be executed
@@ -46,6 +47,7 @@ func (b *Backend) Start() error {
 }
 
 func (b *Backend) Close() error {
+	b.closer <- struct{}{}
 	return b.transport.Close()
 }
 
@@ -59,7 +61,8 @@ func NewServerBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 			stack: map[string]chan *response{},
 			lock:  sync.Mutex{},
 		},
-		km: km,
+		km:     km,
+		closer: make(chan struct{}, 1),
 	}
 
 	// handle incoming message and iterate over
@@ -151,6 +154,8 @@ func NewServerBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 			b.lock.Unlock()
 
 			select {
+			case <-b.closer:
+				return
 			case req := <-b.outReqQueue:
 				// add response channel
 				b.stack.Add(req.ReqID, req.RespChan)
