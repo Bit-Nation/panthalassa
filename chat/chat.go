@@ -44,8 +44,7 @@ func NewChat(b Backend) (*Chat, error) {
 	c := &Chat{}
 
 	// register messages handler
-	msgHandler := c.messagesHandler
-	b.AddRequestHandler(&msgHandler)
+	b.AddRequestHandler(c.messagesHandler)
 
 	return c, nil
 }
