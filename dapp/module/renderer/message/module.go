@@ -22,7 +22,7 @@ func (m *Module) Name() string {
 
 // register module function in the VM
 // setOpenHandler must be called with a callback
-// the callback that is passed to `setOpenHandler`
+// the callback that is passed to `setMessageHandler`
 // should accept two parameters:
 // 1. The "data" will hold the data (object) passed into the open call
 //    (will e.g. hold the message and the context)
