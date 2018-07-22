@@ -59,10 +59,6 @@ func New(stream net.Stream) (*Logger, error) {
 	}, nil
 }
 
-func (l *Logger) Name() string {
-	return "LOGGER"
-}
-
 // Register a module that writes console.log
 // to the given logger
 func (l *Logger) Register(vm *otto.Otto) error {

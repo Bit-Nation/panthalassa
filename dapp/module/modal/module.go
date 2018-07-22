@@ -41,10 +41,6 @@ func New(l *log.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
 	}
 }
 
-func (m *Module) Name() string {
-	return "MODAL"
-}
-
 func (m *Module) Register(vm *otto.Otto) error {
 
 	err := vm.Set("renderModal", func(call otto.FunctionCall) otto.Value {
