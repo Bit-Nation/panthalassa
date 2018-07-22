@@ -62,6 +62,12 @@ func NewCountThrottling(concurrency uint, coolDown time.Duration, maxQueue uint,
 	return t
 }
 
+func (t *CountThrottling) Current() uint {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	return t.current
+}
+
 func (t *CountThrottling) Decrease() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
