@@ -72,9 +72,10 @@ func (m *Module) Register(vm *otto.Otto) error {
 		m.lock.Lock()
 		defer m.lock.Unlock()
 		if _, exist := m.modalIDs[uiID]; !exist {
-			_, err := cb.Call(cb, fmt.Errorf(`modal ui id: "%s" has not been registerd`, uiID))
+			errMsg := fmt.Sprintf("modal UI ID: '%s' does not exist", uiID)
+			_, err := cb.Call(cb, vm.MakeCustomError("MissingModalID", errMsg), uiID)
 			if err != nil {
-				m.logger.Error(err.Error())
+				m.logger.Error(errMsg)
 			}
 			return otto.Value{}
 		}
@@ -95,7 +96,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			)
 
 			if err != nil {
-				cb.Call(cb, err.Error())
+				cb.Call(cb, vm.MakeCustomError("Error", "failed to render modal"))
 				return
 			}
 
@@ -131,7 +132,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		// create new id
 		id, err := uuid.NewV4()
 		if err != nil {
-			_, err = cb.Call(cb, err)
+			_, err = cb.Call(cb, vm.MakeCustomError("Error", err.Error()))
 			if err != nil {
 				m.logger.Error(err.Error())
 			}
