@@ -238,7 +238,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 	msgToSend.UsedSharedSecret, err = sharedSecretID(sender, receiver, ss.BaseID)
 
 	// send message to the backend
-	err = c.backend.SubmitMessage(msgToSend)
+	err = c.backend.SubmitMessages([]*bpb.ChatMessage{&msgToSend})
 	if err != nil {
 		return handleSendError(err)
 	}

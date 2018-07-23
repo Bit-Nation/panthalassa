@@ -3,11 +3,13 @@ package chat
 import (
 	"time"
 
-	prekey "github.com/Bit-Nation/panthalassa/chat/prekey"
+	backend "github.com/Bit-Nation/panthalassa/backend"
+	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
+	log "github.com/ipfs/go-log"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -16,12 +18,13 @@ const (
 	SignedPreKeyValidTimeFrame = time.Hour * 24 * 60
 )
 
-// represents the source were we get things
-// like the pre key bundles from
+var logger = log.Logger("chat")
+
 type Backend interface {
 	FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error)
-	SubmitMessage(msg bpb.ChatMessage) error
-	FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (prekey.PreKey, error)
+	SubmitMessages(messages []*bpb.ChatMessage) error
+	FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error)
+	AddRequestHandler(handler backend.RequestHandler)
 }
 
 type Chat struct {
@@ -34,4 +37,17 @@ type Chat struct {
 	signedPreKeyStorage  db.SignedPreKeyStorage
 	oneTimePreKeyStorage db.OneTimePreKeyStorage
 	userStorage          db.UserStorage
+}
+
+func NewChat(b Backend) (*Chat, error) {
+
+	c := &Chat{}
+
+	// register messages handler
+	b.AddRequestHandler(c.messagesHandler)
+
+	// register now one time pre key handler
+	b.AddRequestHandler(c.oneTimePreKeysHandler)
+
+	return c, nil
 }

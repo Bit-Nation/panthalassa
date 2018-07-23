@@ -7,4 +7,6 @@ import (
 
 type OneTimePreKeyStorage interface {
 	Cut(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error)
+	Count() (uint32, error)
+	Put(keyPair []x3dh.KeyPair) error
 }
