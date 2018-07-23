@@ -46,5 +46,8 @@ func NewChat(b Backend) (*Chat, error) {
 	// register messages handler
 	b.AddRequestHandler(c.messagesHandler)
 
+	// register now one time pre key handler
+	b.AddRequestHandler(c.oneTimePreKeysHandler)
+
 	return c, nil
 }
