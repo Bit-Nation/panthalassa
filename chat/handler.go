@@ -34,7 +34,7 @@ func (c *Chat) messagesHandler(req *bpb.BackendMessage_Request) (*bpb.BackendMes
 }
 
 // handle new one time pre keys request
-func (c *Chat) oneTimePreKeys(req *bpb.BackendMessage_Request) (*bpb.BackendMessage_Response, error) {
+func (c *Chat) oneTimePreKeysHandler(req *bpb.BackendMessage_Request) (*bpb.BackendMessage_Response, error) {
 
 	// exit if not a request to fetch new one time pre keys
 	if req.NewOneTimePreKeys == 0 {
