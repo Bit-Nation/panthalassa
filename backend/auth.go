@@ -25,7 +25,7 @@ func (b *Backend) auth(req *bpb.BackendMessage_Request) (*bpb.BackendMessage_Res
 			return nil, err
 		}
 
-		toSign := append(myBytes, auth.ToSign...)
+		toSign := append(auth.ToSign, myBytes...)
 
 		// sign data
 		signature, err := b.km.IdentitySign(toSign)
