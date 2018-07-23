@@ -1,8 +1,8 @@
 # panthalassa
 
 [![standard-readme compliant](https://img.shields.io/badge/standard--readme-OK-green.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
-[![Build Status](https://semaphoreci.com/api/v1/florianlenz/panthalassa/branches/develop/badge.svg)](https://semaphoreci.com/florianlenz/panthalassa) (Develop)
-[![Build Status](https://semaphoreci.com/api/v1/florianlenz/panthalassa/branches/master/badge.svg)](https://semaphoreci.com/florianlenz/panthalassa) (Master)
+[![Build Status](https://travis-ci.org/Bit-Nation/panthalassa.svg?branch=develop)](https://travis-ci.org/Bit-Nation/panthalassa) (Develop)
+[![Build Status](https://travis-ci.org/Bit-Nation/panthalassa.svg?branch=master)](https://travis-ci.org/Bit-Nation/panthalassa) (Master)
 
 > Backend for Pangea
 
