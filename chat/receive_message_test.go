@@ -330,7 +330,7 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 			},
 		},
 		oneTimePreKeyStorage: &testOneTimePreKeyStorage{
-			cut: func(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error) {
+			cut: func(pubKey []byte) (*x3dh.PrivateKey, error) {
 				return nil, nil
 			},
 		},

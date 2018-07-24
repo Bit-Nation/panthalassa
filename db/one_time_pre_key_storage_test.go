@@ -26,11 +26,12 @@ func TestNewBoltOneTimePreKeyStorage(t *testing.T) {
 	require.Equal(t, uint32(1), keys)
 
 	// make sure fetched pre key is the one we passed in
-	privKey, err := storage.Cut(keyPair.PublicKey)
+	privKey, err := storage.Cut(keyPair.PublicKey[:])
 	require.Nil(t, err)
 	require.Equal(t, keyPair.PrivateKey, *privKey)
 
 	// must fail since the previous cut deleted the key from the storage
-	_, err = storage.Cut(keyPair.PublicKey)
-	require.EqualError(t, err, "failed to fetch one time pre key private key for given public key")
+	privKey, err = storage.Cut(keyPair.PublicKey[:])
+	require.Nil(t, err)
+	require.Nil(t, privKey)
 }

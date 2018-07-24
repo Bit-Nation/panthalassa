@@ -14,7 +14,7 @@ var (
 )
 
 type OneTimePreKeyStorage interface {
-	Cut(pubKey x3dh.PublicKey) (*x3dh.PrivateKey, error)
+	Cut(pubKey []byte) (*x3dh.PrivateKey, error)
 	Count() (uint32, error)
 	Put(keyPairs []x3dh.KeyPair) error
 }
@@ -24,29 +24,34 @@ type BoltOneTimePreKeyStorage struct {
 	km *km.KeyManager
 }
 
-func NewBoltOneTimePreKeyStorage(db *bolt.DB, km *km.KeyManager) *BoltChatMessageStorage {
-	return &BoltChatMessageStorage{
+func NewBoltOneTimePreKeyStorage(db *bolt.DB, km *km.KeyManager) *BoltOneTimePreKeyStorage {
+	return &BoltOneTimePreKeyStorage{
 		db: db,
 		km: km,
 	}
 }
 
-func (s *BoltChatMessageStorage) Cut(pubKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
+func (s *BoltOneTimePreKeyStorage) Cut(pubKey []byte) (*x3dh.PrivateKey, error) {
 
-	var privKey x3dh.PrivateKey
+	var privKey *x3dh.PrivateKey
+
+	handleErr := func(err error) error {
+		privKey = nil
+		return err
+	}
 
 	err := s.db.Update(func(tx *bolt.Tx) error {
 
 		// one time pre keys
 		oneTimePreKeys, err := tx.CreateBucketIfNotExists(oneTimePreKeyStorageBucketName)
 		if err != nil {
-			return err
+			return handleErr(err)
 		}
 
 		// fetch encrypted one time pre key of public key
 		encryptedRawPriv := oneTimePreKeys.Get(pubKey[:])
 		if encryptedRawPriv == nil {
-			return errors.New("failed to fetch one time pre key private key for given public key")
+			return handleErr(err)
 		}
 
 		// turn from byte slice to cipher text
@@ -55,7 +60,7 @@ func (s *BoltChatMessageStorage) Cut(pubKey x3dh.PublicKey) (*x3dh.PrivateKey, e
 			if err := oneTimePreKeys.Delete(pubKey[:]); err != nil {
 				logger.Error(err)
 			}
-			return err
+			return handleErr(err)
 		}
 
 		// decrypt the cipher text
@@ -64,7 +69,7 @@ func (s *BoltChatMessageStorage) Cut(pubKey x3dh.PublicKey) (*x3dh.PrivateKey, e
 			if err := oneTimePreKeys.Delete(pubKey[:]); err != nil {
 				logger.Error(err)
 			}
-			return err
+			return handleErr(err)
 		}
 
 		// make sure that we have a valid private key
@@ -72,11 +77,13 @@ func (s *BoltChatMessageStorage) Cut(pubKey x3dh.PublicKey) (*x3dh.PrivateKey, e
 			if err := oneTimePreKeys.Delete(pubKey[:]); err != nil {
 				logger.Error(err)
 			}
-			return errors.New("got invalid x3dh private key for public key")
+			return handleErr(errors.New("got invalid x3dh private key for public key"))
 		}
 
 		// copy over
-		copy(privKey[:], plainPriv)
+		var k x3dh.PrivateKey
+		copy(k[:], plainPriv)
+		privKey = &k
 
 		// since this is the cut method we delete the private key once we fetched it
 		if err := oneTimePreKeys.Delete(pubKey[:]); err != nil {
@@ -87,11 +94,11 @@ func (s *BoltChatMessageStorage) Cut(pubKey x3dh.PublicKey) (*x3dh.PrivateKey, e
 
 	})
 
-	return &privKey, err
+	return privKey, err
 
 }
 
-func (s *BoltChatMessageStorage) Count() (uint32, error) {
+func (s *BoltOneTimePreKeyStorage) Count() (uint32, error) {
 
 	var amount uint32
 
@@ -114,7 +121,7 @@ func (s *BoltChatMessageStorage) Count() (uint32, error) {
 	return amount, err
 }
 
-func (s *BoltChatMessageStorage) Put(keyPairs []x3dh.KeyPair) error {
+func (s *BoltOneTimePreKeyStorage) Put(keyPairs []x3dh.KeyPair) error {
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 

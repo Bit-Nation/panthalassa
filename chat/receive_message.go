@@ -148,7 +148,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// fetch used one time pre key
-		oneTimePreKey, err := c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
+		oneTimePreKeyPriv, err := c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
 		if err != nil {
 			return err
 		}
@@ -173,7 +173,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		sharedX3dhSec, err := c.x3dh.SecretFromRemote(x3dh.ProtocolInitialisation{
 			RemoteIdKey:        remoteChatIdKey,
 			RemoteEphemeralKey: x3dhEphemeralKey,
-			MyOneTimePreKey:    oneTimePreKey,
+			MyOneTimePreKey:    oneTimePreKeyPriv,
 			MySignedPreKey:     signedPreKey.PrivateKey,
 		})
 		if err != nil {

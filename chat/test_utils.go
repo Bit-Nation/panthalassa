@@ -56,12 +56,12 @@ type testPreKeyBundle struct {
 }
 
 type testOneTimePreKeyStorage struct {
-	cut   func(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error)
+	cut   func(pubKey []byte) (*x3dh.PrivateKey, error)
 	count func() (uint32, error)
 	put   func(keyPair []x3dh.KeyPair) error
 }
 
-func (t *testOneTimePreKeyStorage) Cut(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error) {
+func (t *testOneTimePreKeyStorage) Cut(pubKey []byte) (*x3dh.PrivateKey, error) {
 	return t.cut(pubKey)
 }
 
