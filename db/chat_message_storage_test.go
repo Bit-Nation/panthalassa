@@ -7,10 +7,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"fmt"
 	bpb "github.com/Bit-Nation/protobuffers"
 	bolt "github.com/coreos/bbolt"
-	"github.com/gogo/protobuf/proto"
+	proto "github.com/gogo/protobuf/proto"
 	require "github.com/stretchr/testify/require"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -94,6 +93,12 @@ func TestBoltChatMessageStorage_PersistMessage(t *testing.T) {
 	})
 	require.Nil(t, err)
 
-	fmt.Println(storage.Messages(partner, int64(33), 10))
-
+	// test the fetch messages
+	messages, err := storage.Messages(partner, int64(33), 10)
+	require.Nil(t, err)
+	message := messages[33]
+	require.Equal(t, "the_message_id", message.ID)
+	require.Equal(t, true, message.Received)
+	require.Equal(t, uint32(1), message.Version)
+	require.Equal(t, Status(300), message.Status)
 }
