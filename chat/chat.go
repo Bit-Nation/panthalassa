@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"crypto/rand"
 	"time"
 
 	backend "github.com/Bit-Nation/panthalassa/backend"
@@ -39,15 +40,39 @@ type Chat struct {
 	userStorage          db.UserStorage
 }
 
-func NewChat(b Backend) (*Chat, error) {
+type Config struct {
+	MessageDB            db.ChatMessageStorage
+	Backend              Backend
+	SharedSecretDB       db.SharedSecretStorage
+	KM                   *keyManager.KeyManager
+	DRKeyStorage         dr.KeysStorage
+	SignedPreKeyStorage  db.SignedPreKeyStorage
+	OneTimePreKeyStorage db.OneTimePreKeyStorage
+	UserStorage          db.UserStorage
+}
 
-	c := &Chat{}
+// @todo we need to construct the x3dh instance correct
+func NewChat(conf Config) (*Chat, error) {
+
+	x3dh.NewCurve25519(rand.Reader)
+
+	c := &Chat{
+		messageDB:            conf.MessageDB,
+		backend:              conf.Backend,
+		sharedSecStorage:     conf.SharedSecretDB,
+		x3dh:                 nil,
+		km:                   conf.KM,
+		drKeyStorage:         conf.DRKeyStorage,
+		signedPreKeyStorage:  conf.SignedPreKeyStorage,
+		oneTimePreKeyStorage: conf.OneTimePreKeyStorage,
+		userStorage:          conf.UserStorage,
+	}
 
 	// register messages handler
-	b.AddRequestHandler(c.messagesHandler)
+	c.backend.AddRequestHandler(c.messagesHandler)
 
 	// register now one time pre key handler
-	b.AddRequestHandler(c.oneTimePreKeysHandler)
+	c.backend.AddRequestHandler(c.oneTimePreKeysHandler)
 
 	return c, nil
 }
