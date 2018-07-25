@@ -26,13 +26,14 @@ const (
 	StatusDelivered      Status = 300
 	StatusFailedToHandle Status = 400
 	StatusPersisted      Status = 500
-	StatusReceived       Status = 600
 )
 
 type ChatMessageStorage interface {
-	PersistSentMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
+	PersistMessageToSend(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
 	PersistReceivedMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
 	UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus Status) error
+	AllChats() ([]ed25519.PublicKey, error)
+	Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]Message, error)
 }
 
 type Message struct {
@@ -49,6 +50,7 @@ type PlainMessagePersistedEvent struct {
 	Msg     bpb.PlainChatMessage
 	Partner ed25519.PublicKey
 	DBMsg   Message
+	MsgID   int64
 }
 
 type BoltChatMessageStorage struct {
@@ -129,6 +131,7 @@ func (s *BoltChatMessageStorage) PersistMessage(partner ed25519.PublicKey, msg b
 					Msg:     msg,
 					Partner: partner,
 					DBMsg:   dbMessage,
+					MsgID:   int64(binary.BigEndian.Uint64(createdAt)),
 				}
 			}
 		})
@@ -225,7 +228,7 @@ func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64
 
 }
 
-func (s *BoltChatMessageStorage) PersistSentMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+func (s *BoltChatMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
 	return s.PersistMessage(partner, msg, false, StatusPersisted)
 }
 

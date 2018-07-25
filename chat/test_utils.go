@@ -13,9 +13,11 @@ import (
 )
 
 type testMessageStorage struct {
-	persistSentMessage     func(to ed25519.PublicKey, msg bpb.PlainChatMessage) error
+	persistMessageToSend   func(to ed25519.PublicKey, msg bpb.PlainChatMessage) error
 	persistReceivedMessage func(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
 	updateStatus           func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error
+	messages               func(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error)
+	allChats               func() ([]ed25519.PublicKey, error)
 }
 
 type testSharedSecretStorage struct {
@@ -129,8 +131,8 @@ func (s *testSharedSecretStorage) Get(key ed25519.PublicKey, sharedSecretID []by
 	return s.get(key, sharedSecretID)
 }
 
-func (s *testMessageStorage) PersistSentMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
-	return s.persistSentMessage(partner, msg)
+func (s *testMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+	return s.persistMessageToSend(partner, msg)
 }
 
 func (s *testMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus db.Status) error {
@@ -139,6 +141,14 @@ func (s *testMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID strin
 
 func (s *testMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
 	return s.persistReceivedMessage(partner, msg)
+}
+
+func (s *testMessageStorage) Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error) {
+	return s.messages(partner, start, amount)
+}
+
+func (s *testMessageStorage) AllChats() ([]ed25519.PublicKey, error) {
+	return s.allChats()
 }
 
 func (b *testBackend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error) {

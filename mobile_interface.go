@@ -7,11 +7,15 @@ import (
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
+	chat "github.com/Bit-Nation/panthalassa/chat"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
+	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	mesh "github.com/Bit-Nation/panthalassa/mesh"
 	profile "github.com/Bit-Nation/panthalassa/profile"
+	"github.com/Bit-Nation/panthalassa/uiapi"
+	bolt "github.com/coreos/bbolt"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
@@ -32,7 +36,7 @@ type StartConfig struct {
 }
 
 // create a new panthalassa instance
-func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error {
+func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpStream) error {
 
 	if config.EnableDebugging {
 
@@ -51,13 +55,16 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 	}
 
 	// device api
-	api := api.New(client, km)
+	deviceApi := api.New(client, km)
 
 	// we don't need the rendevouz key for now
-	m, errReporter, err := mesh.New(pk, api, "", config.SignedProfile)
+	m, errReporter, err := mesh.New(pk, deviceApi, "", config.SignedProfile)
 	if err != nil {
 		return err
 	}
+
+	// user interface api
+	uiApi := stapi.New(uiUpstream)
 
 	//Report error's from mesh network to current logger
 	go func() {
@@ -69,15 +76,40 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		}
 	}()
 
+	// open database
+	dbPath, err := db.KMToDBPath(km)
+	if err != nil {
+		return err
+	}
+	dbInstance, err := db.Open(dbPath, 0600, &bolt.Options{Timeout: 1})
+	if err != nil {
+		return err
+	}
+
+	// open message storage
+	messageStorage := db.NewChatMessageStorage(dbInstance, []chan db.PlainMessagePersistedEvent{
+		chat.NewMessageDBListener(uiApi, 40),
+	}, km)
+
+	// chat
+	chatInstance, err := chat.NewChat(chat.Config{
+		MessageDB: messageStorage,
+		KM:        km,
+	})
+	if err != nil {
+		return err
+	}
+
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:       km,
 		upStream: client,
-		api:      api,
+		api:      deviceApi,
 		mesh:     m,
 		dAppReg: dAppReg.NewDAppRegistry(m.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
-		}, api, km),
+		}, deviceApi, km),
+		chat: chatInstance,
 	}
 
 	return nil
@@ -85,7 +117,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 }
 
 // start panthalassa
-func Start(config string, password string, client UpStream) error {
+func Start(config string, password string, client, uiUpstream UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -104,11 +136,11 @@ func Start(config string, password string, client UpStream) error {
 		return err
 	}
 
-	return start(km, c, client)
+	return start(km, c, client, uiUpstream)
 }
 
 // create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
+func StartFromMnemonic(config string, mnemonic string, client, uiUpstream UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -128,7 +160,7 @@ func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
 	}
 
 	// create panthalassa instance
-	return start(km, c, client)
+	return start(km, c, client, uiUpstream)
 
 }
 

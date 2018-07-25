@@ -20,5 +20,5 @@ func (c *Chat) SavePrivateMessage(to ed25519.PublicKey, msg bpb.PlainChatMessage
 		return err
 	}
 	msg.MessageID = id.String()
-	return c.messageDB.PersistSentMessage(to, msg)
+	return c.messageDB.PersistMessageToSend(to, msg)
 }
