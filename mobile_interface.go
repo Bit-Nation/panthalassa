@@ -69,7 +69,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		km:       km,
 		upStream: client,
 		api:      api,
-		mesh:     network,
+		p2p:      network,
 		chat:     &c,
 		dAppReg: dAppReg.NewDAppRegistry(network.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
