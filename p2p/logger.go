@@ -1,12 +1,12 @@
 package p2p
 
 import (
+	"context"
+	"log"
+
 	formatter "github.com/ipfs/go-log/writer"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	goLog "github.com/whyrusleeping/go-logging"
-
-	"context"
-	"log"
 )
 
 const logProtocol = "/pangea/logger/1.0.0"
