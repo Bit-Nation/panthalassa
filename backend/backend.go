@@ -51,7 +51,7 @@ func (b *Backend) Close() error {
 	return b.transport.Close()
 }
 
-func NewServerBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
+func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 
 	b := &Backend{
 		transport:   trans,
@@ -71,13 +71,13 @@ func NewServerBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 	trans.OnMessage(func(msg *bpb.BackendMessage) error {
 		b.lock.Lock()
 		defer b.lock.Unlock()
-		
+
 		// make sure we don't get a response & a request at the same time
 		// we don't accept it. It's invalid!
 		if msg.Request != nil && msg.Response != nil {
 			return errors.New("a message can’t have a response and a request at the same time")
 		}
-		
+
 		// handle requests
 		if msg.Request != nil {
 			for _, handler := range b.requestHandler {

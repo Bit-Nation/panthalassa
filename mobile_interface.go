@@ -7,10 +7,12 @@ import (
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
+	backend "github.com/Bit-Nation/panthalassa/backend"
+	chat "github.com/Bit-Nation/panthalassa/chat"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
-	mesh "github.com/Bit-Nation/panthalassa/mesh"
+	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
@@ -44,44 +46,40 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		return errors.New("call stop first in order to create a new panthalassa instance")
 	}
 
-	//Mesh network
-	pk, err := km.MeshPrivateKey()
-	if err != nil {
-		return err
-	}
-
 	// device api
 	api := api.New(client, km)
 
-	// we don't need the rendevouz key for now
-	m, errReporter, err := mesh.New(pk, api, "", config.SignedProfile)
+	// create backend
+	backend, err := backend.NewBackend()
 	if err != nil {
 		return err
 	}
 
-	//Report error's from mesh network to current logger
-	go func() {
-		for {
-			select {
-			case err := <-errReporter:
-				logger.Error(err)
-			}
-		}
-	}()
+	// create chat
+	c, err := chat.NewChat(backend)
+	if err != nil {
+		return err
+	}
+
+	// create p2p network
+	p2pNetwork, err := p2p.New()
+	if err != nil {
+		return err
+	}
 
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:       km,
 		upStream: client,
 		api:      api,
-		mesh:     m,
-		dAppReg: dAppReg.NewDAppRegistry(m.Host, dAppReg.Config{
+		p2p:      p2pNetwork,
+		chat:     c,
+		dAppReg: dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
 		}, api, km),
 	}
 
 	return nil
-
 }
 
 // start panthalassa
