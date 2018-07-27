@@ -11,7 +11,7 @@ import (
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
-	mesh "github.com/Bit-Nation/panthalassa/mesh"
+	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
@@ -45,30 +45,14 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		return errors.New("call stop first in order to create a new panthalassa instance")
 	}
 
-	//Mesh network
-	pk, err := km.MeshPrivateKey()
-	if err != nil {
-		return err
-	}
-
 	// device api
 	api := api.New(client, km)
 
 	// we don't need the rendevouz key for now
-	m, errReporter, err := mesh.New(pk, api, "", config.SignedProfile)
+	network, err := p2p.New()
 	if err != nil {
 		return err
 	}
-
-	//Report error's from mesh network to current logger
-	go func() {
-		for {
-			select {
-			case err := <-errReporter:
-				logger.Error(err)
-			}
-		}
-	}()
 
 	chatKeyPair, err := km.ChatIdKeyPair()
 	if err != nil {
@@ -85,9 +69,9 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		km:       km,
 		upStream: client,
 		api:      api,
-		mesh:     m,
+		p2p:      network,
 		chat:     &c,
-		dAppReg: dAppReg.NewDAppRegistry(m.Host, dAppReg.Config{
+		dAppReg: dAppReg.NewDAppRegistry(network.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
 		}, api, km),
 	}
