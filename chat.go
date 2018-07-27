@@ -57,7 +57,7 @@ func AllChats() (string, error) {
 	return string(chatList), nil
 }
 
-func Messages(partner string, start int64, amount uint) (string, error) {
+func Messages(partner string, start int64, amount int) (string, error) {
 
 	// make sure panthalassa has been started
 	if panthalassaInstance == nil {
@@ -76,7 +76,7 @@ func Messages(partner string, start int64, amount uint) (string, error) {
 	}
 
 	// database messages
-	databaseMessages, err := panthalassaInstance.chat.Messages(partnerPub, start, amount)
+	databaseMessages, err := panthalassaInstance.chat.Messages(partnerPub, int64(start), uint(amount))
 	if err != nil {
 		return "", err
 	}
