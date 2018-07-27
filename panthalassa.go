@@ -19,7 +19,6 @@ type Panthalassa struct {
 	upStream api.UpStream
 	api      *api.API
 	p2p      *p2p.Network
-	chat     *chat.Chat
 	dAppReg  *dAppReg.Registry
 	chat     *chat.Chat
 	msgDB    *db.BoltChatMessageStorage

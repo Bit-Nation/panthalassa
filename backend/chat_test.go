@@ -56,7 +56,7 @@ func TestBackend_FetchSignedPreKey(t *testing.T) {
 		})
 	}
 
-	b, err := NewServerBackend(&transport, nil)
+	b, err := NewBackend(&transport, nil)
 	b.authenticated = true
 	require.Nil(t, err)
 
@@ -113,7 +113,7 @@ func TestBackend_FetchSignedPreKeyInvalidSignature(t *testing.T) {
 		})
 	}
 
-	b, err := NewServerBackend(&transport, nil)
+	b, err := NewBackend(&transport, nil)
 	b.authenticated = true
 	require.Nil(t, err)
 
@@ -182,7 +182,7 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 		})
 	}
 
-	b, err := NewServerBackend(&transport, nil)
+	b, err := NewBackend(&transport, nil)
 	b.authenticated = true
 	require.Nil(t, err)
 
@@ -209,7 +209,7 @@ func TestBackend_SubmitMessage(t *testing.T) {
 		})
 	}
 
-	b, err := NewServerBackend(&transport, nil)
+	b, err := NewBackend(&transport, nil)
 	b.authenticated = true
 	require.Nil(t, err)
 
