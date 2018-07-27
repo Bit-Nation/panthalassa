@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	db "github.com/Bit-Nation/panthalassa/db"
 	bpb "github.com/Bit-Nation/protobuffers"
 	proto "github.com/gogo/protobuf/proto"
 )
@@ -28,14 +27,8 @@ func SendMessage(partner, message string) error {
 		return errors.New("partner must have a length of 32 bytes")
 	}
 
-	// unmarshal the plain message
-	plainMsg := bpb.PlainChatMessage{}
-	if err := proto.Unmarshal([]byte(message), &plainMsg); err != nil {
-		return err
-	}
-
 	// persist private message
-	return panthalassaInstance.chat.SavePrivateMessage(partnerPub, plainMsg)
+	return panthalassaInstance.chat.SavePrivateMessage(partnerPub, []byte(message))
 
 }
 
@@ -89,7 +82,7 @@ func Messages(partner string, start int64, amount uint) (string, error) {
 	}
 
 	// plain messages
-	plainMessages := map[int64]string{}
+	plainMessages := []map[string]interface{}{}
 
 	// decrypt message
 	for key, dbMessage := range databaseMessages {
@@ -97,7 +90,17 @@ func Messages(partner string, start int64, amount uint) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		plainMessages[key] = string(plainMessage)
+		msg := bpb.PlainChatMessage{}
+		if err := proto.Unmarshal(plainMessage, &msg); err != nil {
+			return "", err
+		}
+		plainMessages = append(plainMessages, map[string]interface{}{
+			"message_id": key,
+			"message": map[string]interface{}{
+				"content":    string(msg.Message),
+				"created_at": msg.CreatedAt,
+			},
+		})
 	}
 
 	// marshal messages
@@ -107,61 +110,5 @@ func Messages(partner string, start int64, amount uint) (string, error) {
 	}
 
 	return string(messages), nil
-
-}
-
-func ImportOldSentMessage(partner, message string) error {
-
-	// make sure panthalassa has been started
-	if panthalassaInstance == nil {
-		return errors.New("you have to start panthalassa first")
-	}
-
-	// partner public key
-	partnerPub, err := hex.DecodeString(partner)
-	if err != nil {
-		return err
-	}
-
-	// make sure public key has the right length
-	if len(partnerPub) != 32 {
-		return errors.New("partner must have a length of 32 bytes")
-	}
-
-	// unmarshal the plain message
-	plainMsg := bpb.PlainChatMessage{}
-	if err := proto.Unmarshal([]byte(message), &plainMsg); err != nil {
-		return err
-	}
-
-	return panthalassaInstance.msgDB.PersistMessage(partnerPub, plainMsg, false, db.StatusSent)
-
-}
-
-func ImportOldReceivedMessage(partner, message string) error {
-
-	// make sure panthalassa has been started
-	if panthalassaInstance == nil {
-		return errors.New("you have to start panthalassa first")
-	}
-
-	// partner public key
-	partnerPub, err := hex.DecodeString(partner)
-	if err != nil {
-		return err
-	}
-
-	// make sure public key has the right length
-	if len(partnerPub) != 32 {
-		return errors.New("partner must have a length of 32 bytes")
-	}
-
-	// unmarshal the plain message
-	plainMsg := bpb.PlainChatMessage{}
-	if err := proto.Unmarshal([]byte(message), &plainMsg); err != nil {
-		return err
-	}
-
-	return panthalassaInstance.msgDB.PersistReceivedMessage(partnerPub, plainMsg)
 
 }
