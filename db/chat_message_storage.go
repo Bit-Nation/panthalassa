@@ -67,7 +67,7 @@ func NewChatMessageStorage(db *bolt.DB, listeners []chan PlainMessagePersistedEv
 	}
 }
 
-func (s *BoltChatMessageStorage) PersistMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage, received bool, status Status) error {
+func (s *BoltChatMessageStorage) persistMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage, received bool, status Status) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 
 		// private chat bucket
@@ -229,11 +229,11 @@ func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64
 }
 
 func (s *BoltChatMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
-	return s.PersistMessage(partner, msg, false, StatusPersisted)
+	return s.persistMessage(partner, msg, false, StatusPersisted)
 }
 
 func (s *BoltChatMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
-	return s.PersistMessage(partner, msg, true, StatusPersisted)
+	return s.persistMessage(partner, msg, true, StatusPersisted)
 }
 
 func (s *BoltChatMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus Status) error {

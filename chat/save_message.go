@@ -13,7 +13,8 @@ var nowAsUnix = func() int64 {
 }
 
 // persist private message
-func (c *Chat) SavePrivateMessage(to ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+func (c *Chat) SavePrivateMessage(to ed25519.PublicKey, rawMessage []byte) error {
+	msg := bpb.PlainChatMessage{}
 	msg.CreatedAt = nowAsUnix()
 	id, err := uuid.NewV4()
 	if err != nil {
