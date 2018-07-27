@@ -50,7 +50,8 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 	api := api.New(client, km)
 
 	// create backend
-	backend, err := backend.NewBackend()
+	// @TODO use a real transport
+	backend, err := backend.NewBackend(nil, km)
 	if err != nil {
 		return err
 	}
