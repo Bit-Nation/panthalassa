@@ -51,7 +51,7 @@ func (b *Backend) Close() error {
 	return b.transport.Close()
 }
 
-func NewServerBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
+func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 
 	b := &Backend{
 		transport:   trans,

@@ -7,14 +7,15 @@ import (
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
+	backend "github.com/Bit-Nation/panthalassa/backend"
 	chat "github.com/Bit-Nation/panthalassa/chat"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
-	mesh "github.com/Bit-Nation/panthalassa/mesh"
+	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	profile "github.com/Bit-Nation/panthalassa/profile"
-	"github.com/Bit-Nation/panthalassa/uiapi"
+	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bolt "github.com/coreos/bbolt"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
@@ -39,7 +40,6 @@ type StartConfig struct {
 func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpStream) error {
 
 	if config.EnableDebugging {
-
 		log.SetDebugLogging()
 	}
 
@@ -48,33 +48,21 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 		return errors.New("call stop first in order to create a new panthalassa instance")
 	}
 
-	//Mesh network
-	pk, err := km.MeshPrivateKey()
-	if err != nil {
-		return err
-	}
-
 	// device api
 	deviceApi := api.New(client, km)
 
-	// we don't need the rendevouz key for now
-	m, errReporter, err := mesh.New(pk, deviceApi, "", config.SignedProfile)
+	// create backend
+	// @TODO use a real transport
+	backend, err := backend.NewBackend(nil, km)
 	if err != nil {
 		return err
 	}
 
-	// user interface api
-	uiApi := stapi.New(uiUpstream)
-
-	//Report error's from mesh network to current logger
-	go func() {
-		for {
-			select {
-			case err := <-errReporter:
-				logger.Error(err)
-			}
-		}
-	}()
+	// create p2p network
+	p2pNetwork, err := p2p.New()
+	if err != nil {
+		return err
+	}
 
 	// open database
 	dbPath, err := db.KMToDBPath(km)
@@ -86,6 +74,9 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 		return err
 	}
 
+	// ui api
+	uiApi := uiapi.New(uiUpstream)
+
 	// open message storage
 	messageStorage := db.NewChatMessageStorage(dbInstance, []chan db.PlainMessagePersistedEvent{
 		chat.NewMessageDBListener(uiApi, 40),
@@ -95,6 +86,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 	chatInstance, err := chat.NewChat(chat.Config{
 		MessageDB: messageStorage,
 		KM:        km,
+		Backend:   backend,
 	})
 	if err != nil {
 		return err
@@ -105,15 +97,14 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 		km:       km,
 		upStream: client,
 		api:      deviceApi,
-		mesh:     m,
-		dAppReg: dAppReg.NewDAppRegistry(m.Host, dAppReg.Config{
+		p2p:      p2pNetwork,
+		dAppReg: dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
 		}, deviceApi, km),
 		chat: chatInstance,
 	}
 
 	return nil
-
 }
 
 // start panthalassa
