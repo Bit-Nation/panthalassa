@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"time"
 
+	"crypto/sha256"
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
@@ -59,16 +60,23 @@ type Config struct {
 	UserStorage          db.UserStorage
 }
 
-// @todo we need to construct the x3dh instance correct
 func NewChat(conf Config) (*Chat, error) {
 
-	x3dh.NewCurve25519(rand.Reader)
+	// my chat id key pair
+	myChatIDKeyPair, err := conf.KM.ChatIdKeyPair()
+	if err != nil {
+		return nil, err
+	}
+
+	// curve 25519
+	c25519 := x3dh.NewCurve25519(rand.Reader)
+	myX3dh := x3dh.New(&c25519, sha256.New(), "pangea-chat", myChatIDKeyPair)
 
 	c := &Chat{
 		messageDB:            conf.MessageDB,
 		backend:              conf.Backend,
 		sharedSecStorage:     conf.SharedSecretDB,
-		x3dh:                 nil,
+		x3dh:                 &myX3dh,
 		km:                   conf.KM,
 		drKeyStorage:         conf.DRKeyStorage,
 		signedPreKeyStorage:  conf.SignedPreKeyStorage,
