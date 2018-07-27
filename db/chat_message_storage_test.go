@@ -27,7 +27,7 @@ func TestBoltChatMessageStorage_PersistMessage(t *testing.T) {
 
 	// persist message
 	storage := NewChatMessageStorage(db, []chan PlainMessagePersistedEvent{eventListener}, km)
-	err = storage.PersistMessage(partner, bpb.PlainChatMessage{
+	err = storage.persistMessage(partner, bpb.PlainChatMessage{
 		Message:   []byte("hi there"),
 		CreatedAt: 33,
 		MessageID: "the_message_id",
