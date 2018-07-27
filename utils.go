@@ -151,7 +151,7 @@ func ConnectLogger(address string) error {
 	}
 
 	// peer info
-	pi, err := ps.InfoFromP2pAddr(*addr)
+	pi, err := ps.InfoFromP2pAddr(addr)
 	if err != nil {
 		return err
 	}
