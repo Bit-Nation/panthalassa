@@ -4,12 +4,11 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 
-	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
-	bpb "github.com/Bit-Nation/protobuffers"
 	bolt "github.com/coreos/bbolt"
-	proto "github.com/gogo/protobuf/proto"
+	uuid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
@@ -26,40 +25,103 @@ const (
 	StatusDelivered      Status = 300
 	StatusFailedToHandle Status = 400
 	StatusPersisted      Status = 500
+	DAppMessageVersion   uint   = 1
 )
 
+var statuses = map[Status]bool{
+	StatusSent:           true,
+	StatusFailedToSend:   true,
+	StatusDelivered:      true,
+	StatusFailedToHandle: true,
+	StatusPersisted:      true,
+}
+
 type ChatMessageStorage interface {
-	PersistMessageToSend(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
-	PersistReceivedMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
+	PersistMessageToSend(partner ed25519.PublicKey, msg Message) error
+	PersistReceivedMessage(partner ed25519.PublicKey, msg Message) error
 	UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus Status) error
 	AllChats() ([]ed25519.PublicKey, error)
 	Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]Message, error)
 }
 
-type Message struct {
-	ID string `json:"message_id"`
-	// encrypted message
-	Message aes.CipherText `json:"message"`
-	Version uint32         `json:"version"`
-	Status  Status         `json:"status"`
-	// is a received message
-	Received bool `json:"received"`
+type DAppMessage struct {
+	DAppPublicKey []byte                 `json:"dapp_public_key"`
+	Type          string                 `json:"type"`
+	Params        map[string]interface{} `json:"params"`
+	ShouldSend    bool                   `json:"should_send"`
 }
 
-type PlainMessagePersistedEvent struct {
-	Msg     bpb.PlainChatMessage
-	Partner ed25519.PublicKey
-	DBMsg   Message
-	MsgID   int64
+type Message struct {
+	ID        string       `json:"message_id"`
+	Version   uint         `json:"version"`
+	Status    Status       `json:"status"`
+	Received  bool         `json:"received"`
+	DApp      *DAppMessage `json:"dapp"`
+	Message   []byte       `json:"message"`
+	CreatedAt int64        `json:"created_at"`
+	Sender    []byte       `json:"sender"`
+}
+
+// validate a given message
+var ValidMessage = func(m Message) error {
+
+	// validate id
+	if m.ID == "" {
+		return errors.New("invalid message id (empty string)")
+	}
+
+	// validate version
+	if m.Version == 0 {
+		return errors.New("invalid version - got 0")
+	}
+
+	// validate version
+	if _, exist := statuses[m.Status]; !exist {
+		return fmt.Errorf("invalid status: %d (is not registered)", m.Status)
+	}
+
+	// validate "type" of message
+	if m.DApp == nil && len(m.Message) == 0 {
+		return errors.New("got invalid message - dapp and message are both nil")
+	}
+
+	// validate DApp
+	if m.DApp != nil {
+
+		// validate DApp public key
+		if len(m.DApp.DAppPublicKey) != 0 {
+			return fmt.Errorf("invalid dapp public key of length %d", len(m.DApp.DAppPublicKey))
+		}
+
+	}
+
+	// validate created at
+	if m.CreatedAt == 0 {
+		return errors.New("invalid created at - must not be 0")
+	}
+
+	// validate sender
+	if len(m.Sender) != 32 {
+		return fmt.Errorf("invalid sender of length %d", len(m.Sender))
+	}
+
+	return nil
+
+}
+
+type MessagePersistedEvent struct {
+	Partner     ed25519.PublicKey
+	Message     Message
+	DBMessageID int64
 }
 
 type BoltChatMessageStorage struct {
 	db                  *bolt.DB
-	postPersistListener []chan PlainMessagePersistedEvent
+	postPersistListener []func(event MessagePersistedEvent)
 	km                  *km.KeyManager
 }
 
-func NewChatMessageStorage(db *bolt.DB, listeners []chan PlainMessagePersistedEvent, km *km.KeyManager) *BoltChatMessageStorage {
+func NewChatMessageStorage(db *bolt.DB, listeners []func(event MessagePersistedEvent), km *km.KeyManager) *BoltChatMessageStorage {
 	return &BoltChatMessageStorage{
 		db:                  db,
 		postPersistListener: listeners,
@@ -67,7 +129,17 @@ func NewChatMessageStorage(db *bolt.DB, listeners []chan PlainMessagePersistedEv
 	}
 }
 
-func (s *BoltChatMessageStorage) persistMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage, received bool, status Status) error {
+func (s *BoltChatMessageStorage) persistMessage(partner ed25519.PublicKey, msg Message) error {
+
+	// set version of message
+	msg.Version = DAppMessageVersion
+
+	// validate message
+	if err := ValidMessage(msg); err != nil {
+		return err
+	}
+
+	// persist message
 	return s.db.Update(func(tx *bolt.Tx) error {
 
 		// private chat bucket
@@ -83,43 +155,35 @@ func (s *BoltChatMessageStorage) persistMessage(partner ed25519.PublicKey, msg b
 		}
 
 		// turn created at into bytes
-		createdAt := make([]byte, 8)
-		binary.BigEndian.PutUint64(createdAt, uint64(msg.CreatedAt))
+		// createdAtMsgID is the id used for the database
+		createdAtMsgID := make([]byte, 8)
+		binary.BigEndian.PutUint64(createdAtMsgID, uint64(msg.CreatedAt))
 
 		// make sure it is not taken and adjust the time indexed timestamp
 		tried := 0
 		for {
-			fetchedMsg := partnerBucket.Get(createdAt)
+			fetchedMsg := partnerBucket.Get(createdAtMsgID)
 			if fetchedMsg == nil || tried == 1000 {
 				break
 			}
 			tried++
-			binary.BigEndian.PutUint64(createdAt, uint64(msg.CreatedAt+1))
+			binary.BigEndian.PutUint64(createdAtMsgID, uint64(msg.CreatedAt+1))
 		}
 
 		// marshal message
-		rawProtoMsg, err := proto.Marshal(&msg)
+		rawMessage, err := json.Marshal(msg)
 		if err != nil {
 			return err
 		}
 
 		// encrypt raw proto message
-		encryptedMessage, err := s.km.AESEncrypt(rawProtoMsg)
+		encryptedMessage, err := s.km.AESEncrypt(rawMessage)
 		if err != nil {
 			return err
 		}
 
-		// database message
-		dbMessage := Message{
-			ID:       msg.MessageID,
-			Message:  encryptedMessage,
-			Version:  1,
-			Status:   status,
-			Received: received,
-		}
-
-		// marshal DB message
-		rawDBMessage, err := json.Marshal(dbMessage)
+		// marshaled encrypted message
+		rawEncryptedMessage, err := encryptedMessage.Marshal()
 		if err != nil {
 			return err
 		}
@@ -127,16 +191,15 @@ func (s *BoltChatMessageStorage) persistMessage(partner ed25519.PublicKey, msg b
 		// tell listeners that we persisted the message
 		tx.OnCommit(func() {
 			for _, listener := range s.postPersistListener {
-				listener <- PlainMessagePersistedEvent{
-					Msg:     msg,
-					Partner: partner,
-					DBMsg:   dbMessage,
-					MsgID:   int64(binary.BigEndian.Uint64(createdAt)),
-				}
+				go listener(MessagePersistedEvent{
+					Partner:     partner,
+					Message:     msg,
+					DBMessageID: int64(binary.BigEndian.Uint64(createdAtMsgID)),
+				})
 			}
 		})
 
-		return partnerBucket.Put(createdAt, rawDBMessage)
+		return partnerBucket.Put(createdAtMsgID, rawEncryptedMessage)
 
 	})
 }
@@ -228,12 +291,21 @@ func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64
 
 }
 
-func (s *BoltChatMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
-	return s.persistMessage(partner, msg, false, StatusPersisted)
+func (s *BoltChatMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg Message) error {
+	id, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+	msg.ID = id.String()
+	msg.Received = false
+	msg.Status = StatusPersisted
+	return s.persistMessage(partner, msg)
 }
 
-func (s *BoltChatMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
-	return s.persistMessage(partner, msg, true, StatusPersisted)
+func (s *BoltChatMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, msg Message) error {
+	msg.Status = StatusPersisted
+	msg.Received = true
+	return s.persistMessage(partner, msg)
 }
 
 func (s *BoltChatMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus Status) error {
