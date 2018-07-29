@@ -21,6 +21,7 @@ type Processor interface {
 type Storage interface {
 	PersistJob(j Job) error
 	DeleteJob(id string) error
+	Map(queue chan Job)
 }
 
 type Job struct {
