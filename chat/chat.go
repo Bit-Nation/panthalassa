@@ -2,13 +2,15 @@ package chat
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"time"
 
-	"crypto/sha256"
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	queue "github.com/Bit-Nation/panthalassa/queue"
+	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	log "github.com/ipfs/go-log"
@@ -39,6 +41,8 @@ type Chat struct {
 	signedPreKeyStorage  db.SignedPreKeyStorage
 	oneTimePreKeyStorage db.OneTimePreKeyStorage
 	userStorage          db.UserStorage
+	uiApi                uiapi.Api
+	queue                *queue.Queue
 }
 
 func (c *Chat) AllChats() ([]ed25519.PublicKey, error) {
@@ -58,6 +62,8 @@ type Config struct {
 	SignedPreKeyStorage  db.SignedPreKeyStorage
 	OneTimePreKeyStorage db.OneTimePreKeyStorage
 	UserStorage          db.UserStorage
+	uiApi                uiapi.Api
+	queue                *queue.Queue
 }
 
 func NewChat(conf Config) (*Chat, error) {
@@ -82,7 +88,11 @@ func NewChat(conf Config) (*Chat, error) {
 		signedPreKeyStorage:  conf.SignedPreKeyStorage,
 		oneTimePreKeyStorage: conf.OneTimePreKeyStorage,
 		userStorage:          conf.UserStorage,
+		uiApi:                conf.uiApi,
 	}
+
+	// add message handler that will inform the ui about updates
+	c.messageDB.AddListener(c.handlePersistedMessage)
 
 	// register messages handler
 	c.backend.AddRequestHandler(c.messagesHandler)

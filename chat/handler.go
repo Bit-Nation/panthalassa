@@ -2,10 +2,13 @@ package chat
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"sync"
 
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
+	db "github.com/Bit-Nation/panthalassa/db"
+	queue "github.com/Bit-Nation/panthalassa/queue"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 )
@@ -88,5 +91,54 @@ func (c *Chat) oneTimePreKeysHandler(req *bpb.BackendMessage_Request) (*bpb.Back
 	return &bpb.BackendMessage_Response{
 		OneTimePrekeys: preKeys,
 	}, nil
+
+}
+
+func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
+
+	// add to queue
+	err := c.queue.AddJob(queue.Job{
+		Type: "MESSAGE:SEND",
+		Data: map[string]interface{}{
+			"partner":       hex.EncodeToString(e.Partner),
+			"db_message_id": e.DBMessageID,
+		},
+	})
+	if err != nil {
+		logger.Error(err)
+	}
+
+	if e.Message.Status == db.StatusPersisted {
+		c.uiApi.Send("MESSAGE:PERSISTED", map[string]interface{}{
+			"message_id": e.DBMessageID,
+			"message": map[string]interface{}{
+				"content":    string(e.Message.Message),
+				"created_at": e.Message.CreatedAt,
+			},
+			"partner": hex.EncodeToString(e.Partner),
+		})
+	}
+
+	if e.Message.Status == db.StatusDelivered {
+		c.uiApi.Send("MESSAGE:DELIVERED", map[string]interface{}{
+			"message_id": e.DBMessageID,
+			"message": map[string]interface{}{
+				"content":    string(e.Message.Message),
+				"created_at": e.Message.CreatedAt,
+			},
+			"partner": hex.EncodeToString(e.Partner),
+		})
+	}
+
+	if e.Message.Received {
+		c.uiApi.Send("MESSAGE:RECEIVED", map[string]interface{}{
+			"message_id": e.DBMessageID,
+			"message": map[string]interface{}{
+				"content":    string(e.Message.Message),
+				"created_at": e.Message.CreatedAt,
+			},
+			"partner": hex.EncodeToString(e.Partner),
+		})
+	}
 
 }
