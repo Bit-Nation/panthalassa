@@ -5,9 +5,11 @@ import (
 	"encoding/binary"
 	"errors"
 
+	db "github.com/Bit-Nation/panthalassa/db"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	mh "github.com/multiformats/go-multihash"
+	"github.com/segmentio/objconv/json"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -155,4 +157,42 @@ func hashChatMessage(msg bpb.ChatMessage) (mh.Multihash, error) {
 
 	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
 
+}
+
+// turns a received plain protobuf message into a database message
+func protoPlainMsgToMessage(msg *bpb.PlainChatMessage) (db.Message, error) {
+
+	m := db.Message{
+		Message:   msg.Message,
+		CreatedAt: msg.CreatedAt,
+	}
+
+	if isDAppMessage(msg) {
+		m.DApp = &db.DAppMessage{
+			DAppPublicKey: msg.DAppPublicKey,
+			Type:          msg.Type,
+			Params:        map[string]interface{}{},
+		}
+		// unmarshal params
+		if msg.Params != nil {
+			if err := json.Unmarshal(msg.Params, &m.DApp.Params); err != nil {
+				return db.Message{}, err
+			}
+		}
+		// make sure that there is no message text
+		// since the protocol doesn't allow it
+		m.Message = nil
+	}
+
+	return m, nil
+
+}
+
+// checks if a chat message is supposed to initialize a chat
+func isChatInitMessage(msg *bpb.ChatMessage) bool {
+	return msg.EphemeralKey != nil && msg.SignedPreKey != nil
+}
+
+func isDAppMessage(msg *bpb.PlainChatMessage) bool {
+	return len(msg.DAppPublicKey) != 0
 }
