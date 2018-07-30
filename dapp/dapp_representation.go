@@ -2,6 +2,7 @@ package dapp
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -34,6 +35,7 @@ type JsonBuild struct {
 	Image          []byte
 	Signature      mh.Multihash
 	Engine         SV
+	Version        uint32
 }
 
 // hash the published DApp
@@ -77,6 +79,14 @@ func (r JsonBuild) Hash() ([]byte, error) {
 
 	// write engine into buffer
 	if _, err := buff.Write([]byte(r.Engine.String())); err != nil {
+		return nil, err
+	}
+
+	// write version
+	v := make([]byte, 4)
+	binary.BigEndian.PutUint32(v, uint32(r.Version))
+
+	if _, err := buff.Write([]byte(v)); err != nil {
 		return nil, err
 	}
 
@@ -148,6 +158,7 @@ type jsonBuild struct {
 	Image          string            `json:"image"`
 	Signature      string            `json:"signature"`
 	Engine         string            `json:"engine"`
+	Version        uint32            `json:"version"`
 }
 
 func JsonToJsonBuild(b jsonBuild) (JsonBuild, error) {
@@ -184,6 +195,7 @@ func JsonToJsonBuild(b jsonBuild) (JsonBuild, error) {
 		Image:          []byte(b.Image),
 		Signature:      multiHash,
 		Engine:         sv,
+		Version:        b.Version,
 	}, nil
 
 }
