@@ -236,6 +236,10 @@ func (s *BoltChatMessageStorage) AllChats() ([]ed25519.PublicKey, error) {
 
 func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]Message, error) {
 
+	if amount < 1 {
+		return nil, errors.New("invalid amount - must be at least one")
+	}
+
 	messages := map[int64]Message{}
 
 	err := s.db.View(func(tx *bolt.Tx) error {
