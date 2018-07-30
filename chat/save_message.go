@@ -3,23 +3,19 @@ package chat
 import (
 	"time"
 
-	bpb "github.com/Bit-Nation/protobuffers"
-	uuid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"
+	db "github.com/Bit-Nation/panthalassa/db"
 )
 
 var nowAsUnix = func() int64 {
-	return time.Now().Unix()
+	return time.Now().UnixNano()
 }
 
 // persist private message
 func (c *Chat) SavePrivateMessage(to ed25519.PublicKey, rawMessage []byte) error {
-	msg := bpb.PlainChatMessage{}
-	msg.CreatedAt = nowAsUnix()
-	id, err := uuid.NewV4()
-	if err != nil {
-		return err
+	msg := db.Message{
+		Message: rawMessage,
+		CreatedAt: nowAsUnix(),
 	}
-	msg.MessageID = id.String()
 	return c.messageDB.PersistMessageToSend(to, msg)
 }
