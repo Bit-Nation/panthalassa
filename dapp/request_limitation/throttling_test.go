@@ -24,7 +24,9 @@ func TestThrottling_ExecCoolDown(t *testing.T) {
 	// add to stack
 	require.Nil(t, throttling.Exec(func() {}))
 	require.Nil(t, throttling.Exec(func() {}))
-	require.Nil(t, throttling.Exec(func() {}))
+	require.Nil(t, throttling.Exec(func() {
+		time.Sleep(time.Second)
+	}))
 	// wait a bit so that the queue can pickup the job
 	time.Sleep(time.Millisecond * 100)
 
