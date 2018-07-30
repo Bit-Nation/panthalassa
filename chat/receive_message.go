@@ -13,11 +13,6 @@ import (
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-// checks if a chat message is supposed to initialize a chat
-func isChatInitMessage(msg *bpb.ChatMessage) bool {
-	return msg.EphemeralKey != nil && msg.SignedPreKey != nil
-}
-
 // convert a byte sequence to an x3dh public key
 func byteSliceTox3dhPub(pub []byte) (x3dh.PublicKey, error) {
 	var x3dhPub x3dh.PublicKey
@@ -144,11 +139,17 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			if err != nil {
 				return err
 			}
-			return c.messageDB.PersistReceivedMessage(msg.Sender, decryptedMsg)
+			// convert proto plain message to decrypted message
+			dbMessage, err := protoPlainMsgToMessage(&decryptedMsg)
+			dbMessage.Sender = sender
+			if err != nil {
+				return err
+			}
+			return c.messageDB.PersistReceivedMessage(msg.Sender, dbMessage)
 		}
 
 		// fetch used one time pre key
-		oneTimePreKey, err := c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
+		oneTimePreKeyPriv, err := c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
 		if err != nil {
 			return err
 		}
@@ -173,7 +174,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		sharedX3dhSec, err := c.x3dh.SecretFromRemote(x3dh.ProtocolInitialisation{
 			RemoteIdKey:        remoteChatIdKey,
 			RemoteEphemeralKey: x3dhEphemeralKey,
-			MyOneTimePreKey:    oneTimePreKey,
+			MyOneTimePreKey:    oneTimePreKeyPriv,
 			MySignedPreKey:     signedPreKey.PrivateKey,
 		})
 		if err != nil {
@@ -247,7 +248,14 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 
-		return c.messageDB.PersistReceivedMessage(sender, plainMsg)
+		// convert plain protobuf message to database message
+		dbMessage, err := protoPlainMsgToMessage(&plainMsg)
+		dbMessage.Sender = sender
+		if err != nil {
+			return err
+		}
+
+		return c.messageDB.PersistReceivedMessage(sender, dbMessage)
 
 	}
 
@@ -276,8 +284,15 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		return err
 	}
 
+	// convert proto message to database message
+	dbMessage, err := protoPlainMsgToMessage(&plainMsg)
+	dbMessage.Sender = sender
+	if err != nil {
+		return err
+	}
+
 	// persist message
-	if err := c.messageDB.PersistReceivedMessage(msg.Sender, plainMsg); err != nil {
+	if err := c.messageDB.PersistReceivedMessage(msg.Sender, dbMessage); err != nil {
 		return err
 	}
 

@@ -7,6 +7,7 @@ import (
 	api "github.com/Bit-Nation/panthalassa/api"
 	chat "github.com/Bit-Nation/panthalassa/chat"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
+	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
@@ -18,8 +19,9 @@ type Panthalassa struct {
 	upStream api.UpStream
 	api      *api.API
 	p2p      *p2p.Network
-	chat     *chat.Chat
 	dAppReg  *dAppReg.Registry
+	chat     *chat.Chat
+	msgDB    *db.BoltChatMessageStorage
 }
 
 //Stop the panthalassa instance

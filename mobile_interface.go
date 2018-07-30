@@ -11,9 +11,12 @@ import (
 	chat "github.com/Bit-Nation/panthalassa/chat"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
+	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	profile "github.com/Bit-Nation/panthalassa/profile"
+	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
+	bolt "github.com/coreos/bbolt"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
@@ -34,10 +37,9 @@ type StartConfig struct {
 }
 
 // create a new panthalassa instance
-func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error {
+func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpStream) error {
 
 	if config.EnableDebugging {
-
 		log.SetDebugLogging()
 	}
 
@@ -47,17 +49,11 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 	}
 
 	// device api
-	api := api.New(client, km)
+	deviceApi := api.New(client, km)
 
 	// create backend
 	// @TODO use a real transport
 	backend, err := backend.NewBackend(nil, km)
-	if err != nil {
-		return err
-	}
-
-	// create chat
-	c, err := chat.NewChat(backend)
 	if err != nil {
 		return err
 	}
@@ -68,23 +64,50 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 		return err
 	}
 
+	// open database
+	dbPath, err := db.KMToDBPath(km)
+	if err != nil {
+		return err
+	}
+	dbInstance, err := db.Open(dbPath, 0600, &bolt.Options{Timeout: 1})
+	if err != nil {
+		return err
+	}
+
+	// ui api
+	uiApi := uiapi.New(uiUpstream)
+
+	// open message storage
+	messageStorage := db.NewChatMessageStorage(dbInstance, []func(db.MessagePersistedEvent){}, km)
+
+	// chat
+	chatInstance, err := chat.NewChat(chat.Config{
+		MessageDB: messageStorage,
+		KM:        km,
+		Backend:   backend,
+		UiApi:     uiApi,
+	})
+	if err != nil {
+		return err
+	}
+
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:       km,
 		upStream: client,
-		api:      api,
+		api:      deviceApi,
 		p2p:      p2pNetwork,
-		chat:     c,
 		dAppReg: dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
-		}, api, km),
+		}, deviceApi, km),
+		chat: chatInstance,
 	}
 
 	return nil
 }
 
 // start panthalassa
-func Start(config string, password string, client UpStream) error {
+func Start(config string, password string, client, uiUpstream UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -103,11 +126,11 @@ func Start(config string, password string, client UpStream) error {
 		return err
 	}
 
-	return start(km, c, client)
+	return start(km, c, client, uiUpstream)
 }
 
 // create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
+func StartFromMnemonic(config string, mnemonic string, client, uiUpstream UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -127,7 +150,7 @@ func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
 	}
 
 	// create panthalassa instance
-	return start(km, c, client)
+	return start(km, c, client, uiUpstream)
 
 }
 
