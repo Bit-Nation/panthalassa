@@ -349,6 +349,11 @@ func (s *BoltChatMessageStorage) GetMessage(partner ed25519.PublicKey, dbID int6
 	return msg, err
 }
 
+// add listener
+func (s *BoltChatMessageStorage) AddListener(fn func(e MessagePersistedEvent)) {
+	s.postPersistListener = append(s.postPersistListener, fn)
+}
+
 func (s *BoltChatMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg Message) error {
 	id, err := uuid.NewV4()
 	if err != nil {
