@@ -12,8 +12,6 @@ deps:
 	go get -u github.com/kardianos/govendor
 	go get github.com/stretchr/testify
 	go get -u github.com/golang/dep/cmd/dep
-	go get golang.org/x/tools/cmd/cover
-	go get github.com/mattn/goveralls
 install:
 	gx install
 	dep ensure
