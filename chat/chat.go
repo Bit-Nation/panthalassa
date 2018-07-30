@@ -1,12 +1,16 @@
 package chat
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"time"
 
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	queue "github.com/Bit-Nation/panthalassa/queue"
+	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	log "github.com/ipfs/go-log"
@@ -37,17 +41,73 @@ type Chat struct {
 	signedPreKeyStorage  db.SignedPreKeyStorage
 	oneTimePreKeyStorage db.OneTimePreKeyStorage
 	userStorage          db.UserStorage
+	uiApi                *uiapi.Api
+	queue                *queue.Queue
 }
 
-func NewChat(b Backend) (*Chat, error) {
+func (c *Chat) AllChats() ([]ed25519.PublicKey, error) {
+	return c.messageDB.AllChats()
+}
 
-	c := &Chat{}
+func (c *Chat) Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error) {
+	return c.messageDB.Messages(partner, start, amount)
+}
+
+type Config struct {
+	MessageDB            db.ChatMessageStorage
+	Backend              Backend
+	SharedSecretDB       db.SharedSecretStorage
+	KM                   *keyManager.KeyManager
+	DRKeyStorage         dr.KeysStorage
+	SignedPreKeyStorage  db.SignedPreKeyStorage
+	OneTimePreKeyStorage db.OneTimePreKeyStorage
+	UserStorage          db.UserStorage
+	UiApi                *uiapi.Api
+	queue                *queue.Queue
+}
+
+func NewChat(conf Config) (*Chat, error) {
+
+	// my chat id key pair
+	myChatIDKeyPair, err := conf.KM.ChatIdKeyPair()
+	if err != nil {
+		return nil, err
+	}
+
+	// curve 25519
+	c25519 := x3dh.NewCurve25519(rand.Reader)
+	myX3dh := x3dh.New(&c25519, sha256.New(), "pangea-chat", myChatIDKeyPair)
+
+	c := &Chat{
+		messageDB:            conf.MessageDB,
+		backend:              conf.Backend,
+		sharedSecStorage:     conf.SharedSecretDB,
+		x3dh:                 &myX3dh,
+		km:                   conf.KM,
+		drKeyStorage:         conf.DRKeyStorage,
+		signedPreKeyStorage:  conf.SignedPreKeyStorage,
+		oneTimePreKeyStorage: conf.OneTimePreKeyStorage,
+		userStorage:          conf.UserStorage,
+		uiApi:                conf.UiApi,
+	}
+
+	err = c.queue.RegisterProcessor(&SubmitMessagesProcessor{
+		chat:  c,
+		msgDB: c.messageDB,
+		queue: c.queue,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// add message handler that will inform the ui about updates
+	c.messageDB.AddListener(c.handlePersistedMessage)
 
 	// register messages handler
-	b.AddRequestHandler(c.messagesHandler)
+	c.backend.AddRequestHandler(c.messagesHandler)
 
 	// register now one time pre key handler
-	b.AddRequestHandler(c.oneTimePreKeysHandler)
+	c.backend.AddRequestHandler(c.oneTimePreKeysHandler)
 
 	return c, nil
 }

@@ -194,7 +194,7 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 			},
 		},
 		messageDB: &testMessageStorage{
-			persistReceivedMessage: func(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+			persistReceivedMessage: func(partner ed25519.PublicKey, msg db.Message) error {
 				require.Equal(t, senderPub, partner)
 				require.Equal(t, "hi bob", string(msg.Message))
 				return nil
@@ -252,6 +252,7 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 		Message:                  []byte("hi bob"),
 		SharedSecretBaseID:       sharedSecretIDRef,
 		SharedSecretCreationDate: 4,
+		CreatedAt:                444,
 	})
 	require.Nil(t, err)
 
@@ -322,15 +323,15 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 			},
 		},
 		messageDB: &testMessageStorage{
-			persistReceivedMessage: func(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+			persistReceivedMessage: func(partner ed25519.PublicKey, msg db.Message) error {
 				require.Equal(t, senderPub, partner)
 				require.Equal(t, "hi bob", string(msg.Message))
-				require.Equal(t, sharedSecretIDRef, msg.SharedSecretBaseID)
+				require.Equal(t, int64(444), msg.CreatedAt)
 				return nil
 			},
 		},
 		oneTimePreKeyStorage: &testOneTimePreKeyStorage{
-			cut: func(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error) {
+			cut: func(pubKey []byte) (*x3dh.PrivateKey, error) {
 				return nil, nil
 			},
 		},
@@ -495,10 +496,9 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 			},
 		},
 		messageDB: &testMessageStorage{
-			persistReceivedMessage: func(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+			persistReceivedMessage: func(partner ed25519.PublicKey, msg db.Message) error {
 				require.Equal(t, senderPub, partner)
 				require.Equal(t, "hi bob", string(msg.Message))
-				require.Equal(t, sharedSecretIDRef, msg.SharedSecretBaseID)
 				return nil
 			},
 		},

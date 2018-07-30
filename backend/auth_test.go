@@ -32,7 +32,7 @@ func TestBackend_Auth(t *testing.T) {
 		return nil
 	}
 
-	_, err = NewServerBackend(&transport, km)
+	_, err = NewBackend(&transport, km)
 	require.Nil(t, err)
 	err = transport.onMessage(&bpb.BackendMessage{
 		RequestID: "i_am_the_request_id",
