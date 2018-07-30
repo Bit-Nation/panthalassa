@@ -13,11 +13,13 @@ import (
 )
 
 type testMessageStorage struct {
-	persistMessageToSend   func(to ed25519.PublicKey, msg bpb.PlainChatMessage) error
-	persistReceivedMessage func(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
-	updateStatus           func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error
+	persistMessageToSend   func(to ed25519.PublicKey, msg db.Message) error
+	persistReceivedMessage func(partner ed25519.PublicKey, msg db.Message) error
+	updateStatus           func(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error
 	messages               func(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error)
 	allChats               func() ([]ed25519.PublicKey, error)
+	addListener            func(fn func(e db.MessagePersistedEvent))
+	getMessage             func(partner ed25519.PublicKey, messageID int64) (*db.Message, error)
 }
 
 type testSharedSecretStorage struct {
@@ -131,15 +133,15 @@ func (s *testSharedSecretStorage) Get(key ed25519.PublicKey, sharedSecretID []by
 	return s.get(key, sharedSecretID)
 }
 
-func (s *testMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+func (s *testMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg db.Message) error {
 	return s.persistMessageToSend(partner, msg)
 }
 
-func (s *testMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus db.Status) error {
+func (s *testMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error {
 	return s.updateStatus(partner, msgID, newStatus)
 }
 
-func (s *testMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+func (s *testMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, msg db.Message) error {
 	return s.persistReceivedMessage(partner, msg)
 }
 
@@ -149,6 +151,14 @@ func (s *testMessageStorage) Messages(partner ed25519.PublicKey, start int64, am
 
 func (s *testMessageStorage) AllChats() ([]ed25519.PublicKey, error) {
 	return s.allChats()
+}
+
+func (s *testMessageStorage) AddListener(fn func(e db.MessagePersistedEvent)) {
+	s.addListener(fn)
+}
+
+func (s *testMessageStorage) GetMessage(partner ed25519.PublicKey, messageID int64) (*db.Message, error) {
+	return s.getMessage(partner, messageID)
 }
 
 func (b *testBackend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error) {
