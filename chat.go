@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/Bit-Nation/panthalassa/crypto/aes"
 	bpb "github.com/Bit-Nation/protobuffers"
 	proto "github.com/gogo/protobuf/proto"
 )
@@ -86,7 +87,14 @@ func Messages(partner string, start int64, amount int) (string, error) {
 
 	// decrypt message
 	for key, dbMessage := range databaseMessages {
-		plainMessage, err := panthalassaInstance.km.AESDecrypt(dbMessage.Message)
+		// unmarshal aes cipher text
+		ct, err := aes.Unmarshal(dbMessage.Message)
+		if err != nil {
+			return "", err
+		}
+
+		// decrypt aes
+		plainMessage, err := panthalassaInstance.km.AESDecrypt(ct)
 		if err != nil {
 			return "", err
 		}

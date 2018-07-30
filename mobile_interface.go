@@ -78,15 +78,14 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 	uiApi := uiapi.New(uiUpstream)
 
 	// open message storage
-	messageStorage := db.NewChatMessageStorage(dbInstance, []chan db.PlainMessagePersistedEvent{
-		chat.NewMessageDBListener(uiApi, 40),
-	}, km)
+	messageStorage := db.NewChatMessageStorage(dbInstance, []func(db.MessagePersistedEvent){}, km)
 
 	// chat
 	chatInstance, err := chat.NewChat(chat.Config{
 		MessageDB: messageStorage,
 		KM:        km,
 		Backend:   backend,
+		UiApi:     uiApi,
 	})
 	if err != nil {
 		return err

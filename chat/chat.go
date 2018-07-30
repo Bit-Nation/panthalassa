@@ -41,7 +41,7 @@ type Chat struct {
 	signedPreKeyStorage  db.SignedPreKeyStorage
 	oneTimePreKeyStorage db.OneTimePreKeyStorage
 	userStorage          db.UserStorage
-	uiApi                uiapi.Api
+	uiApi                *uiapi.Api
 	queue                *queue.Queue
 }
 
@@ -62,7 +62,7 @@ type Config struct {
 	SignedPreKeyStorage  db.SignedPreKeyStorage
 	OneTimePreKeyStorage db.OneTimePreKeyStorage
 	UserStorage          db.UserStorage
-	uiApi                uiapi.Api
+	UiApi                *uiapi.Api
 	queue                *queue.Queue
 }
 
@@ -88,7 +88,7 @@ func NewChat(conf Config) (*Chat, error) {
 		signedPreKeyStorage:  conf.SignedPreKeyStorage,
 		oneTimePreKeyStorage: conf.OneTimePreKeyStorage,
 		userStorage:          conf.UserStorage,
-		uiApi:                conf.uiApi,
+		uiApi:                conf.UiApi,
 	}
 
 	c.queue.RegisterProcessor(&SubmitMessagesProcessor{

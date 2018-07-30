@@ -374,6 +374,6 @@ func (s *BoltChatMessageStorage) PersistReceivedMessage(partner ed25519.PublicKe
 	return s.persistMessage(partner, msg)
 }
 
-func (s *BoltChatMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus Status) error {
+func (s *BoltChatMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID int64, newStatus Status) error {
 	return errors.New("currently not implemented")
 }
