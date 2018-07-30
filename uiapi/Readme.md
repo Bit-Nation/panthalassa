@@ -23,3 +23,8 @@
         - `message`
             - `content` raw message content (will be "" if DApp message)
             - `created_at` unix timestamp
+
+- DApp
+
+    - `DAPP:PERSISTED`
+        - `dapp_signing_key` hex encoded signing key used to sign the DApp
