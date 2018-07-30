@@ -16,23 +16,30 @@ import (
 )
 
 type testUpstream struct {
+	send func(string)
 }
 
-func (u testUpstream) Send(string string) {
-
+func (u testUpstream) Send(data string) {
+	u.send(data)
 }
 
 func TestBoltStorage_SaveDApp(t *testing.T) {
 
 	db := createDB()
 
-	dAppStorage := BoltDAppStorage{
-		db:    db,
-		uiApi: uiApi.New(&testUpstream{}),
-	}
-
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
+
+	called := make(chan struct{}, 1)
+	dAppStorage := BoltDAppStorage{
+		db: db,
+		uiApi: uiApi.New(&testUpstream{
+			send: func(s string) {
+				require.Equal(t, fmt.Sprintf(`{"name":"DAPP:PERSISTED","payload":{"dapp_signing_key":"%x"}}`, pub), s)
+				called <- struct{}{}
+			},
+		}),
+	}
 
 	dAppJson := JsonBuild{
 		Name: map[string]string{
@@ -76,16 +83,18 @@ func TestBoltStorage_SaveDApp(t *testing.T) {
 
 	})
 	require.Nil(t, err)
+	select {
+	case <-called:
+	case <-time.After(time.Second * 1):
+		require.FailNow(t, "timed out")
+	}
 
 }
 
 func TestBoltStorage_SaveDAppInvalidSignature(t *testing.T) {
 
-	db := createDB()
-
 	dAppStorage := BoltDAppStorage{
-		db:    db,
-		uiApi: uiApi.New(&testUpstream{}),
+		db: createDB(),
 	}
 
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
@@ -123,8 +132,10 @@ func TestBoltStorage_All(t *testing.T) {
 	db := createDB()
 
 	dAppStorage := BoltDAppStorage{
-		db:    db,
-		uiApi: uiApi.New(&testUpstream{}),
+		db: db,
+		uiApi: uiApi.New(&testUpstream{send: func(s string) {
+
+		}}),
 	}
 
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
