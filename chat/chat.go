@@ -91,11 +91,14 @@ func NewChat(conf Config) (*Chat, error) {
 		uiApi:                conf.UiApi,
 	}
 
-	c.queue.RegisterProcessor(&SubmitMessagesProcessor{
+	err = c.queue.RegisterProcessor(&SubmitMessagesProcessor{
 		chat:  c,
 		msgDB: c.messageDB,
 		queue: c.queue,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	// add message handler that will inform the ui about updates
 	c.messageDB.AddListener(c.handlePersistedMessage)
