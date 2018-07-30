@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Bit-Nation/panthalassa/crypto/aes"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bolt "github.com/coreos/bbolt"
 	uuid "github.com/satori/go.uuid"
@@ -42,6 +43,8 @@ type ChatMessageStorage interface {
 	UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus Status) error
 	AllChats() ([]ed25519.PublicKey, error)
 	Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]Message, error)
+	AddListener(func(e MessagePersistedEvent))
+	GetMessage(partner ed25519.PublicKey, messageID int64) (*Message, error)
 }
 
 type DAppMessage struct {
@@ -52,14 +55,15 @@ type DAppMessage struct {
 }
 
 type Message struct {
-	ID        string       `json:"message_id"`
-	Version   uint         `json:"version"`
-	Status    Status       `json:"status"`
-	Received  bool         `json:"received"`
-	DApp      *DAppMessage `json:"dapp"`
-	Message   []byte       `json:"message"`
-	CreatedAt int64        `json:"created_at"`
-	Sender    []byte       `json:"sender"`
+	ID         string       `json:"message_id"`
+	Version    uint         `json:"version"`
+	Status     Status       `json:"status"`
+	Received   bool         `json:"received"`
+	DApp       *DAppMessage `json:"dapp"`
+	Message    []byte       `json:"message"`
+	CreatedAt  int64        `json:"created_at"`
+	Sender     []byte       `json:"sender"`
+	DatabaseID int64        `json:"db_id"`
 }
 
 // validate a given message
@@ -96,8 +100,10 @@ var ValidMessage = func(m Message) error {
 	}
 
 	// validate created at
-	if m.CreatedAt == 0 {
-		return errors.New("invalid created at - must not be 0")
+	// must be greater then the max unix time stamp
+	// in seconds since we need the micro second timestamp
+	if m.CreatedAt <= 2147483647 {
+		return errors.New("invalid created at - must be bigger then 2147483647")
 	}
 
 	// validate sender
@@ -289,6 +295,58 @@ func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64
 
 	return messages, err
 
+}
+
+// fetch message by it's partner and database id
+// will return nil if the message doesn't exist
+func (s *BoltChatMessageStorage) GetMessage(partner ed25519.PublicKey, dbID int64) (*Message, error) {
+	var msg *Message
+	msg = nil
+	err := s.db.View(func(tx *bolt.Tx) error {
+
+		// private chats bucket
+		privateChats, err := tx.CreateBucketIfNotExists(privateChatBucketName)
+		if err != nil {
+			return err
+		}
+
+		// bucket with chat of partner
+		partnerMessages, err := privateChats.CreateBucketIfNotExists(partner)
+		if err != nil {
+			return err
+		}
+
+		// turn numeric message id into byte message id
+		byteMsgID := make([]byte, 8)
+		binary.BigEndian.PutUint64(byteMsgID, uint64(dbID))
+
+		// fetch encrypted message
+		rawEncryptedMessage := partnerMessages.Get(byteMsgID)
+		if rawEncryptedMessage == nil {
+			return fmt.Errorf("coulnd't fetch message for partner: %x and message id: %d", partner, messageID)
+		}
+
+		// decrypt message
+		ct, err := aes.Unmarshal(rawEncryptedMessage)
+		if err != nil {
+			return err
+		}
+		rawPlainMessage, err := s.km.AESDecrypt(ct)
+		if err != nil {
+			return err
+		}
+
+		// unmarshal database message
+		m := Message{}
+		if err := json.Unmarshal(rawPlainMessage, &m); err != nil {
+			return err
+		}
+		msg = &m
+
+		return nil
+
+	})
+	return msg, err
 }
 
 func (s *BoltChatMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg Message) error {

@@ -59,7 +59,7 @@ func TestValidMessage(t *testing.T) {
 			},
 		},
 		testVector{
-			expectedError: "invalid created at - must not be 0",
+			expectedError: "invalid created at - must be bigger than 2147483647",
 			message: Message{
 				ID:      "-",
 				Version: 1,
@@ -72,7 +72,7 @@ func TestValidMessage(t *testing.T) {
 			message: Message{
 				ID:        "-",
 				Version:   1,
-				CreatedAt: 1,
+				CreatedAt: 2147483648,
 				Status:    100,
 				Message:   []byte("message"),
 				Sender:    []byte("too short"),
@@ -120,7 +120,7 @@ func TestBoltChatMessageStorage_persistSuccess(t *testing.T) {
 	msgToPersist := Message{
 		ID:        "-",
 		Message:   []byte("hi"),
-		CreatedAt: 11,
+		CreatedAt: 2147483647,
 		Sender:    partner,
 		Status:    StatusPersisted,
 		Received:  true,
@@ -138,6 +138,7 @@ func TestBoltChatMessageStorage_persistSuccess(t *testing.T) {
 		require.Equal(t, uint(1), msg.Version)
 		require.Equal(t, msgToPersist.Sender, msg.Sender)
 		require.Equal(t, msgToPersist.DApp, msg.DApp)
+		require.Equal(t, int64(2147483647), msg.DatabaseID)
 
 	}
 
@@ -146,7 +147,7 @@ func TestBoltChatMessageStorage_persistSuccess(t *testing.T) {
 	listeners := []func(event MessagePersistedEvent){
 		func(event MessagePersistedEvent) {
 			messageAssertion(event.Message)
-			require.Equal(t, int64(11), event.DBMessageID)
+			require.Equal(t, int64(2147483647), event.DBMessageID)
 			require.Equal(t, partner, event.Partner)
 			calledListener = true
 		},
