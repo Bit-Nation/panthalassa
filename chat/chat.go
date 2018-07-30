@@ -91,6 +91,12 @@ func NewChat(conf Config) (*Chat, error) {
 		uiApi:                conf.uiApi,
 	}
 
+	c.queue.RegisterProcessor(&SubmitMessagesProcessor{
+		chat:  c,
+		msgDB: c.messageDB,
+		queue: c.queue,
+	})
+
 	// add message handler that will inform the ui about updates
 	c.messageDB.AddListener(c.handlePersistedMessage)
 

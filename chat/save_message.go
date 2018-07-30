@@ -3,8 +3,8 @@ package chat
 import (
 	"time"
 
-	ed25519 "golang.org/x/crypto/ed25519"
 	db "github.com/Bit-Nation/panthalassa/db"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 var nowAsUnix = func() int64 {
@@ -14,7 +14,7 @@ var nowAsUnix = func() int64 {
 // persist private message
 func (c *Chat) SavePrivateMessage(to ed25519.PublicKey, rawMessage []byte) error {
 	msg := db.Message{
-		Message: rawMessage,
+		Message:   rawMessage,
 		CreatedAt: nowAsUnix(),
 	}
 	return c.messageDB.PersistMessageToSend(to, msg)

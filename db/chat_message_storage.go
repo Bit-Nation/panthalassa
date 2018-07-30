@@ -40,7 +40,7 @@ var statuses = map[Status]bool{
 type ChatMessageStorage interface {
 	PersistMessageToSend(partner ed25519.PublicKey, msg Message) error
 	PersistReceivedMessage(partner ed25519.PublicKey, msg Message) error
-	UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus Status) error
+	UpdateStatus(partner ed25519.PublicKey, msgID int64, newStatus Status) error
 	AllChats() ([]ed25519.PublicKey, error)
 	Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]Message, error)
 	AddListener(func(e MessagePersistedEvent))
