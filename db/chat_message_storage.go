@@ -103,7 +103,7 @@ var ValidMessage = func(m Message) error {
 	// must be greater then the max unix time stamp
 	// in seconds since we need the micro second timestamp
 	if m.CreatedAt <= 2147483647 {
-		return errors.New("invalid created at - must be bigger then 2147483647")
+		return errors.New("invalid created at - must be bigger than 2147483647")
 	}
 
 	// validate sender
@@ -175,6 +175,9 @@ func (s *BoltChatMessageStorage) persistMessage(partner ed25519.PublicKey, msg M
 			tried++
 			binary.BigEndian.PutUint64(createdAtMsgID, uint64(msg.CreatedAt+1))
 		}
+
+		// set database id
+		msg.DatabaseID = int64(binary.BigEndian.Uint64(createdAtMsgID))
 
 		// marshal message
 		rawMessage, err := json.Marshal(msg)
@@ -323,7 +326,7 @@ func (s *BoltChatMessageStorage) GetMessage(partner ed25519.PublicKey, dbID int6
 		// fetch encrypted message
 		rawEncryptedMessage := partnerMessages.Get(byteMsgID)
 		if rawEncryptedMessage == nil {
-			return fmt.Errorf("coulnd't fetch message for partner: %x and message id: %d", partner, messageID)
+			return fmt.Errorf("coulnd't fetch message for partner: %x and message id: %d", partner, dbID)
 		}
 
 		// decrypt message
