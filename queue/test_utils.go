@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"crypto/rand"
+	"encoding/hex"
 	bolt "github.com/coreos/bbolt"
 )
 
@@ -45,7 +47,11 @@ func (s *testStorage) Map(queue chan Job) {
 }
 
 func createDB() *bolt.DB {
-	dbPath, err := filepath.Abs(os.TempDir() + "/" + time.Now().String())
+	file := make([]byte, 32)
+	if _, err := rand.Read(file); err != nil {
+		panic(err)
+	}
+	dbPath, err := filepath.Abs(filepath.Join(os.TempDir(), hex.EncodeToString(file)))
 	if err != nil {
 		panic(err)
 	}

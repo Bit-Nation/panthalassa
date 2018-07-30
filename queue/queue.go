@@ -84,6 +84,10 @@ func (q *Queue) fetchProcessor(processor string) (Processor, error) {
 	return p, nil
 }
 
+func (q *Queue) DeleteJob(j Job) error {
+	return q.storage.DeleteJob(j.ID)
+}
+
 func New(s Storage, jobStack chan Job, concurrency uint) *Queue {
 
 	// construct queue
