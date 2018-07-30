@@ -1,5 +1,12 @@
 language: go
-
 go:
-  - "1.10.x"
-script: make deps && make install && make test
+- 1.10.x
+script:
+- make deps
+- make install
+- go test -v -covermode=count -coverprofile=coverage.out
+- $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+
+env:
+  global:
+  - secure: IYn1SXNJ1yZYGN+KVkHODHpvHzf9Km20ikzljJ3O1vI5uI6OXgCgKrVem01DZ0T3TB0aOOiZnJoQAWyjRA0C8ve5XtDOqA9xZf4gnmdflpXT47oN0v4qMykLodGbVSOagnQHQUtY6jEf9O+WXZIjohP+LKgi5ZYW7dukx3EFtiOCBguJ4D9Lj9cYu/TCw7Ul13vNBSJQ51hbGfxzCV41vYb6LEZNNTK6HcTZH0oyc6fPv0KFgJa9WELskfeXRNU2c8DpNTn151Sl0sRpW5hEfhkYU8J/sT8LI+MvHD+OdRvPZ3qdZ7gosA5BZL6w1V9y9uFfFK+gbGGANZdFvkACy2UlUHrHPbGUJFfeAMgKzXx5ErQv5yn0XAF4cJCYmVMZ0fO+GIWH0d6E/Ua5N4jVwHyOF2ALZ88akDzWAtWLyyWGYuSspbHOdCJo9ZsaPwmXS2OCmM8rNlS6wqZtdGhfrSzp33x3mY+8bQkJ0RRNuBwk1KA9cxDciCFAh9Gy+UaNgvreKR5hIFw+roiUdMQ7z4A0ekOSID1k6vgs9/UHKdBX7Inz435CuEBHm4zs7EKWjOjhiDvWOfQB3AKlSua7V1ksFvqFNj1eFNhSRmPDqmmiLr4t1fOuOmG5hS0DV+1PG9AxVrWKAiEZveWrv8+PlVL5rvmuUciWfMZNLghABpM=
