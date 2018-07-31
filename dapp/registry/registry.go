@@ -19,7 +19,7 @@ import (
 	sendEthTxMod "github.com/Bit-Nation/panthalassa/dapp/module/sendEthTx"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
-	"github.com/Bit-Nation/panthalassa/keyManager"
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	log "github.com/ipfs/go-log"
 	host "github.com/libp2p/go-libp2p-host"
 	net "github.com/libp2p/go-libp2p-net"
@@ -36,11 +36,12 @@ type Registry struct {
 	lock           sync.Mutex
 	dAppDevStreams map[string]net.Stream
 	dAppInstances  map[string]*dapp.DApp
-	closeChan      chan *dapp.JsonRepresentation
+	closeChan      chan *dapp.JsonBuild
 	conf           Config
 	ethWS          *ethws.EthereumWS
 	api            *api.API
 	km             *keyManager.KeyManager
+	dAppDB         dapp.Storage
 }
 
 type Config struct {
@@ -48,21 +49,22 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager) *Registry {
+func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage) *Registry {
 
 	r := &Registry{
 		host:           h,
 		lock:           sync.Mutex{},
 		dAppDevStreams: map[string]net.Stream{},
 		dAppInstances:  map[string]*dapp.DApp{},
-		closeChan:      make(chan *dapp.JsonRepresentation),
+		closeChan:      make(chan *dapp.JsonBuild),
 		conf:           conf,
 		ethWS: ethws.New(ethws.Config{
 			Retry: time.Second,
 			WSUrl: conf.EthWSEndpoint,
 		}),
-		api: api,
-		km:  km,
+		api:    api,
+		km:     km,
+		dAppDB: dAppDB,
 	}
 
 	// add worker to remove DApps
@@ -71,7 +73,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 			select {
 			case cc := <-r.closeChan:
 				r.lock.Lock()
-				delete(r.dAppInstances, hex.EncodeToString(cc.SignaturePublicKey))
+				delete(r.dAppInstances, hex.EncodeToString(cc.UsedSigningKey))
 				// @todo send signal to client that this app was shut down
 				r.lock.Unlock()
 			}
@@ -83,7 +85,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 }
 
 // start a DApp
-func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation, timeOut time.Duration) error {
+func (r *Registry) StartDApp(dApp *dapp.JsonBuild, timeOut time.Duration) error {
 
 	var l *golog.Logger
 	l, err := golog.GetLogger("app name")
@@ -94,7 +96,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation, timeOut time.Duratio
 	vmModules := []module.Module{
 		uuidv4Mod.New(l),
 		ethWSMod.New(l, r.ethWS),
-		modalMod.New(l, r.api, dApp.SignaturePublicKey),
+		modalMod.New(l, r.api, dApp.UsedSigningKey),
 		sendEthTxMod.New(r.api, l),
 		randBytes.New(l),
 		ethAddrMod.New(r.km),
@@ -104,7 +106,7 @@ func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation, timeOut time.Duratio
 	// we would like to mutate the logger
 	// to write to the stream we have for development
 	// this will write logs to the stream
-	exist, stream := r.getDAppDevStream(dApp.SignaturePublicKey)
+	exist, stream := r.getDAppDevStream(dApp.UsedSigningKey)
 	if exist {
 		// append log module
 		logger, err := loggerMod.New(stream)
@@ -194,11 +196,11 @@ func (r *Registry) CallFunction(dAppID string, funcId uint, args string) error {
 
 }
 
-func (r *Registry) ShutDown(dAppJson dapp.JsonRepresentation) error {
+func (r *Registry) ShutDown(dAppJson dapp.JsonBuild) error {
 
 	// shut down DApp & remove from state
 	r.lock.Lock()
-	dApp, exist := r.dAppInstances[hex.EncodeToString(dAppJson.SignaturePublicKey)]
+	dApp, exist := r.dAppInstances[hex.EncodeToString(dAppJson.UsedSigningKey)]
 	if !exist {
 		return errors.New("DApp is not running")
 	}
