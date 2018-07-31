@@ -8,6 +8,7 @@ import (
 
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bolt "github.com/coreos/bbolt"
+	"golang.org/x/crypto/ed25519"
 )
 
 var (
@@ -17,6 +18,7 @@ var (
 type Storage interface {
 	SaveDApp(dApp Data) error
 	All() ([]*Data, error)
+	Get(signingKey ed25519.PublicKey) (*Data, error)
 }
 
 type BoltDAppStorage struct {
@@ -100,4 +102,38 @@ func (s *BoltDAppStorage) All() ([]*Data, error) {
 	})
 
 	return dApps, err
+}
+
+func (s *BoltDAppStorage) Get(signingKey ed25519.PublicKey) (*Data, error) {
+
+	var dApp *Data
+	dApp = nil
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+
+		// fetch dApp's bucket
+		dAppStorage := tx.Bucket(dAppStoreBucketName)
+		if dAppStorage == nil {
+			return nil
+		}
+
+		// fetch DApp Data
+		rawDAppData := dAppStorage.Get(signingKey)
+		if rawDAppData == nil {
+			return nil
+		}
+
+		// unmarshal raw DApp data
+		d := Data{}
+		if err := json.Unmarshal(rawDAppData, &d); err != nil {
+			return err
+		}
+		dApp = &d
+
+		return nil
+
+	})
+
+	return dApp, err
+
 }
