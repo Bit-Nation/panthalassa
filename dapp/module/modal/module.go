@@ -41,6 +41,11 @@ func New(l *log.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
 	}
 }
 
+// showModal provides a way to display a modal
+// the first parameter should be the modal title
+// the second parameter should be the layout to render
+// and the third parameter is an optional callback that
+// will called with an optional error
 func (m *Module) Register(vm *otto.Otto) error {
 
 	err := vm.Set("renderModal", func(call otto.FunctionCall) otto.Value {

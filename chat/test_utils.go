@@ -1,6 +1,7 @@
 package chat
 
 import (
+	backend "github.com/Bit-Nation/panthalassa/backend"
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
@@ -12,9 +13,13 @@ import (
 )
 
 type testMessageStorage struct {
-	persistSentMessage     func(to ed25519.PublicKey, msg bpb.PlainChatMessage) error
-	persistReceivedMessage func(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error
-	updateStatus           func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error
+	persistMessageToSend   func(to ed25519.PublicKey, msg db.Message) error
+	persistReceivedMessage func(partner ed25519.PublicKey, msg db.Message) error
+	updateStatus           func(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error
+	messages               func(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error)
+	allChats               func() ([]ed25519.PublicKey, error)
+	addListener            func(fn func(e db.MessagePersistedEvent))
+	getMessage             func(partner ed25519.PublicKey, messageID int64) (*db.Message, error)
 }
 
 type testSharedSecretStorage struct {
@@ -28,8 +33,9 @@ type testSharedSecretStorage struct {
 
 type testBackend struct {
 	fetchPreKeyBundle func(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error)
-	submitMessage     func(msg bpb.ChatMessage) error
+	submitMessages    func(msg []*bpb.ChatMessage) error
 	fetchSignedPreKey func(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error)
+	addRequestHandler func(backend.RequestHandler)
 }
 
 type testSignedPreKeyStore struct {
@@ -50,15 +56,25 @@ type testPreKeyBundle struct {
 	signedPreKey    x3dh.PublicKey
 	preKeySignature []byte
 	oneTimePreKey   *x3dh.PublicKey
-	validSignature  bool
+	validSignature  func() (bool, error)
 }
 
 type testOneTimePreKeyStorage struct {
-	cut func(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error)
+	cut   func(pubKey []byte) (*x3dh.PrivateKey, error)
+	count func() (uint32, error)
+	put   func(keyPair []x3dh.KeyPair) error
 }
 
-func (t *testOneTimePreKeyStorage) Cut(pubKey ed25519.PublicKey) (*x3dh.PrivateKey, error) {
+func (t *testOneTimePreKeyStorage) Cut(pubKey []byte) (*x3dh.PrivateKey, error) {
 	return t.cut(pubKey)
+}
+
+func (t *testOneTimePreKeyStorage) Count() (uint32, error) {
+	return t.count()
+}
+
+func (t *testOneTimePreKeyStorage) Put(keyPair []x3dh.KeyPair) error {
+	return t.put(keyPair)
 }
 
 func (s *testSignedPreKeyStore) GetActive() (*x3dh.KeyPair, error) {
@@ -89,8 +105,8 @@ func (b testPreKeyBundle) OneTimePreKey() *x3dh.PublicKey {
 	return b.oneTimePreKey
 }
 
-func (b testPreKeyBundle) ValidSignature() bool {
-	return b.validSignature
+func (b testPreKeyBundle) ValidSignature() (bool, error) {
+	return b.validSignature()
 }
 
 func (s *testSharedSecretStorage) HasAny(key ed25519.PublicKey) (bool, error) {
@@ -117,28 +133,48 @@ func (s *testSharedSecretStorage) Get(key ed25519.PublicKey, sharedSecretID []by
 	return s.get(key, sharedSecretID)
 }
 
-func (s *testMessageStorage) PersistSentMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
-	return s.persistSentMessage(partner, msg)
+func (s *testMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg db.Message) error {
+	return s.persistMessageToSend(partner, msg)
 }
 
-func (s *testMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID string, newStatus db.Status) error {
+func (s *testMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error {
 	return s.updateStatus(partner, msgID, newStatus)
 }
 
-func (s *testMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+func (s *testMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, msg db.Message) error {
 	return s.persistReceivedMessage(partner, msg)
+}
+
+func (s *testMessageStorage) Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error) {
+	return s.messages(partner, start, amount)
+}
+
+func (s *testMessageStorage) AllChats() ([]ed25519.PublicKey, error) {
+	return s.allChats()
+}
+
+func (s *testMessageStorage) AddListener(fn func(e db.MessagePersistedEvent)) {
+	s.addListener(fn)
+}
+
+func (s *testMessageStorage) GetMessage(partner ed25519.PublicKey, messageID int64) (*db.Message, error) {
+	return s.getMessage(partner, messageID)
 }
 
 func (b *testBackend) FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error) {
 	return b.fetchPreKeyBundle(userIDPubKey)
 }
 
-func (b *testBackend) SubmitMessage(msg bpb.ChatMessage) error {
-	return b.submitMessage(msg)
+func (b *testBackend) SubmitMessages(messages []*bpb.ChatMessage) error {
+	return b.submitMessages(messages)
 }
 
 func (b *testBackend) FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error) {
 	return b.fetchSignedPreKey(userIdPubKey)
+}
+
+func (b testBackend) AddRequestHandler(handler backend.RequestHandler) {
+	b.addRequestHandler(handler)
 }
 
 func (s *testUserStorage) GetSignedPreKey(idKey ed25519.PublicKey) (preKey.PreKey, error) {

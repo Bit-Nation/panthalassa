@@ -1,13 +1,11 @@
 package api
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"time"
 
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
-	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
@@ -17,10 +15,6 @@ func (a *API) RenderModal(uiID, layout string, dAppIDKey ed25519.PublicKey) erro
 
 func (a *API) SendEthereumTransaction(value, to, data string) (string, error) {
 	return a.dAppApi.SendEthereumTransaction(value, to, data)
-}
-
-func (a *API) SaveDApp(dApp dapp.JsonRepresentation) error {
-	return a.dAppApi.SaveDApp(dApp)
 }
 
 type DAppApi struct {
@@ -91,25 +85,4 @@ func (a *DAppApi) SendEthereumTransaction(value, to, data string) (string, error
 
 	return string(raw), nil
 
-}
-
-// save DApp
-func (a *DAppApi) SaveDApp(dApp dapp.JsonRepresentation) error {
-
-	resp, err := a.api.request(&pb.Request{
-		SaveDApp: &pb.Request_SaveDApp{
-			AppName:          dApp.Name,
-			Code:             dApp.Code,
-			Signature:        hex.EncodeToString(dApp.Signature),
-			SigningPublicKey: hex.EncodeToString(dApp.SignaturePublicKey),
-		},
-	}, time.Second*10)
-
-	if err != nil {
-		return err
-	}
-
-	resp.Closer <- nil
-
-	return err
 }

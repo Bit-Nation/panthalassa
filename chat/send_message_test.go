@@ -20,9 +20,9 @@ import (
 func TestChat_SendMessageFailToFetchPreKeyBundle(t *testing.T) {
 
 	msgStorage := testMessageStorage{
-		updateStatus: func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error {
+		updateStatus: func(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error {
 			require.Equal(t, ed25519.PublicKey{1}, partner)
-			require.Equal(t, "i am the message ID", msgID)
+			require.Equal(t, int64(2147483648), msgID)
 			require.Equal(t, db.StatusFailedToSend, newStatus)
 			return nil
 		},
@@ -46,7 +46,16 @@ func TestChat_SendMessageFailToFetchPreKeyBundle(t *testing.T) {
 		sharedSecStorage: &sharedSecretStore,
 	}
 
-	err := c.SendMessage(ed25519.PublicKey{1}, bpb.PlainChatMessage{MessageID: "i am the message ID"})
+	err := c.SendMessage(ed25519.PublicKey{1}, db.Message{
+		ID:         "i am the message ID",
+		Version:    1,
+		Status:     300,
+		Message:    []byte("my message"),
+		CreatedAt:  2147483648,
+		Sender:     make([]byte, 32),
+		DatabaseID: 2147483648,
+	},
+	)
 	require.EqualError(t, err, "i am a test error - failed to fetch pre key bundle")
 
 }
@@ -54,9 +63,9 @@ func TestChat_SendMessageFailToFetchPreKeyBundle(t *testing.T) {
 func TestChat_SendMessageX3dhError(t *testing.T) {
 
 	msgStorage := testMessageStorage{
-		updateStatus: func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error {
+		updateStatus: func(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error {
 			require.Equal(t, ed25519.PublicKey{1}, partner)
-			require.Equal(t, "i am the message ID", msgID)
+			require.Equal(t, int64(2147483648), msgID)
 			require.Equal(t, db.StatusFailedToSend, newStatus)
 			return nil
 		},
@@ -64,7 +73,9 @@ func TestChat_SendMessageX3dhError(t *testing.T) {
 
 	backend := testBackend{
 		fetchPreKeyBundle: func(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error) {
-			return testPreKeyBundle{validSignature: false}, nil
+			return testPreKeyBundle{validSignature: func() (bool, error) {
+				return false, nil
+			}}, nil
 		},
 	}
 
@@ -80,7 +91,15 @@ func TestChat_SendMessageX3dhError(t *testing.T) {
 		sharedSecStorage: &sharedSecretStore,
 	}
 
-	err := c.SendMessage(ed25519.PublicKey{1}, bpb.PlainChatMessage{MessageID: "i am the message ID"})
+	err := c.SendMessage(ed25519.PublicKey{1}, db.Message{
+		ID:         "i am the message ID",
+		Version:    1,
+		Status:     300,
+		Message:    []byte("my message"),
+		CreatedAt:  2147483648,
+		Sender:     make([]byte, 32),
+		DatabaseID: 2147483648,
+	})
 	require.EqualError(t, err, "the signature of the received pre key bundle is invalid")
 
 }
@@ -89,9 +108,9 @@ func TestChat_SendMessageX3dhError(t *testing.T) {
 // but we don't
 func TestChat_SendMessageNoSharedSecretThoWeShould(t *testing.T) {
 	msgStorage := testMessageStorage{
-		updateStatus: func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error {
+		updateStatus: func(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error {
 			require.Equal(t, ed25519.PublicKey{1}, partner)
-			require.Equal(t, "i am the message ID", msgID)
+			require.Equal(t, int64(2147483648), msgID)
 			require.Equal(t, db.StatusFailedToSend, newStatus)
 			return nil
 		},
@@ -114,7 +133,15 @@ func TestChat_SendMessageNoSharedSecretThoWeShould(t *testing.T) {
 		sharedSecStorage: &sharedSecretStore,
 	}
 
-	err := c.SendMessage(ed25519.PublicKey{1}, bpb.PlainChatMessage{MessageID: "i am the message ID"})
+	err := c.SendMessage(ed25519.PublicKey{1}, db.Message{
+		ID:         "i am the message ID",
+		Version:    1,
+		Status:     300,
+		Message:    []byte("my message"),
+		CreatedAt:  2147483648,
+		Sender:     make([]byte, 32),
+		DatabaseID: 2147483648,
+	})
 	require.EqualError(t, err, "no shared secret found test error")
 }
 
@@ -142,16 +169,20 @@ func TestChat_SendMessage(t *testing.T) {
 	signedPreKeyBob.PublicKey = drKeyPair.PublicKey
 	require.Nil(t, signedPreKeyBob.Sign(*kmBob))
 
-	plainMsgToSend := bpb.PlainChatMessage{
-		MessageID: "i am the message ID of the message to send",
-		Message:   []byte("hi there"),
-		CreatedAt: 4,
+	plainMsgToSend := db.Message{
+		ID:         "i am the message ID of the message to send",
+		Version:    1,
+		Status:     300,
+		Message:    []byte("my message"),
+		CreatedAt:  2147483648,
+		Sender:     make([]byte, 32),
+		DatabaseID: 2147483648,
 	}
 
 	msgStorage := testMessageStorage{
-		updateStatus: func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error {
+		updateStatus: func(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error {
 			require.Equal(t, hex.EncodeToString(rawIdPubKeyBob), hex.EncodeToString(partner))
-			require.Equal(t, "i am the message ID of the message to send", msgID)
+			require.Equal(t, int64(2147483648), msgID)
 			require.Equal(t, db.StatusSent, newStatus)
 			return nil
 		},
@@ -163,7 +194,10 @@ func TestChat_SendMessage(t *testing.T) {
 
 	calledBackend := false
 	backend := testBackend{
-		submitMessage: func(msg bpb.ChatMessage) error {
+		submitMessages: func(messages []*bpb.ChatMessage) error {
+
+			msg := messages[0]
+			require.NotNil(t, msg)
 
 			// all of those checks relate to the if a
 			// shared secret was accepted or not
@@ -219,7 +253,9 @@ func TestChat_SendMessage(t *testing.T) {
 			require.Nil(t, err)
 			plainMsg := bpb.PlainChatMessage{}
 			require.Nil(t, proto.Unmarshal(decryptedRawMessage, &plainMsg))
-			require.Equal(t, plainMsgToSend, plainMsg)
+
+			// do some assertions
+			require.Equal(t, plainMsgToSend.CreatedAt, plainMsg.CreatedAt)
 
 			calledBackend = true
 			return nil
@@ -288,16 +324,20 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 	sharedSecretBaseID := make([]byte, 32)
 	sharedSecretBaseID[6] = 0x42
 
-	plainMsgToSend := bpb.PlainChatMessage{
-		MessageID: "i am the message ID of the message to send",
-		Message:   []byte("hi there"),
-		CreatedAt: 4,
+	plainMsgToSend := db.Message{
+		ID:         "i am the message ID of the message to send",
+		Version:    1,
+		Status:     300,
+		Message:    []byte("my message"),
+		CreatedAt:  2147483648,
+		Sender:     make([]byte, 32),
+		DatabaseID: 2147483648,
 	}
 
 	msgStorage := testMessageStorage{
-		updateStatus: func(partner ed25519.PublicKey, msgID string, newStatus db.Status) error {
+		updateStatus: func(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error {
 			require.Equal(t, hex.EncodeToString(rawIdPubKeyBob), hex.EncodeToString(partner))
-			require.Equal(t, "i am the message ID of the message to send", msgID)
+			require.Equal(t, int64(2147483648), msgID)
 			require.Equal(t, db.StatusSent, newStatus)
 			return nil
 		},
@@ -305,7 +345,10 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 
 	calledBackend := false
 	backend := testBackend{
-		submitMessage: func(msg bpb.ChatMessage) error {
+		submitMessages: func(messages []*bpb.ChatMessage) error {
+
+			msg := messages[0]
+			require.NotNil(t, msg)
 
 			arrToSlice := func(arr [32]byte) []byte {
 				return arr[:]
@@ -358,7 +401,7 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 			require.Equal(t, int64(4), plainMsg.SharedSecretCreationDate)
 
 			// make sure message id is the same as the one we have chosen
-			require.Equal(t, plainMsgToSend.MessageID, plainMsg.MessageID)
+			require.Equal(t, plainMsgToSend.ID, plainMsg.MessageID)
 
 			// make sure message is the name as the one we have chosen
 			require.Equal(t, plainMsgToSend.Message, plainMsg.Message)

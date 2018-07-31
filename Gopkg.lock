@@ -5,13 +5,13 @@
   branch = "master"
   name = "github.com/Bit-Nation/protobuffers"
   packages = ["."]
-  revision = "a496b52ee82fcfddce3fe8323439fd8b3cae4030"
+  revision = "721ce055684dca05144dfba187e63ad849af84b0"
 
 [[projects]]
   branch = "master"
   name = "github.com/Bit-Nation/x3dh"
   packages = ["."]
-  revision = "417987ac3f207efd09c8489c490cdc26991067fd"
+  revision = "f0fcdf8e34bf27e17bede582af1f5652648c4107"
 
 [[projects]]
   branch = "master"

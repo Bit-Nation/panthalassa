@@ -12,15 +12,46 @@ import (
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	proto "github.com/golang/protobuf/proto"
+	"github.com/segmentio/objconv/json"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 // send a message
-func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage) error {
+func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) error {
+
+	// validate database message
+	if err := db.ValidMessage(dbMessage); err != nil {
+		return err
+	}
+
+	// create plain message from database message
+	plainMessage := bpb.PlainChatMessage{
+		CreatedAt: dbMessage.CreatedAt,
+		Message:   dbMessage.Message,
+		MessageID: dbMessage.ID,
+		// this version is NOT the same as the version from the database message
+		Version: 1,
+	}
+
+	// in the case this is a DApp message,
+	// we have to add the props to the protobuf message
+	if dbMessage.DApp != nil {
+		plainMessage.Type = dbMessage.DApp.Type
+		plainMessage.DAppPublicKey = dbMessage.DApp.DAppPublicKey
+		// marshal props
+		params, err := json.Marshal(dbMessage.DApp.Params)
+		if err != nil {
+			return err
+		}
+		plainMessage.Params = params
+		// make sure there is no plain text in the message
+		// since that's not allowed
+		plainMessage.Message = nil
+	}
 
 	var handleSendError = func(err error) error {
-		updateError := c.messageDB.UpdateStatus(receiver, msg.MessageID, db.StatusFailedToSend)
+		updateError := c.messageDB.UpdateStatus(receiver, dbMessage.DatabaseID, db.StatusFailedToSend)
 		if updateError != nil {
 			return errors.New(fmt.Sprintf("failed to update status with error: %s - original error: %s", updateError, err))
 		}
@@ -43,6 +74,8 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		}
 		return signedPreKey, nil
 	}
+
+	// @todo we should validate the plain message
 
 	// check if there is a shared secret for the receiver
 	exist, err := c.sharedSecStorage.HasAny(receiver)
@@ -138,8 +171,8 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 		if len(ss.BaseID) != 32 {
 			return handleSendError(errors.New("base it is invalid - must have 32 bytes"))
 		}
-		msg.SharedSecretBaseID = ss.BaseID
-		msg.SharedSecretCreationDate = ss.CreatedAt.Unix()
+		plainMessage.SharedSecretBaseID = ss.BaseID
+		plainMessage.SharedSecretCreationDate = ss.CreatedAt.Unix()
 	}
 
 	// create double ratchet session
@@ -154,7 +187,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 	}
 
 	// marshal message
-	rawPlainMessage, err := proto.Marshal(&msg)
+	rawPlainMessage, err := proto.Marshal(&plainMessage)
 	if err != nil {
 		return handleSendError(err)
 	}
@@ -177,7 +210,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 
 	// construct chat message
 	msgToSend := bpb.ChatMessage{
-		MessageID: []byte(msg.MessageID),
+		MessageID: []byte(dbMessage.ID),
 		Receiver:  receiver,
 		Message: &bpb.DoubleRatchedMsg{
 			DoubleRatchetPK: drMessage.Header.DH[:],
@@ -238,10 +271,10 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, msg bpb.PlainChatMessage)
 	msgToSend.UsedSharedSecret, err = sharedSecretID(sender, receiver, ss.BaseID)
 
 	// send message to the backend
-	err = c.backend.SubmitMessage(msgToSend)
+	err = c.backend.SubmitMessages([]*bpb.ChatMessage{&msgToSend})
 	if err != nil {
 		return handleSendError(err)
 	}
 
-	return c.messageDB.UpdateStatus(receiver, msg.MessageID, db.StatusSent)
+	return c.messageDB.UpdateStatus(receiver, dbMessage.DatabaseID, db.StatusSent)
 }

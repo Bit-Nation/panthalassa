@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	api "github.com/Bit-Nation/panthalassa/api"
+	chat "github.com/Bit-Nation/panthalassa/chat"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
+	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
-	mesh "github.com/Bit-Nation/panthalassa/mesh"
+	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
@@ -16,15 +18,17 @@ type Panthalassa struct {
 	km       *keyManager.KeyManager
 	upStream api.UpStream
 	api      *api.API
-	mesh     *mesh.Network
+	p2p      *p2p.Network
 	dAppReg  *dAppReg.Registry
+	chat     *chat.Chat
+	msgDB    *db.BoltChatMessageStorage
 }
 
 //Stop the panthalassa instance
 //this becomes interesting when we start
 //to use the mesh network
 func (p *Panthalassa) Stop() error {
-	return p.mesh.Close()
+	return p.p2p.Close()
 }
 
 //Export account with the given password
@@ -68,13 +72,13 @@ func (p *Panthalassa) AddContact(pubKey string) error {
 	}
 
 	// add public key to peer store
-	err = p.mesh.Host.Peerstore().AddPubKey(id, lp2pPubKey)
+	err = p.p2p.Host.Peerstore().AddPubKey(id, lp2pPubKey)
 	if err != nil {
 		return err
 	}
 
 	logger.Info(fmt.Sprintf("added contact: %s", pubKey))
 
-	return p.mesh.Host.Peerstore().Put(id, "contact", true)
+	return p.p2p.Host.Peerstore().Put(id, "contact", true)
 
 }
