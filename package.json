@@ -82,6 +82,24 @@
       "hash": "QmcVVHfdyv15GVPk7NrxdWjh2hLVccXnoD8j2tyQShiXJb",
       "name": "go-log",
       "version": "1.5.3"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmenmFuirGzv8S1R3DyvbZ6tFmQapkGeDCebgYzni1Ntn3",
+      "name": "go-smux-multiplex",
+      "version": "3.0.6"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmVniQJkdzLZaZwzwMdd3dJTvWiJ1DQEkreVy6hs6h7Vk5",
+      "name": "go-smux-multistream",
+      "version": "2.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNWCEvi7bPRcvqAV8AKLGVNoQdArWi7NJayka2SM4XtRe",
+      "name": "go-smux-yamux",
+      "version": "2.0.1"
     }
   ],
   "gxVersion": "0.12.1",
