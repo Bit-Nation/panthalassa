@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
 	api "github.com/Bit-Nation/panthalassa/api"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
@@ -88,8 +89,17 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 // start a DApp
 func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Duration) error {
 
+	// fetch DApp
+	dApp, err := r.dAppDB.Get(dAppSigningKey)
+	if err != nil {
+		return err
+	}
+	if dApp == nil {
+		return fmt.Errorf("failed to fetch DApp for signing key: %x", dAppSigningKey)
+	}
+
 	var l *golog.Logger
-	l, err := golog.GetLogger("app name")
+	l, err = golog.GetLogger("app name")
 	if err != nil {
 		return err
 	}

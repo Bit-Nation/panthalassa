@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"encoding/hex"
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
 	backend "github.com/Bit-Nation/panthalassa/backend"
@@ -314,19 +315,25 @@ func OpenDApp(id, context string) error {
 
 }
 
-func StartDApp(dApp string, timeout int) error {
+func StartDApp(dAppSingingKeyStr string, timeout int) error {
 
 	//Exit if not started
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa first")
 	}
 
-	dAppResp := dapp.Data{}
-	if err := json.Unmarshal([]byte(dApp), &dAppResp); err != nil {
+	// decode singing key
+	dAppSigningKey, err := hex.DecodeString(dAppSingingKeyStr)
+	if err != nil {
 		return err
 	}
 
-	return panthalassaInstance.dAppReg.StartDApp(&dAppResp, time.Second*time.Duration(timeout))
+	// signing key must be 32 bytes long since it's and ed25519 pub key
+	if len(dAppSigningKey) != 32 {
+		return errors.New("DApp singing key must be 32 bytes long")
+	}
+
+	return panthalassaInstance.dAppReg.StartDApp(dAppSigningKey, time.Second*time.Duration(timeout))
 
 }
 
