@@ -15,10 +15,6 @@ type Module struct {
 	km *keyManager.KeyManager
 }
 
-func (m *Module) Name() string {
-	return "ETH:ADDRESS"
-}
-
 func (m *Module) Register(vm *otto.Otto) error {
 
 	addr, err := m.km.GetEthereumAddress()

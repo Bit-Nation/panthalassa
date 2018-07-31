@@ -30,10 +30,6 @@ type Module struct {
 	throttling *reqLim.Throttling
 }
 
-func (m *Module) Name() string {
-	return "SEND_ETH_TX"
-}
-
 func (m *Module) Register(vm *otto.Otto) error {
 
 	// send an ethereum transaction

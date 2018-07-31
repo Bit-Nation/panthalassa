@@ -21,10 +21,6 @@ func New(l *log.Logger) *UUIDV4 {
 	return &UUIDV4{logger: l}
 }
 
-func (r *UUIDV4) Name() string {
-	return "UUIDV4"
-}
-
 func (r *UUIDV4) Register(vm *otto.Otto) error {
 
 	return vm.Set("uuidV4", func(call otto.FunctionCall) otto.Value {
