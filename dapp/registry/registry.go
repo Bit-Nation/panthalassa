@@ -208,11 +208,11 @@ func (r *Registry) CallFunction(dAppID string, funcId uint, args string) error {
 
 }
 
-func (r *Registry) ShutDown(dAppJson dapp.Data) error {
+func (r *Registry) ShutDown(signingKey ed25519.PublicKey) error {
 
 	// shut down DApp & remove from state
 	r.lock.Lock()
-	dApp, exist := r.dAppInstances[hex.EncodeToString(dAppJson.UsedSigningKey)]
+	dApp, exist := r.dAppInstances[hex.EncodeToString(signingKey)]
 	if !exist {
 		return errors.New("DApp is not running")
 	}

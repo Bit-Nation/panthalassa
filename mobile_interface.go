@@ -363,3 +363,24 @@ func CallDAppFunction(dAppId string, id int, args string) error {
 	return panthalassaInstance.dAppReg.CallFunction(dAppId, uint(id), args)
 
 }
+
+func StopDApp(dAppSingingKeyStr string) error {
+
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+
+	// decode singing key
+	dAppSigningKey, err := hex.DecodeString(dAppSingingKeyStr)
+	if err != nil {
+		return err
+	}
+
+	// signing key must be 32 bytes long since it's and ed25519 pub key
+	if len(dAppSigningKey) != 32 {
+		return errors.New("DApp singing key must be 32 bytes long")
+	}
+
+	return panthalassaInstance.dAppReg.ShutDown(dAppSigningKey)
+
+}
