@@ -32,10 +32,6 @@ type Module struct {
 	reqLim    *reqLim.Count
 }
 
-func (m *Module) Name() string {
-	return "CALLBACKS"
-}
-
 // this will call the given function (identified by the id)
 // with the given payload as an object and a callback
 // e.g. myRegisteredFunction(payloadObj, cb)

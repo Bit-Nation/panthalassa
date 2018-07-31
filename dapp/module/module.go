@@ -5,6 +5,5 @@ import (
 )
 
 type Module interface {
-	Name() string
 	Register(vm *otto.Otto) error
 }

@@ -32,10 +32,6 @@ func New(l *log.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
 	}
 }
 
-func (m *Module) Name() string {
-	return "MODAL"
-}
-
 // showModal provides a way to display a modal
 // the first parameter should be the modal title
 // the second parameter should be the layout to render

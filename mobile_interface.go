@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"encoding/hex"
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
 	backend "github.com/Bit-Nation/panthalassa/backend"
@@ -49,7 +50,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 	}
 
 	// device api
-	deviceApi := api.New(client, km)
+	deviceApi := api.New(client)
 
 	// create backend
 	// @TODO use a real transport
@@ -91,6 +92,9 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 		return err
 	}
 
+	// dApp storage
+	dAppStorage := dapp.NewDAppStorage(dbInstance, uiApi)
+
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:       km,
@@ -99,7 +103,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 		p2p:      p2pNetwork,
 		dAppReg: dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
-		}, deviceApi, km),
+		}, deviceApi, km, dAppStorage),
 		chat: chatInstance,
 	}
 
@@ -311,19 +315,25 @@ func OpenDApp(id, context string) error {
 
 }
 
-func StartDApp(dApp string, timeout int) error {
+func StartDApp(dAppSingingKeyStr string, timeout int) error {
 
 	//Exit if not started
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa first")
 	}
 
-	dAppResp := dapp.JsonRepresentation{}
-	if err := json.Unmarshal([]byte(dApp), &dAppResp); err != nil {
+	// decode singing key
+	dAppSigningKey, err := hex.DecodeString(dAppSingingKeyStr)
+	if err != nil {
 		return err
 	}
 
-	return panthalassaInstance.dAppReg.StartDApp(&dAppResp, time.Second*time.Duration(timeout))
+	// signing key must be 32 bytes long since it's an ed25519 pub key
+	if len(dAppSigningKey) != 32 {
+		return errors.New("DApp singing key must be 32 bytes long")
+	}
+
+	return panthalassaInstance.dAppReg.StartDApp(dAppSigningKey, time.Second*time.Duration(timeout))
 
 }
 
@@ -351,5 +361,26 @@ func CallDAppFunction(dAppId string, id int, args string) error {
 	}
 
 	return panthalassaInstance.dAppReg.CallFunction(dAppId, uint(id), args)
+
+}
+
+func StopDApp(dAppSingingKeyStr string) error {
+
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+
+	// decode singing key
+	dAppSigningKey, err := hex.DecodeString(dAppSingingKeyStr)
+	if err != nil {
+		return err
+	}
+
+	// signing key must be 32 bytes long since it's and ed25519 pub key
+	if len(dAppSigningKey) != 32 {
+		return errors.New("DApp singing key must be 32 bytes long")
+	}
+
+	return panthalassaInstance.dAppReg.ShutDown(dAppSigningKey)
 
 }
