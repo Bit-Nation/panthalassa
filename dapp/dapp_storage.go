@@ -15,8 +15,8 @@ var (
 )
 
 type Storage interface {
-	SaveDApp(dApp JsonBuild) error
-	All() ([]JsonBuild, error)
+	SaveDApp(dApp Data) error
+	All() ([]Data, error)
 }
 
 type BoltDAppStorage struct {
@@ -24,7 +24,7 @@ type BoltDAppStorage struct {
 	uiApi *uiapi.Api
 }
 
-func (s *BoltDAppStorage) SaveDApp(dApp JsonBuild) error {
+func (s *BoltDAppStorage) SaveDApp(dApp Data) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 
 		if dApp.Version < 1 {
@@ -63,9 +63,9 @@ func (s *BoltDAppStorage) SaveDApp(dApp JsonBuild) error {
 	})
 }
 
-func (s *BoltDAppStorage) All() ([]*JsonBuild, error) {
+func (s *BoltDAppStorage) All() ([]*Data, error) {
 
-	var dApps []*JsonBuild
+	var dApps []*Data
 
 	err := s.db.View(func(tx *bolt.Tx) error {
 
@@ -78,7 +78,7 @@ func (s *BoltDAppStorage) All() ([]*JsonBuild, error) {
 		return dAppStorage.ForEach(func(_, rawDApp []byte) error {
 
 			// unmarshal build
-			d := JsonBuild{}
+			d := Data{}
 			if err := json.Unmarshal(rawDApp, &d); err != nil {
 				return err
 			}

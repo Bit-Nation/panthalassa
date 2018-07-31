@@ -28,7 +28,7 @@ func (v *SV) String() string {
 }
 
 // JSON Representation of published DApp
-type JsonBuild struct {
+type Data struct {
 	Name           map[string]string
 	UsedSigningKey ed25519.PublicKey
 	Code           []byte
@@ -39,7 +39,7 @@ type JsonBuild struct {
 }
 
 // hash the published DApp
-func (r JsonBuild) Hash() ([]byte, error) {
+func (r Data) Hash() ([]byte, error) {
 
 	buff := bytes.NewBuffer(nil)
 
@@ -102,7 +102,7 @@ func (r JsonBuild) Hash() ([]byte, error) {
 
 // verify if this published DApp
 // was signed with the attached public key
-func (r JsonBuild) VerifySignature() (bool, error) {
+func (r Data) VerifySignature() (bool, error) {
 
 	hash, err := r.Hash()
 	if err != nil {
@@ -113,7 +113,7 @@ func (r JsonBuild) VerifySignature() (bool, error) {
 
 }
 
-func (r JsonBuild) Marshal() ([]byte, error) {
+func (r Data) Marshal() ([]byte, error) {
 	return json.Marshal(r)
 }
 
@@ -151,7 +151,7 @@ func engineVersionToSV(version string) (SV, error) {
 
 }
 
-type jsonBuild struct {
+type RawData struct {
 	Name           map[string]string `json:"name"`
 	UsedSigningKey string            `json:"used_signing_key"`
 	Code           string            `json:"code"`
@@ -161,34 +161,34 @@ type jsonBuild struct {
 	Version        uint32            `json:"version"`
 }
 
-func JsonToJsonBuild(b jsonBuild) (JsonBuild, error) {
+func ParseJsonToData(b RawData) (Data, error) {
 
 	// unmarshal used signing key
 	usedSigningKey, err := hex.DecodeString(b.UsedSigningKey)
 	if err != nil {
-		return JsonBuild{}, err
+		return Data{}, err
 	}
 	if len(usedSigningKey) != 32 {
-		return JsonBuild{}, fmt.Errorf("invalid length fof signing key %d", len(usedSigningKey))
+		return Data{}, fmt.Errorf("invalid length fof signing key %d", len(usedSigningKey))
 	}
 
 	// unmarshal signature
 	rawSignature, err := hex.DecodeString(b.Signature)
 	if err != nil {
-		return JsonBuild{}, err
+		return Data{}, err
 	}
 	multiHash, err := mh.Cast(rawSignature)
 	if err != nil {
-		return JsonBuild{}, err
+		return Data{}, err
 	}
 
 	// decode engine version
 	sv, err := engineVersionToSV(b.Engine)
 	if err != nil {
-		return JsonBuild{}, err
+		return Data{}, err
 	}
 
-	return JsonBuild{
+	return Data{
 		Name:           b.Name,
 		UsedSigningKey: usedSigningKey,
 		Code:           []byte(b.Code),
