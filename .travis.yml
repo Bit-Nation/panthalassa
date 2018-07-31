@@ -2,4 +2,14 @@ language: go
 
 go:
   - "1.10.x"
-script: make deps && make install && make test
+
+script:
+  - make deps
+  - make install
+  - bash test.sh
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+  
+notifications:
+  email: false
