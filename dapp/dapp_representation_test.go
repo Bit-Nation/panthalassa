@@ -21,7 +21,7 @@ func TestDAppRepresentationHash(t *testing.T) {
 	testHash, err := mh.Sum(nil, mh.SHA3_256, -1)
 	require.Nil(t, err)
 
-	dAppJson := jsonBuild{
+	dAppJson := RawData{
 		Name: map[string]string{
 			"en-us": "send and request money",
 			"de":    "sende und fordere geld an",
@@ -76,7 +76,7 @@ func TestDAppRepresentationHash(t *testing.T) {
 	require.Nil(t, err)
 
 	// calculate hash
-	jsonBuild, err := JsonToJsonBuild(dAppJson)
+	jsonBuild, err := ParseJsonToData(dAppJson)
 	require.Nil(t, err)
 	calculatedHash, err := jsonBuild.Hash()
 	require.Nil(t, err)
@@ -112,7 +112,7 @@ func TestDAppVerifySignature(t *testing.T) {
 	fakeSignature, err := mh.Sum([]byte("invalid signature"), mh.SHA3_256, -1)
 	require.Nil(t, err)
 
-	dAppJson := jsonBuild{
+	dAppJson := RawData{
 		Name: map[string]string{
 			"en-us": "send and request money",
 			"de":    "sende und fordere geld an",
@@ -126,7 +126,7 @@ func TestDAppVerifySignature(t *testing.T) {
 
 	// validate signature
 	// should be invalid since it doesn't exist
-	jsonDApp, err := JsonToJsonBuild(dAppJson)
+	jsonDApp, err := ParseJsonToData(dAppJson)
 	require.Nil(t, err)
 	valid, err := jsonDApp.VerifySignature()
 	require.Nil(t, err)

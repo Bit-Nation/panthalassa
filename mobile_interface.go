@@ -49,7 +49,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 	}
 
 	// device api
-	deviceApi := api.New(client, km)
+	deviceApi := api.New(client)
 
 	// create backend
 	// @TODO use a real transport
@@ -321,7 +321,7 @@ func StartDApp(dApp string, timeout int) error {
 		return errors.New("you have to start panthalassa first")
 	}
 
-	dAppResp := dapp.JsonRepresentation{}
+	dAppResp := dapp.Data{}
 	if err := json.Unmarshal([]byte(dApp), &dAppResp); err != nil {
 		return err
 	}

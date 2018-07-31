@@ -16,7 +16,7 @@ func TestStartDAppSuccess(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
 
-	app := JsonBuild{
+	app := Data{
 		Name: map[string]string{
 			"en-us": "send and request money",
 		},
@@ -38,7 +38,7 @@ func TestStartDAppSuccess(t *testing.T) {
 	// mock the verify signature function since
 	// we don't care about correctness
 
-	closer := make(chan *JsonBuild)
+	closer := make(chan *Data)
 
 	_, err = New(log.MustGetLogger(""), &app, []dAppMod.Module{}, closer, time.Second)
 	require.Nil(t, err)
@@ -50,7 +50,7 @@ func TestStartDAppHalting(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
 
-	app := JsonBuild{
+	app := Data{
 		Name: map[string]string{
 			"en-us": "send and request money",
 		},
@@ -72,7 +72,7 @@ func TestStartDAppHalting(t *testing.T) {
 	// mock the verify signature function since
 	// we don't care about correctness
 
-	closer := make(chan *JsonBuild, 1)
+	closer := make(chan *Data, 1)
 
 	dApp, err := New(log.MustGetLogger(""), &app, []dAppMod.Module{}, closer, time.Second)
 	require.Nil(t, dApp)
@@ -88,7 +88,7 @@ func TestStartInvalidSignature(t *testing.T) {
 	_, invalidPriv, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
 
-	app := JsonBuild{
+	app := Data{
 		Name: map[string]string{
 			"en-us": "send and request money",
 		},
@@ -111,7 +111,7 @@ func TestStartInvalidSignature(t *testing.T) {
 	// mock the verify signature function since
 	// we don't care about correctness
 
-	closer := make(chan *JsonBuild, 1)
+	closer := make(chan *Data, 1)
 
 	dApp, err := New(log.MustGetLogger(""), &app, []dAppMod.Module{}, closer, time.Second)
 	require.Nil(t, dApp)

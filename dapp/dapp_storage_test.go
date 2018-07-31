@@ -41,7 +41,7 @@ func TestBoltStorage_SaveDApp(t *testing.T) {
 		}),
 	}
 
-	dAppJson := JsonBuild{
+	dAppJson := Data{
 		Name: map[string]string{
 			"en-us": "send and request money",
 			"de":    "sende und fordere geld an",
@@ -75,7 +75,7 @@ func TestBoltStorage_SaveDApp(t *testing.T) {
 
 		// make sure that the dApps are the same
 		// since we persisted the whole Dapp
-		dApp := JsonBuild{}
+		dApp := Data{}
 		require.Nil(t, json.Unmarshal(rawDApp, &dApp))
 		require.Equal(t, dAppJson, dApp)
 
@@ -100,7 +100,7 @@ func TestBoltStorage_SaveDAppInvalidSignature(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
 
-	dAppJson := JsonBuild{
+	dAppJson := Data{
 		Name: map[string]string{
 			"en-us": "send and request money",
 			"de":    "sende und fordere geld an",
@@ -141,7 +141,7 @@ func TestBoltStorage_All(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
 
-	dAppJson := JsonBuild{
+	dAppJson := Data{
 		Name: map[string]string{
 			"en-us": "send and request money",
 			"de":    "sende und fordere geld an",
