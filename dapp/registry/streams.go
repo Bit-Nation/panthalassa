@@ -21,7 +21,7 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 		for {
 
 			// read DApp from stream
-			rawJsonDApp, err := reader.ReadBytes(0x20)
+			rawJsonDApp, err := reader.ReadBytes(0x0A)
 			if err != nil {
 				logger.Error(err)
 				if err == io.EOF {
