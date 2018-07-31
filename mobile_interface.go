@@ -1,11 +1,11 @@
 package panthalassa
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"time"
 
-	"encoding/hex"
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
 	backend "github.com/Bit-Nation/panthalassa/backend"
@@ -53,8 +53,9 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 	deviceApi := api.New(client)
 
 	// create backend
-	// @TODO use a real transport
-	backend, err := backend.NewBackend(nil, km)
+	trans := &backend.WSTransport{}
+	defer trans.Start()
+	backend, err := backend.NewBackend(trans, km)
 	if err != nil {
 		return err
 	}
