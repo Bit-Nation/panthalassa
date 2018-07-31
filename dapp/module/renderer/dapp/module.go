@@ -16,10 +16,6 @@ type Module struct {
 	vm       *otto.Otto
 }
 
-func (m *Module) Name() string {
-	return "RENDERER:DAPP"
-}
-
 func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
 	// setOpenHandler must be called with a callback

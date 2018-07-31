@@ -16,10 +16,6 @@ type Module struct {
 	vm       *otto.Otto
 }
 
-func (m *Module) Name() string {
-	return "RENDERER:MESSAGE"
-}
-
 // register module function in the VM
 // setOpenHandler must be called with a callback
 // the callback that is passed to `setOpenHandler`
