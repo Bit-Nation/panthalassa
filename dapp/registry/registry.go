@@ -36,7 +36,7 @@ type Registry struct {
 	lock           sync.Mutex
 	dAppDevStreams map[string]net.Stream
 	dAppInstances  map[string]*dapp.DApp
-	closeChan      chan *dapp.JsonBuild
+	closeChan      chan *dapp.Data
 	conf           Config
 	ethWS          *ethws.EthereumWS
 	api            *api.API
@@ -56,7 +56,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 		lock:           sync.Mutex{},
 		dAppDevStreams: map[string]net.Stream{},
 		dAppInstances:  map[string]*dapp.DApp{},
-		closeChan:      make(chan *dapp.JsonBuild),
+		closeChan:      make(chan *dapp.Data),
 		conf:           conf,
 		ethWS: ethws.New(ethws.Config{
 			Retry: time.Second,
@@ -85,7 +85,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 }
 
 // start a DApp
-func (r *Registry) StartDApp(dApp *dapp.JsonBuild, timeOut time.Duration) error {
+func (r *Registry) StartDApp(dApp *dapp.Data, timeOut time.Duration) error {
 
 	var l *golog.Logger
 	l, err := golog.GetLogger("app name")
@@ -196,7 +196,7 @@ func (r *Registry) CallFunction(dAppID string, funcId uint, args string) error {
 
 }
 
-func (r *Registry) ShutDown(dAppJson dapp.JsonBuild) error {
+func (r *Registry) ShutDown(dAppJson dapp.Data) error {
 
 	// shut down DApp & remove from state
 	r.lock.Lock()

@@ -17,8 +17,8 @@ import (
 type DApp struct {
 	vm           *otto.Otto
 	logger       *logger.Logger
-	app          *JsonBuild
-	closeChan    chan<- *JsonBuild
+	app          *Data
+	closeChan    chan<- *Data
 	dAppRenderer *dAppRenderer.Module
 	msgRenderer  *msgRenderer.Module
 	cbMod        *cbModule.Module
@@ -49,7 +49,7 @@ func (d *DApp) CallFunction(id uint, args string) error {
 }
 
 // will start a DApp based on the given config file
-func New(l *logger.Logger, app *JsonBuild, vmModules []module.Module, closer chan<- *JsonBuild, timeOut time.Duration) (*DApp, error) {
+func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *Data, timeOut time.Duration) (*DApp, error) {
 
 	// check if app is valid
 	valid, err := app.VerifySignature()

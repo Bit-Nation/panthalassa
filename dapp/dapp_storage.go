@@ -16,12 +16,19 @@ var (
 
 type Storage interface {
 	SaveDApp(dApp Data) error
-	All() ([]Data, error)
+	All() ([]*Data, error)
 }
 
 type BoltDAppStorage struct {
 	db    *bolt.DB
 	uiApi *uiapi.Api
+}
+
+func NewDAppStorage(db *bolt.DB, api *uiapi.Api) *BoltDAppStorage {
+	return &BoltDAppStorage{
+		db:    db,
+		uiApi: api,
+	}
 }
 
 func (s *BoltDAppStorage) SaveDApp(dApp Data) error {
