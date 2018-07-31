@@ -37,36 +37,21 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 			rawJsonDApp, err := base64.StdEncoding.DecodeString(string(jsonDAppStr))
 			if err != nil {
 				logger.Error(err)
-				if err == io.EOF {
-					str.Close()
-				} else {
-					str.Reset()
-				}
-				break
+				continue
 			}
 
 			// unmarshal DApp data
 			rawDAppData := dapp.RawData{}
 			if err := json.Unmarshal(rawJsonDApp, &rawDAppData); err != nil {
 				logger.Error(err)
-				if err == io.EOF {
-					str.Close()
-				} else {
-					str.Reset()
-				}
-				break
+				continue
 			}
 
 			// parse json to DApp Data
 			dAppData, err := dapp.ParseJsonToData(rawDAppData)
 			if err := json.Unmarshal(rawJsonDApp, &rawDAppData); err != nil {
 				logger.Error(err)
-				if err == io.EOF {
-					str.Close()
-				} else {
-					str.Reset()
-				}
-				break
+				continue
 			}
 
 			// add stream to registry so that we can
