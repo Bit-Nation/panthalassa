@@ -2,6 +2,7 @@ package registry
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 
@@ -21,7 +22,19 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 		for {
 
 			// read DApp from stream
-			rawJsonDApp, err := reader.ReadBytes(0x0A)
+			jsonDAppStr, err := reader.ReadBytes(0x0A)
+			if err != nil {
+				logger.Error(err)
+				if err == io.EOF {
+					str.Close()
+				} else {
+					str.Reset()
+				}
+				break
+			}
+
+			// decode base64 json
+			rawJsonDApp, err := base64.StdEncoding.DecodeString(string(jsonDAppStr))
 			if err != nil {
 				logger.Error(err)
 				if err == io.EOF {
