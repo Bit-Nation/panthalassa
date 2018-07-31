@@ -110,28 +110,21 @@ func (s *BoltDAppStorage) Get(signingKey ed25519.PublicKey) (*Data, error) {
 	dApp = nil
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-
-		// fetch dApp's bucket
-		dAppStorage := tx.Bucket(dAppStoreBucketName)
-		if dAppStorage == nil {
+		var dApp *Data
+		dApp = nil
+		err := s.db.View(func(tx *bolt.Tx) error {
+			d := Data{}
+			if dAppStorage := tx.Bucket(dAppStoreBucketName); dAppStorage != nil {
+				if rawDAppData := dAppStorage.Get(signingKey); rawDAppData != nil {
+					if err := json.Unmarshal(rawDAppData, &d); err != nil {
+						return err
+					}
+				}
+			}
+			dApp = &d
 			return nil
-		}
-
-		// fetch DApp Data
-		rawDAppData := dAppStorage.Get(signingKey)
-		if rawDAppData == nil {
-			return nil
-		}
-
-		// unmarshal raw DApp data
-		d := Data{}
-		if err := json.Unmarshal(rawDAppData, &d); err != nil {
-			return err
-		}
-		dApp = &d
-
-		return nil
-
+		})
+		return err
 	})
 
 	return dApp, err

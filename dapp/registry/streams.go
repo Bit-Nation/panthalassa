@@ -22,7 +22,7 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 		for {
 
 			// read DApp from stream
-			jsonDAppStr, err := reader.ReadBytes(0x0A)
+			jsonDAppBytes, err := reader.ReadBytes(0x0A)
 			if err != nil {
 				logger.Error(err)
 				if err == io.EOF {
@@ -34,7 +34,7 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 			}
 
 			// decode base64 json
-			rawJsonDApp, err := base64.StdEncoding.DecodeString(string(jsonDAppStr))
+			rawJsonDApp, err := base64.StdEncoding.DecodeString(string(jsonDAppBytes))
 			if err != nil {
 				logger.Error(err)
 				continue

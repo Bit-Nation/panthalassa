@@ -98,9 +98,9 @@ func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Dura
 		return fmt.Errorf("failed to fetch DApp for signing key: %x", dAppSigningKey)
 	}
 
+	// get logger
 	var l *golog.Logger
-	l, err = golog.GetLogger("app name")
-	if err != nil {
+	if l, err = golog.GetLogger("app name"); err != nil {
 		return err
 	}
 

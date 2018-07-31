@@ -328,7 +328,7 @@ func StartDApp(dAppSingingKeyStr string, timeout int) error {
 		return err
 	}
 
-	// signing key must be 32 bytes long since it's and ed25519 pub key
+	// signing key must be 32 bytes long since it's an ed25519 pub key
 	if len(dAppSigningKey) != 32 {
 		return errors.New("DApp singing key must be 32 bytes long")
 	}
