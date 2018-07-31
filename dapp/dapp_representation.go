@@ -18,9 +18,9 @@ import (
 var InvalidSignature = errors.New("failed to verify signature for DApp")
 
 type SV struct {
-	Major uint
-	Minor uint
-	Patch uint
+	Major uint `json:"major"`
+	Minor uint `json:"minor"`
+	Patch uint `json:"patch"`
 }
 
 func (v *SV) String() string {
@@ -29,13 +29,13 @@ func (v *SV) String() string {
 
 // JSON Representation of published DApp
 type Data struct {
-	Name           map[string]string
-	UsedSigningKey ed25519.PublicKey
-	Code           []byte
-	Image          []byte
-	Signature      mh.Multihash
-	Engine         SV
-	Version        uint32
+	Name           map[string]string `json:"name"`
+	UsedSigningKey ed25519.PublicKey `json:"used_signed_pre_key"`
+	Code           []byte            `json:"code"`
+	Image          []byte            `json:"image"`
+	Signature      mh.Multihash      `json:"signature"`
+	Engine         SV                `json:"engine"`
+	Version        uint32            `json:"version"`
 }
 
 // hash the published DApp

@@ -26,6 +26,7 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	golog "github.com/op/go-logging"
+	"golang.org/x/crypto/ed25519"
 )
 
 var logger = log.Logger("dapp - registry")
@@ -85,7 +86,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 }
 
 // start a DApp
-func (r *Registry) StartDApp(dApp *dapp.Data, timeOut time.Duration) error {
+func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Duration) error {
 
 	var l *golog.Logger
 	l, err := golog.GetLogger("app name")
@@ -182,6 +183,7 @@ func (r *Registry) ConnectDevelopmentServer(addr ma.Multiaddr) error {
 }
 
 // call a function in a DApp
+// @todo when the function call takes too long the lock could stay locked. We should "free" it asap
 func (r *Registry) CallFunction(dAppID string, funcId uint, args string) error {
 
 	r.lock.Lock()
