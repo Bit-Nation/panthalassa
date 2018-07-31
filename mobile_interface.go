@@ -20,6 +20,7 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
+	transport "github.com/Bit-Nation/panthalassa/backend"
 )
 
 var panthalassaInstance *Panthalassa
@@ -52,8 +53,9 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 	deviceApi := api.New(client, km)
 
 	// create backend
-	// @TODO use a real transport
-	backend, err := backend.NewBackend(nil, km)
+	//created var t as temporal Transport
+	var t Transport
+	backend, err := backend.NewBackend(t, km)
 	if err != nil {
 		return err
 	}
@@ -69,7 +71,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 	if err != nil {
 		return err
 	}
-	dbInstance, err := db.Open(dbPath, 0600, &bolt.Options{Timeout: 1})
+	dbInstance, err := db.Open(dbPath, 0600, &bolt.Options{Timeout: 1, ReadOnly: true})
 	if err != nil {
 		return err
 	}
