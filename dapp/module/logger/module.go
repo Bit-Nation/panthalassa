@@ -2,33 +2,27 @@ package logger
 
 import (
 	"bufio"
+	"encoding/base64"
 	"strings"
 
-	pb "github.com/Bit-Nation/panthalassa/dapp/registry/pb"
 	net "github.com/libp2p/go-libp2p-net"
-	mc "github.com/multiformats/go-multicodec"
-	protoMc "github.com/multiformats/go-multicodec/protobuf"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
 
 type streamLogger struct {
-	writer  *bufio.Writer
-	encoder mc.Encoder
+	writer *bufio.Writer
 }
 
 func (l *streamLogger) Write(data []byte) (int, error) {
 
-	msg := pb.Message{
-		Type: pb.Message_LOG,
-		Log:  data,
+	// write log encoded as base64 to make sure there are no spaces in the dataset
+	if a, err := l.writer.Write([]byte(base64.StdEncoding.EncodeToString(data))); err != nil {
+		return a, err
 	}
 
-	if err := l.encoder.Encode(&msg); err != nil {
-		return 0, err
-	}
-
-	if err := l.writer.Flush(); err != nil {
+	// write line break as delimiter
+	if err := l.writer.WriteByte(0x0A); err != nil {
 		return 0, err
 	}
 
@@ -47,10 +41,7 @@ func New(stream net.Stream) (*Logger, error) {
 	}
 
 	w := bufio.NewWriter(stream)
-	loggerStream := &streamLogger{
-		writer:  w,
-		encoder: protoMc.Multicodec(nil).Encoder(w),
-	}
+	loggerStream := &streamLogger{writer: w}
 
 	l.SetBackend(logger.AddModuleLevel(logger.NewLogBackend(loggerStream, "", 0)))
 
