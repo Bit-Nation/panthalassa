@@ -8,29 +8,10 @@ import (
 	"time"
 
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
-	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
-	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
-	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	proto "github.com/golang/protobuf/proto"
 	require "github.com/stretchr/testify/require"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
-
-func keyManagerFactory() *keyManager.KeyManager {
-
-	mne, err := mnemonic.FromString("panda eyebrow bullet gorilla call smoke muffin taste mesh discover soft ostrich alcohol speed nation flash devote level hobby quick inner drive ghost inside")
-	if err != nil {
-		panic(err)
-	}
-
-	ks, err := keyStore.NewFromMnemonic(mne)
-	if err != nil {
-		panic(err)
-	}
-
-	return keyManager.CreateFromKeyStore(ks)
-
-}
 
 func requireNil(value interface{}) {
 	if value != nil {
@@ -46,7 +27,7 @@ func TestAPI_ShowModal(t *testing.T) {
 		sendFn: func(data string) {
 			c <- data
 		},
-	}, keyManagerFactory())
+	})
 
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
@@ -93,7 +74,7 @@ func TestAPI_SendEthereumTransaction(t *testing.T) {
 		sendFn: func(data string) {
 			c <- data
 		},
-	}, keyManagerFactory())
+	})
 
 	go func() {
 
