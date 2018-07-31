@@ -110,8 +110,6 @@ func (s *BoltDAppStorage) Get(signingKey ed25519.PublicKey) (*Data, error) {
 	dApp = nil
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-		var dApp *Data
-		dApp = nil
 		err := s.db.View(func(tx *bolt.Tx) error {
 			d := Data{}
 			if dAppStorage := tx.Bucket(dAppStoreBucketName); dAppStorage != nil {
