@@ -2,7 +2,6 @@ package dapp
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -82,11 +81,8 @@ func (r Data) Hash() ([]byte, error) {
 		return nil, err
 	}
 
-	// write version
-	v := make([]byte, 4)
-	binary.BigEndian.PutUint32(v, uint32(r.Version))
-
-	if _, err := buff.Write([]byte(v)); err != nil {
+	// write version as string - see for the specs why
+	if _, err := buff.WriteString(strconv.Itoa(int(r.Version))); err != nil {
 		return nil, err
 	}
 

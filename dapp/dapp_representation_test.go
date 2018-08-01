@@ -3,8 +3,8 @@ package dapp
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/binary"
 	"encoding/hex"
+	"strconv"
 	"testing"
 
 	mh "github.com/multiformats/go-multihash"
@@ -67,9 +67,7 @@ func TestDAppRepresentationHash(t *testing.T) {
 	require.Nil(t, err)
 
 	// write version
-	v := make([]byte, 4)
-	binary.BigEndian.PutUint32(v, uint32(1))
-	_, err = buff.Write(v)
+	_, err = buff.WriteString(strconv.Itoa(int(1)))
 	require.Nil(t, err)
 
 	expectedHash, err := mh.Sum(buff.Bytes(), mh.SHA3_256, -1)
