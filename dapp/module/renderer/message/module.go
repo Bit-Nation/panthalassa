@@ -76,6 +76,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 	go func() {
 
 		// call the message renderer
+		// @todo what happens if we call the callback twice?
 		_, err = m.renderer.Call(*m.renderer, payloadObj, func(call otto.FunctionCall) otto.Value {
 
 			// fetch params from the callback call
