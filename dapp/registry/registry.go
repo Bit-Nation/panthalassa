@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"sync"
 	"time"
 
-	"fmt"
 	api "github.com/Bit-Nation/panthalassa/api"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
@@ -17,6 +17,8 @@ import (
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
 	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
 	randBytes "github.com/Bit-Nation/panthalassa/dapp/module/randBytes"
+	renderDApp "github.com/Bit-Nation/panthalassa/dapp/module/renderer/dapp"
+	renderMsg "github.com/Bit-Nation/panthalassa/dapp/module/renderer/message"
 	sendEthTxMod "github.com/Bit-Nation/panthalassa/dapp/module/sendEthTx"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
@@ -27,7 +29,7 @@ import (
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	golog "github.com/op/go-logging"
-	"golang.org/x/crypto/ed25519"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 var logger = log.Logger("dapp - registry")
@@ -111,6 +113,8 @@ func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Dura
 		sendEthTxMod.New(r.api, l),
 		randBytes.New(l),
 		ethAddrMod.New(r.km),
+		renderMsg.New(l),
+		renderDApp.New(l),
 	}
 
 	// if there is a stream for this DApp

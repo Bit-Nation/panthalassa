@@ -40,7 +40,7 @@ func TestAPI_ShowModal(t *testing.T) {
 			req := pb.Request{}
 			requireNil(proto.Unmarshal([]byte(data), &req))
 
-			if req.ShowModal.Title != "Request Money" {
+			if req.ShowModal.UiID != "user_interface_id" {
 				panic("Expected title to be 'Request Money'")
 			}
 
@@ -61,7 +61,7 @@ func TestAPI_ShowModal(t *testing.T) {
 
 	}()
 
-	err = api.ShowModal("Request Money", "{}", pub)
+	err = api.RenderModal("user_interface_id", "{}", pub)
 	require.Nil(t, err)
 
 }
