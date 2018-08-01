@@ -1,10 +1,8 @@
 package dapp
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
-	"strconv"
 	"testing"
 
 	mh "github.com/multiformats/go-multihash"
@@ -14,11 +12,8 @@ import (
 
 func TestDAppRepresentationHash(t *testing.T) {
 
-	pub, _, err := ed25519.GenerateKey(rand.Reader)
-	require.Nil(t, err)
-
 	// we need a test hash for the JsonToJsonBuild method
-	testHash, err := mh.Sum(nil, mh.SHA3_256, -1)
+	testHash, err := mh.Sum(nil, mh.SHA2_256, -1)
 	require.Nil(t, err)
 
 	dAppJson := RawData{
@@ -26,52 +21,13 @@ func TestDAppRepresentationHash(t *testing.T) {
 			"en-us": "send and request money",
 			"de":    "sende und fordere geld an",
 		},
-		UsedSigningKey: hex.EncodeToString(pub),
+		UsedSigningKey: "110c3ff292fb8ebf0084a9fc1e8c06418ab1c2cbd1058d87e78aa0fcdcbf5791",
 		Code:           `var wallet = "0x930aa9a843266bdb02847168d571e7913907dd84"`,
-		Image:          "base64...",
+		Image:          "aGk=",
 		Engine:         "1.2.3",
 		Signature:      testHash.String(),
 		Version:        1,
 	}
-
-	// calculate hash manually
-	// name + code + signature public key
-	buff := bytes.NewBuffer(nil)
-
-	// write de first since we sort for the language codes
-	_, err = buff.WriteString("de")
-	require.Nil(t, err)
-	_, err = buff.WriteString("sende und fordere geld an")
-	require.Nil(t, err)
-
-	// write en us
-	_, err = buff.WriteString("en-us")
-	require.Nil(t, err)
-	_, err = buff.WriteString("send and request money")
-	require.Nil(t, err)
-
-	// write used signing key
-	_, err = buff.Write(pub)
-	require.Nil(t, err)
-
-	// write code to buffer
-	_, err = buff.WriteString(`var wallet = "0x930aa9a843266bdb02847168d571e7913907dd84"`)
-	require.Nil(t, err)
-
-	// write image
-	_, err = buff.WriteString("base64...")
-	require.Nil(t, err)
-
-	// write engine
-	_, err = buff.WriteString("1.2.3")
-	require.Nil(t, err)
-
-	// write version
-	_, err = buff.WriteString(strconv.Itoa(int(1)))
-	require.Nil(t, err)
-
-	expectedHash, err := mh.Sum(buff.Bytes(), mh.SHA3_256, -1)
-	require.Nil(t, err)
 
 	// calculate hash
 	jsonBuild, err := ParseJsonToData(dAppJson)
@@ -80,7 +36,7 @@ func TestDAppRepresentationHash(t *testing.T) {
 	require.Nil(t, err)
 
 	// check if hashes match
-	require.Equal(t, hex.EncodeToString(expectedHash), hex.EncodeToString(calculatedHash))
+	require.Equal(t, "122045b810a58b64b3d35e46a30c8b1d80dccb8f04142acb4f6fe86e01792316a3e4", hex.EncodeToString(calculatedHash))
 
 }
 
@@ -117,7 +73,7 @@ func TestDAppVerifySignature(t *testing.T) {
 		},
 		UsedSigningKey: hex.EncodeToString(pub),
 		Code:           `var wallet = "0x930aa9a843266bdb02847168d571e7913907dd84"`,
-		Image:          "base64...",
+		Image:          "aGk=",
 		Engine:         "1.2.3",
 		Signature:      fakeSignature.String(),
 	}
