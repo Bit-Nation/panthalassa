@@ -17,7 +17,7 @@ func TestModule_RenderMessageError(t *testing.T) {
 	m := New(l)
 	require.Nil(t, m.Register(vm))
 
-	vm.Call("setMessageHandler", vm, func(payload otto.Value, cb otto.Value) otto.Value {
+	vm.Call("setMessageRenderer", vm, func(payload otto.Value, cb otto.Value) otto.Value {
 
 		cb.Call(cb, "I am an error")
 
@@ -39,7 +39,7 @@ func TestModule_RenderMessageSuccess(t *testing.T) {
 	m := New(l)
 	require.Nil(t, m.Register(vm))
 
-	vm.Call("setMessageHandler", vm, func(payload otto.Value, cb otto.Value) otto.Value {
+	vm.Call("setMessageRenderer", vm, func(payload otto.Value, cb otto.Value) otto.Value {
 
 		msg, err := payload.Object().Get("message")
 		if err != nil {
