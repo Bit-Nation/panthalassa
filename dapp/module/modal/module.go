@@ -8,6 +8,7 @@ import (
 
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
+	"github.com/RadicalApp/libsignal-protocol-go/logger"
 	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	uuid "github.com/satori/go.uuid"
@@ -74,8 +75,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		defer m.lock.Unlock()
 		if _, exist := m.modalIDs[uiID]; !exist {
 			errMsg := fmt.Sprintf("modal UI ID: '%s' does not exist", uiID)
-			_, err := cb.Call(cb, vm.MakeCustomError("MissingModalID", errMsg), uiID)
-			if err != nil {
+			if _, err := cb.Call(cb, vm.MakeCustomError("MissingModalID", errMsg), uiID); err != nil {
 				m.logger.Error(errMsg)
 			}
 			return otto.Value{}
@@ -88,13 +88,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		// context of request limitation
 		go func() {
 			// request to show modal
-			err := m.device.RenderModal(
-				uiID,
-				layout,
-				m.dAppIDKey,
-			)
-
-			if err != nil {
+			if err := m.device.RenderModal(uiID, layout, m.dAppIDKey); err != nil {
 				cb.Call(cb, vm.MakeCustomError("Error", "failed to render modal"))
 				return
 			}
@@ -168,10 +162,17 @@ func (m *Module) CloseModal(uiID string) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	closeModal := m.modalIDs[uiID]
+	// fetch modal
+	closeModal, exist := m.modalIDs[uiID]
+	if !exist {
+		return
+	}
+	// close modal
 	if _, err := closeModal.Call(*closeModal); err != nil {
 		m.logger.Error(err.Error())
 	}
+
+	// finish close (decrease counter & delete from id's"
 	m.modalIDsReqLim.Decrease()
 	delete(m.modalIDs, uiID)
 
