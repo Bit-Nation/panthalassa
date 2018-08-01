@@ -8,7 +8,6 @@ import (
 
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	"github.com/RadicalApp/libsignal-protocol-go/logger"
 	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	uuid "github.com/satori/go.uuid"
