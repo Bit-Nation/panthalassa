@@ -2,7 +2,6 @@ package dapp
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -10,7 +9,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
+	"encoding/base64"
+	
 	mh "github.com/multiformats/go-multihash"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -53,11 +53,11 @@ func (r Data) Hash() ([]byte, error) {
 	// write languages to buffer
 	for _, k := range languages {
 		// write language code
-		if _, err := buff.Write([]byte(k)); err != nil {
+		if _, err := buff.WriteString(k); err != nil {
 			return nil, err
 		}
 		// write name
-		if _, err := buff.Write([]byte(r.Name[k])); err != nil {
+		if _, err := buff.WriteString(r.Name[k]); err != nil {
 			return nil, err
 		}
 	}
@@ -82,16 +82,13 @@ func (r Data) Hash() ([]byte, error) {
 		return nil, err
 	}
 
-	// write version
-	v := make([]byte, 4)
-	binary.BigEndian.PutUint32(v, uint32(r.Version))
-
-	if _, err := buff.Write([]byte(v)); err != nil {
+	// write version as string - see for the specs why
+	if _, err := buff.WriteString(strconv.Itoa(int(r.Version))); err != nil {
 		return nil, err
 	}
 
 	// hash it
-	multiHash, err := mh.Sum(buff.Bytes(), mh.SHA3_256, -1)
+	multiHash, err := mh.Sum(buff.Bytes(), mh.SHA2_256, -1)
 	if err != nil {
 		return nil, err
 	}
@@ -188,11 +185,17 @@ func ParseJsonToData(b RawData) (Data, error) {
 		return Data{}, err
 	}
 
+	// decode image from base64 to bytes
+	image, err := base64.StdEncoding.DecodeString(b.Image)
+	if err != nil {
+		return Data{}, err
+	}
+
 	return Data{
 		Name:           b.Name,
 		UsedSigningKey: usedSigningKey,
 		Code:           []byte(b.Code),
-		Image:          []byte(b.Image),
+		Image:          image,
 		Signature:      multiHash,
 		Engine:         sv,
 		Version:        b.Version,
