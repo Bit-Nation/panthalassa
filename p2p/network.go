@@ -6,6 +6,9 @@ import (
 	log "github.com/ipfs/go-log"
 	lp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
+	mplex "github.com/whyrusleeping/go-smux-multiplex"
+	msmux "github.com/whyrusleeping/go-smux-multistream"
+	yamux "github.com/whyrusleeping/go-smux-yamux"
 )
 
 var logger = log.Logger("network")
@@ -18,6 +21,15 @@ func New() (*Network, error) {
 			return err
 		}
 		cfg.DisableSecio = false
+
+		// add muxer
+		tpt := msmux.NewBlankTransport()
+		tpt.AddTransport("/yamux/1.0.0", yamux.DefaultTransport)
+		// @todo mplex is registered twice till this https://github.com/libp2p/go-libp2p/commit/77b7d8f06f6639fcff5414525257ec18808b6112 is released
+		tpt.AddTransport("/mplex/6.3.0", mplex.DefaultTransport)
+		tpt.AddTransport("/mplex/6.7.0", mplex.DefaultTransport)
+		cfg.Muxer = tpt
+
 		return nil
 	})
 	if err != nil {
