@@ -41,7 +41,7 @@ func New(l *log.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
 	}
 }
 
-// showModal provides a way to display a modal
+// renderModal provides a way to display a modal
 // the first parameter should be the modal title
 // the second parameter should be the layout to render
 // and the third parameter is an optional callback that
@@ -81,8 +81,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			return otto.Value{}
 		}
 
-		// make sure layout is valid
-		// @todo validate layout
+		// get layout
 		layout := call.Argument(1).String()
 
 		// execute show modal action in
