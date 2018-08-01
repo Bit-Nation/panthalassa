@@ -25,6 +25,7 @@ import (
 
 var panthalassaInstance *Panthalassa
 var logger = log.Logger("panthalassa")
+var dbInstance *bolt.DB
 
 type UpStream interface {
 	Send(data string)
@@ -38,7 +39,7 @@ type StartConfig struct {
 }
 
 // create a new panthalassa instance
-func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpStream) error {
+func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpStream, path string) error {
 
 	if config.EnableDebugging {
 		log.SetDebugLogging()
@@ -68,10 +69,12 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 
 	// open database
 	dbPath, err := db.KMToDBPath(km)
+	// path += "/bb.db"
+	path += dbPath
 	if err != nil {
 		return err
 	}
-	dbInstance, err := db.Open(dbPath, 0600, &bolt.Options{Timeout: 1})
+	dbInstance, err := db.Open(path, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}
@@ -112,7 +115,7 @@ func start(km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpS
 }
 
 // start panthalassa
-func Start(config string, password string, client, uiUpstream UpStream) error {
+func Start(config string, password string, client, uiUpstream UpStream, path string) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -131,11 +134,11 @@ func Start(config string, password string, client, uiUpstream UpStream) error {
 		return err
 	}
 
-	return start(km, c, client, uiUpstream)
+	return start(km, c, client, uiUpstream, path)
 }
 
 // create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(config string, mnemonic string, client, uiUpstream UpStream) error {
+func StartFromMnemonic(config string, mnemonic string, client, uiUpstream UpStream, path string) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -155,7 +158,7 @@ func StartFromMnemonic(config string, mnemonic string, client, uiUpstream UpStre
 	}
 
 	// create panthalassa instance
-	return start(km, c, client, uiUpstream)
+	return start(km, c, client, uiUpstream, path)
 
 }
 

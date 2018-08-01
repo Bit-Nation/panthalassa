@@ -17,7 +17,7 @@ func KMToDBPath(km *km.KeyManager) (string, error) {
 		return "", err
 	}
 
-	return filepath.Abs(filepath.Join(idPubKey, ".db"))
+	return filepath.Abs(filepath.Join(idPubKey, "bb.db"))
 
 }
 

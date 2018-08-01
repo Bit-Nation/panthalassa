@@ -5,3 +5,5 @@ log.out
 panthalassa
 .database/
 vendor
+.DS_Store
+Gopkg.lock
