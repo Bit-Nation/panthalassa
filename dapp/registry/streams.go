@@ -49,7 +49,7 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 
 			// parse json to DApp Data
 			dAppData, err := dapp.ParseJsonToData(rawDAppData)
-			if err := json.Unmarshal(rawJsonDApp, &rawDAppData); err != nil {
+			if err != nil {
 				logger.Error(err)
 				continue
 			}
