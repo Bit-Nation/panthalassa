@@ -111,8 +111,9 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		dAppReg: dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
 		}, deviceApi, km, dAppStorage),
-		chat: chatInstance,
-		db:   dbInstance,
+		chat:        chatInstance,
+		db:          dbInstance,
+		dAppStorage: dAppStorage,
 	}
 
 	return nil
@@ -390,5 +391,23 @@ func StopDApp(dAppSingingKeyStr string) error {
 	}
 
 	return panthalassaInstance.dAppReg.ShutDown(dAppSigningKey)
+
+}
+
+func DApps() (string, error) {
+
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa first")
+	}
+
+	// fetch dApps
+	dApps, err := panthalassaInstance.dAppStorage.All()
+	if err != nil {
+		return "", err
+	}
+
+	// marshal dapps
+	rawDApps, err := json.Marshal(dApps)
+	return string(rawDApps), err
 
 }

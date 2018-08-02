@@ -6,6 +6,7 @@ import (
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	chat "github.com/Bit-Nation/panthalassa/chat"
+	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
@@ -16,14 +17,15 @@ import (
 )
 
 type Panthalassa struct {
-	km       *keyManager.KeyManager
-	upStream api.UpStream
-	api      *api.API
-	p2p      *p2p.Network
-	dAppReg  *dAppReg.Registry
-	chat     *chat.Chat
-	msgDB    *db.BoltChatMessageStorage
-	db       *bolt.DB
+	km          *keyManager.KeyManager
+	upStream    api.UpStream
+	api         *api.API
+	p2p         *p2p.Network
+	dAppReg     *dAppReg.Registry
+	chat        *chat.Chat
+	msgDB       *db.BoltChatMessageStorage
+	db          *bolt.DB
+	dAppStorage dapp.Storage
 }
 
 //Stop the panthalassa instance
