@@ -30,7 +30,7 @@ func (v *SV) String() string {
 // JSON Representation of published DApp
 type Data struct {
 	Name           map[string]string `json:"name"`
-	UsedSigningKey ed25519.PublicKey `json:"used_signed_pre_key"`
+	UsedSigningKey ed25519.PublicKey `json:"used_signing_key"`
 	Code           []byte            `json:"code"`
 	Image          []byte            `json:"image"`
 	Signature      mh.Multihash      `json:"signature"`
