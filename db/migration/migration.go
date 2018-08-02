@@ -14,8 +14,6 @@ import (
 	bolt "github.com/coreos/bbolt"
 )
 
-const dbFileMode = 0600
-
 type Migration interface {
 	Migrate(db *bolt.DB) error
 	Version() uint32
@@ -75,7 +73,7 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 	}
 
 	// open production database
-	prodDB, err := bolt.Open(prodDBPath, dbFileMode, &bolt.Options{Timeout: time.Second * 1})
+	prodDB, err := bolt.Open(prodDBPath, 0644, &bolt.Options{Timeout: time.Second})
 	if err != nil {
 		return err
 	}
@@ -87,7 +85,7 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 	}
 	// copy production database over to migration database
 	err = prodDB.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(migrationDBFile, dbFileMode)
+		return tx.CopyFile(migrationDBFile, 0644)
 	})
 	defer prodDB.Close()
 	if err != nil {
@@ -95,7 +93,7 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 	}
 
 	// open migration database
-	migrationDB, err := bolt.Open(migrationDBFile, dbFileMode, bolt.DefaultOptions)
+	migrationDB, err := bolt.Open(migrationDBFile, 0644, bolt.DefaultOptions)
 	if err != nil {
 		return err
 	}
@@ -159,14 +157,14 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 	if err != nil {
 		return err
 	}
-	prodBackupDB, err := bolt.Open(prodDBBackupPath, dbFileMode, &bolt.Options{Timeout: time.Second})
+	prodBackupDB, err := bolt.Open(prodDBBackupPath, 0644, &bolt.Options{Timeout: time.Second})
 	if err != nil {
 		return err
 	}
 
 	// backup production database
 	err = prodDB.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(prodDBBackupPath, dbFileMode)
+		return tx.CopyFile(prodDBBackupPath, 0644)
 	})
 	if err != nil {
 		return err
@@ -182,12 +180,12 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 
 	// copy migrated database to production
 	err = migrationDB.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(prodDBPath, dbFileMode)
+		return tx.CopyFile(prodDBPath, 0644)
 	})
 	if err != nil {
 		// try to recover production database
 		recErr := prodBackupDB.Update(func(tx *bolt.Tx) error {
-			return tx.CopyFile(prodDBPath, dbFileMode)
+			return tx.CopyFile(prodDBPath, 0644)
 		})
 		if recErr != nil {
 			return errors.New(fmt.Sprintf(

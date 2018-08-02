@@ -71,7 +71,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	if err != nil {
 		return err
 	}
-	dbInstance, err := db.Open(dbPath, 0600, &bolt.Options{Timeout: 1})
+	dbInstance, err := db.Open(dbPath, 0644, &bolt.Options{Timeout: time.Second})
 	if err != nil {
 		return err
 	}
@@ -106,6 +106,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 			EthWSEndpoint: config.EthWsEndpoint,
 		}, deviceApi, km, dAppStorage),
 		chat: chatInstance,
+		db:   dbInstance,
 	}
 
 	return nil

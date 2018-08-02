@@ -2,6 +2,7 @@ package dapp
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -9,8 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"encoding/base64"
-	
+
 	mh "github.com/multiformats/go-multihash"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
