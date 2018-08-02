@@ -10,9 +10,8 @@ import (
 func TestRegisterProcessorError(t *testing.T) {
 
 	s := testStorage{}
-	jobStack := make(chan Job, 100)
 
-	queue := New(&s, jobStack, 3)
+	queue := New(&s, 10, 3)
 
 	// register the first time should be valid
 	err := queue.RegisterProcessor(&testProcessor{
@@ -31,9 +30,8 @@ func TestRegisterProcessorError(t *testing.T) {
 func TestFetchProcessor(t *testing.T) {
 
 	s := testStorage{}
-	jobStack := make(chan Job, 100)
 
-	queue := New(&s, jobStack, 3)
+	queue := New(&s, 10, 3)
 
 	_, err := queue.fetchProcessor("I_DO_NOT_EXIST")
 	require.EqualError(t, err, "processor: I_DO_NOT_EXIST does not exist")
@@ -54,8 +52,8 @@ func TestFetchProcessor(t *testing.T) {
 func TestQueue_AddJobError(t *testing.T) {
 
 	s := testStorage{}
-	jobStack := make(chan Job, 100)
-	queue := New(&s, jobStack, 3)
+
+	queue := New(&s, 10, 3)
 
 	// add job
 	err := queue.AddJob(Job{
@@ -71,8 +69,8 @@ func TestQueue_AddJobError(t *testing.T) {
 func TestQueue_AddInvalidJob(t *testing.T) {
 
 	s := testStorage{}
-	jobStack := make(chan Job, 100)
-	queue := New(&s, jobStack, 3)
+
+	queue := New(&s, 10, 3)
 
 	// register processor
 	err := queue.RegisterProcessor(&testProcessor{
@@ -105,8 +103,8 @@ func TestQueue_AddJob(t *testing.T) {
 			return nil
 		},
 	}
-	jobStack := make(chan Job, 100)
-	queue := New(&s, jobStack, 3)
+
+	queue := New(&s, 10, 3)
 
 	// register processor
 	err := queue.RegisterProcessor(&testProcessor{
@@ -132,8 +130,7 @@ func TestQueue_AddJob(t *testing.T) {
 //
 func TestQueue_ProcessJob(t *testing.T) {
 
-	jobStack := make(chan Job, 100)
-	queue := New(&testStorage{}, jobStack, 3)
+	queue := New(&testStorage{}, 10, 3)
 
 	// channel
 	wait := make(chan struct{}, 1)
@@ -155,7 +152,7 @@ func TestQueue_ProcessJob(t *testing.T) {
 	require.Nil(t, err)
 
 	// add job to stack
-	jobStack <- Job{
+	queue.jobStack <- Job{
 		ID:   "<job-id>",
 		Type: "SEND_MONEY",
 	}
