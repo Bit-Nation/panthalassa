@@ -88,14 +88,14 @@ func (q *Queue) DeleteJob(j Job) error {
 	return q.storage.DeleteJob(j.ID)
 }
 
-func New(s Storage, jobStack chan Job, concurrency uint) *Queue {
+func New(s Storage, jobStackSize uint, concurrency uint) *Queue {
 
 	// construct queue
 	q := &Queue{
 		processors: map[string]Processor{},
 		storage:    s,
 		lock:       sync.Mutex{},
-		jobStack:   jobStack,
+		jobStack:   make(chan Job, jobStackSize),
 	}
 
 	// register all processors
@@ -108,11 +108,11 @@ func New(s Storage, jobStack chan Job, concurrency uint) *Queue {
 		go func(q *Queue) {
 			for {
 				// exit if job stack go closed
-				if jobStack == nil {
+				if q.jobStack == nil {
 					return
 				}
 				select {
-				case j := <-jobStack:
+				case j := <-q.jobStack:
 					// fetch processor
 					p, err := q.fetchProcessor(j.Type)
 					if err != nil {

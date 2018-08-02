@@ -16,6 +16,7 @@ import (
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	profile "github.com/Bit-Nation/panthalassa/profile"
+	queue "github.com/Bit-Nation/panthalassa/queue"
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bolt "github.com/coreos/bbolt"
 	proto "github.com/golang/protobuf/proto"
@@ -82,12 +83,17 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// open message storage
 	messageStorage := db.NewChatMessageStorage(dbInstance, []func(db.MessagePersistedEvent){}, km)
 
+	// queue instance
+	jobStorage := queue.NewStorage(dbInstance)
+	q := queue.New(jobStorage, 250, 4)
+
 	// chat
 	chatInstance, err := chat.NewChat(chat.Config{
 		MessageDB: messageStorage,
 		KM:        km,
 		Backend:   backend,
 		UiApi:     uiApi,
+		Queue:     q,
 	})
 	if err != nil {
 		return err

@@ -63,7 +63,7 @@ type Config struct {
 	OneTimePreKeyStorage db.OneTimePreKeyStorage
 	UserStorage          db.UserStorage
 	UiApi                *uiapi.Api
-	queue                *queue.Queue
+	Queue                *queue.Queue
 }
 
 func NewChat(conf Config) (*Chat, error) {
@@ -89,6 +89,7 @@ func NewChat(conf Config) (*Chat, error) {
 		oneTimePreKeyStorage: conf.OneTimePreKeyStorage,
 		userStorage:          conf.UserStorage,
 		uiApi:                conf.UiApi,
+		queue:                conf.Queue,
 	}
 
 	err = c.queue.RegisterProcessor(&SubmitMessagesProcessor{
