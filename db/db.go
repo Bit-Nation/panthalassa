@@ -26,10 +26,13 @@ func Open(path string, mode os.FileMode, options *bolt.Options) (*bolt.DB, error
 
 	migrations := []migration.Migration{}
 
-	// migrate the database
-	err := migration.Migrate(path, migrations)
-	if err != nil {
-		return nil, err
+	// check if production database exist
+	if _, err := os.Stat(path); err == nil {
+		// migrate the database
+		err := migration.Migrate(path, migrations)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// open database
