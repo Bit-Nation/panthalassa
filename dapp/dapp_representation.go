@@ -33,7 +33,7 @@ type Data struct {
 	UsedSigningKey ed25519.PublicKey `json:"used_signing_key"`
 	Code           []byte            `json:"code"`
 	Image          []byte            `json:"image"`
-	Signature      mh.Multihash      `json:"signature"`
+	Signature      []byte            `json:"signature"`
 	Engine         SV                `json:"engine"`
 	Version        uint32            `json:"version"`
 }
@@ -174,10 +174,6 @@ func ParseJsonToData(b RawData) (Data, error) {
 	if err != nil {
 		return Data{}, err
 	}
-	multiHash, err := mh.Cast(rawSignature)
-	if err != nil {
-		return Data{}, err
-	}
 
 	// decode engine version
 	sv, err := engineVersionToSV(b.Engine)
@@ -196,7 +192,7 @@ func ParseJsonToData(b RawData) (Data, error) {
 		UsedSigningKey: usedSigningKey,
 		Code:           []byte(b.Code),
 		Image:          image,
-		Signature:      multiHash,
+		Signature:      rawSignature,
 		Engine:         sv,
 		Version:        b.Version,
 	}, nil
