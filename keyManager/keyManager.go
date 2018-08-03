@@ -2,9 +2,9 @@ package keyManager
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 
-	"encoding/json"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	scrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"

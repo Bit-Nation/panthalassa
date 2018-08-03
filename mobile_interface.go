@@ -1,18 +1,24 @@
 package panthalassa
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"time"
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
+	backend "github.com/Bit-Nation/panthalassa/backend"
 	chat "github.com/Bit-Nation/panthalassa/chat"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
+	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	profile "github.com/Bit-Nation/panthalassa/profile"
+	queue "github.com/Bit-Nation/panthalassa/queue"
+	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
+	bolt "github.com/coreos/bbolt"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
@@ -33,10 +39,9 @@ type StartConfig struct {
 }
 
 // create a new panthalassa instance
-func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error {
+func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, uiUpstream UpStream) error {
 
 	if config.EnableDebugging {
-
 		log.SetDebugLogging()
 	}
 
@@ -46,42 +51,76 @@ func start(km *keyManager.KeyManager, config StartConfig, client UpStream) error
 	}
 
 	// device api
-	api := api.New(client, km)
+	deviceApi := api.New(client)
 
-	// we don't need the rendevouz key for now
-	network, err := p2p.New()
+	// create backend
+	trans := &backend.WSTransport{}
+	defer trans.Start()
+	backend, err := backend.NewBackend(trans, km)
 	if err != nil {
 		return err
 	}
 
-	chatKeyPair, err := km.ChatIdKeyPair()
+	// create p2p network
+	p2pNetwork, err := p2p.New()
 	if err != nil {
 		return err
 	}
 
-	c, err := chat.New(chatKeyPair, km, api)
+	// open database
+	dbPath, err := db.KMToDBPath(dbDir, km)
 	if err != nil {
 		return err
 	}
+	dbInstance, err := db.Open(dbPath, 0644, &bolt.Options{Timeout: time.Second})
+	if err != nil {
+		return err
+	}
+
+	// ui api
+	uiApi := uiapi.New(uiUpstream)
+
+	// open message storage
+	messageStorage := db.NewChatMessageStorage(dbInstance, []func(db.MessagePersistedEvent){}, km)
+
+	// queue instance
+	jobStorage := queue.NewStorage(dbInstance)
+	q := queue.New(jobStorage, 250, 4)
+
+	// chat
+	chatInstance, err := chat.NewChat(chat.Config{
+		MessageDB: messageStorage,
+		KM:        km,
+		Backend:   backend,
+		UiApi:     uiApi,
+		Queue:     q,
+	})
+	if err != nil {
+		return err
+	}
+
+	// dApp storage
+	dAppStorage := dapp.NewDAppStorage(dbInstance, uiApi)
 
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:       km,
 		upStream: client,
-		api:      api,
-		p2p:      network,
-		chat:     &c,
-		dAppReg: dAppReg.NewDAppRegistry(network.Host, dAppReg.Config{
+		api:      deviceApi,
+		p2p:      p2pNetwork,
+		dAppReg: dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
-		}, api, km),
+		}, deviceApi, km, dAppStorage),
+		chat:        chatInstance,
+		db:          dbInstance,
+		dAppStorage: dAppStorage,
 	}
 
 	return nil
-
 }
 
 // start panthalassa
-func Start(config string, password string, client UpStream) error {
+func Start(dbDir, config, password string, client, uiUpstream UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -100,11 +139,11 @@ func Start(config string, password string, client UpStream) error {
 		return err
 	}
 
-	return start(km, c, client)
+	return start(dbDir, km, c, client, uiUpstream)
 }
 
 // create a new panthalassa instance with the mnemonic
-func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
+func StartFromMnemonic(dbDir, config, mnemonic string, client, uiUpstream UpStream) error {
 
 	// unmarshal config
 	var c StartConfig
@@ -124,7 +163,7 @@ func StartFromMnemonic(config string, mnemonic string, client UpStream) error {
 	}
 
 	// create panthalassa instance
-	return start(km, c, client)
+	return start(dbDir, km, c, client, uiUpstream)
 
 }
 
@@ -201,12 +240,20 @@ func SignProfile(name, location, image string) (string, error) {
 		return "", errors.New("you have to start panthalassa")
 	}
 
+	// sign profile
 	p, err := profile.SignProfile(name, location, image, *panthalassaInstance.km)
 	if err != nil {
 		return "", err
 	}
 
-	rawProfile, err := p.Marshal()
+	// export profile to protobuf
+	pp, err := p.ToProtobuf()
+	if err != nil {
+		return "", err
+	}
+
+	// marshal protobuf profile
+	rawProfile, err := proto.Marshal(pp)
 	if err != nil {
 		return "", err
 	}
@@ -277,19 +324,25 @@ func OpenDApp(id, context string) error {
 
 }
 
-func StartDApp(dApp string, timeout int) error {
+func StartDApp(dAppSingingKeyStr string, timeout int) error {
 
 	//Exit if not started
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa first")
 	}
 
-	dAppResp := dapp.JsonRepresentation{}
-	if err := json.Unmarshal([]byte(dApp), &dAppResp); err != nil {
+	// decode singing key
+	dAppSigningKey, err := hex.DecodeString(dAppSingingKeyStr)
+	if err != nil {
 		return err
 	}
 
-	return panthalassaInstance.dAppReg.StartDApp(&dAppResp, time.Second*time.Duration(timeout))
+	// signing key must be 32 bytes long since it's an ed25519 pub key
+	if len(dAppSigningKey) != 32 {
+		return errors.New("DApp singing key must be 32 bytes long")
+	}
+
+	return panthalassaInstance.dAppReg.StartDApp(dAppSigningKey, time.Second*time.Duration(timeout))
 
 }
 
@@ -317,5 +370,44 @@ func CallDAppFunction(dAppId string, id int, args string) error {
 	}
 
 	return panthalassaInstance.dAppReg.CallFunction(dAppId, uint(id), args)
+
+}
+
+func StopDApp(dAppSingingKeyStr string) error {
+
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+
+	// decode singing key
+	dAppSigningKey, err := hex.DecodeString(dAppSingingKeyStr)
+	if err != nil {
+		return err
+	}
+
+	// signing key must be 32 bytes long since it's and ed25519 pub key
+	if len(dAppSigningKey) != 32 {
+		return errors.New("DApp singing key must be 32 bytes long")
+	}
+
+	return panthalassaInstance.dAppReg.ShutDown(dAppSigningKey)
+
+}
+
+func DApps() (string, error) {
+
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa first")
+	}
+
+	// fetch dApps
+	dApps, err := panthalassaInstance.dAppStorage.All()
+	if err != nil {
+		return "", err
+	}
+
+	// marshal dapps
+	rawDApps, err := json.Marshal(dApps)
+	return string(rawDApps), err
 
 }

@@ -1,9 +1,9 @@
 package profile
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"testing"
+	"time"
 
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
@@ -15,10 +15,10 @@ import (
 // @todo add test's which call "SignaturesValid" with invalid data
 // @todo add test's for unmarshal
 
-func TestSignProfile(t *testing.T) {
+func TestProfile(t *testing.T) {
 
 	// create test mnemonic
-	mne, err := mnemonic.New()
+	mne, err := mnemonic.FromString("warrior come shuffle soccer dragon cube embody labor display junk metal left chef drive venue home maximum lounge brush scheme return liquid again chaos")
 	require.Nil(t, err)
 
 	// create key store
@@ -37,59 +37,74 @@ func TestSignProfile(t *testing.T) {
 	require.Equal(t, "Earth", prof.Information.Location)
 	require.Equal(t, "base64", prof.Information.Image)
 
-	// validate profile
+	// validate profile Signatures
 	valid, err := prof.SignaturesValid()
 	require.Nil(t, err)
 	require.True(t, valid)
 
+	// test protobuf transformation
+	pp, err := prof.ToProtobuf()
+	require.Nil(t, err)
+	require.Equal(t, pp.EthereumPubKey, prof.Information.EthereumPubKey)
+	require.Equal(t, pp.IdentityPubKey, prof.Information.IdentityPubKey)
+	require.Equal(t, pp.Name, prof.Information.Name)
+	require.Equal(t, pp.Image, prof.Information.Image)
+	require.Equal(t, pp.Location, prof.Information.Location)
+	require.Equal(t, hex.EncodeToString(pp.ChatIdentityPubKey), hex.EncodeToString(prof.Information.ChatIDKey[:]))
+	require.Equal(t, pp.Timestamp, prof.Information.Timestamp.Unix())
+	require.Equal(t, uint8(pp.Version), prof.Information.Version)
+	require.Equal(t, pp.EthereumKeySignature, prof.Signatures.EthereumKey)
+	require.Equal(t, pp.IdentityKeySignature, prof.Signatures.IdentityKey)
+
+	// test protobuf to profile
+	prof, err = ProtobufToProfile(pp)
+	require.Nil(t, err)
+	require.Equal(t, pp.EthereumPubKey, prof.Information.EthereumPubKey)
+	require.Equal(t, pp.IdentityPubKey, prof.Information.IdentityPubKey)
+	require.Equal(t, pp.Name, prof.Information.Name)
+	require.Equal(t, pp.Image, prof.Information.Image)
+	require.Equal(t, pp.Location, prof.Information.Location)
+	require.Equal(t, hex.EncodeToString(pp.ChatIdentityPubKey), hex.EncodeToString(prof.Information.ChatIDKey[:]))
+	require.Equal(t, pp.Timestamp, prof.Information.Timestamp.Unix())
+	require.Equal(t, uint8(pp.Version), prof.Information.Version)
+	require.Equal(t, pp.EthereumKeySignature, prof.Signatures.EthereumKey)
+	require.Equal(t, pp.IdentityKeySignature, prof.Signatures.IdentityKey)
+
+	// test IdentityPublicKey
+	key, err := prof.IdentityPublicKey()
+	require.Nil(t, err)
+	require.Equal(t, hex.EncodeToString(key), hex.EncodeToString(pp.IdentityPubKey))
+
+	// test EthereumPublicKey
+	key, err = prof.EthereumPublicKey()
+	require.Nil(t, err)
+	require.Equal(t, hex.EncodeToString(key), hex.EncodeToString(pp.EthereumPubKey))
+
+	addr, err := prof.EthereumAddress()
+	require.Nil(t, err)
+	require.Equal(t, "0xb6E578c7535863c075e2A1411eF0Fa0c6E12416A", addr.String())
 }
 
-func TestSignProfileKeyStore(t *testing.T) {
+func TestHash(t *testing.T) {
 
-	// create test mnemonic
-	mne, err := mnemonic.New()
-	require.Nil(t, err)
+	timeStamp := time.Unix(1530874493, 0)
 
-	// create key store from mnemonic
-	keyStore, err := ks.NewFromMnemonic(mne)
-	require.Nil(t, err)
-
-	// create key manager
-	keyManager := km.CreateFromKeyStore(keyStore)
-
-	// export key manager store
-	keyManagerStore, err := keyManager.Export("pw", "pw")
-	require.Nil(t, err)
-
-	profile, err := SignWithKeyManagerStore("Florian", "Earth", "base64", keyManagerStore, "pw")
-	require.Nil(t, err)
-
-	valid, err := profile.SignaturesValid()
-	require.Nil(t, err)
-	require.True(t, valid)
-
-	require.Equal(t, "Florian", profile.Information.Name)
-	require.Equal(t, "Earth", profile.Information.Location)
-	require.Equal(t, "base64", profile.Information.Image)
-
-}
-
-// check that identity public key is correctly encoded and decoded
-func TestProfile_GetIdentityKey(t *testing.T) {
-
-	pubKey := [32]byte{}
-	_, err := rand.Read(pubKey[:])
-	require.Nil(t, err)
-
-	p := Profile{
+	// create profile
+	prof := Profile{
 		Information: Information{
-			IdentityPubKey: hex.EncodeToString(pubKey[:]),
+			Name:           "Florian",
+			Location:       "Earth",
+			Image:          "base64",
+			IdentityPubKey: []byte{3, 4, 5},
+			EthereumPubKey: []byte{1, 3, 4},
+			ChatIDKey:      [32]byte{1, 0, 3},
+			Timestamp:      timeStamp,
+			Version:        3,
 		},
 	}
 
-	key, err := p.GetIdentityKey()
+	h, err := prof.Hash()
 	require.Nil(t, err)
-
-	require.Equal(t, hex.EncodeToString(pubKey[:]), hex.EncodeToString(key))
+	require.Equal(t, "1220b5081e1476192853cf9dfd0ed371275572e3b66e34af8fc89f0868b42ef0c3b4", h.String())
 
 }

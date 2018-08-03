@@ -10,6 +10,7 @@ import (
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	ethc "github.com/ethereum/go-ethereum/crypto"
+	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
@@ -111,7 +112,12 @@ func SignProfileStandAlone(name, location, image, keyManagerStore, password stri
 		return "", err
 	}
 
-	rawProfile, err := p.Marshal()
+	pp, err := p.ToProtobuf()
+	if err != nil {
+		return "", err
+	}
+
+	rawProfile, err := proto.Marshal(pp)
 	if err != nil {
 		return "", err
 	}

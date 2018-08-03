@@ -2,21 +2,27 @@ package db
 
 import (
 	"os"
+	"path/filepath"
 
 	migration "github.com/Bit-Nation/panthalassa/db/migration"
+	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bolt "github.com/coreos/bbolt"
 )
 
-type DB struct {
-	bolt *bolt.DB
-}
+// get database path for key manager
+func KMToDBPath(dir string, km *km.KeyManager) (string, error) {
 
-func (db *DB) Close() error {
-	return db.bolt.Close()
+	idPubKey, err := km.IdentityPublicKey()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Abs(filepath.Join(dir, idPubKey+".db"))
+
 }
 
 // open a database
-func Open(path string, mode os.FileMode, options *bolt.Options) (*DB, error) {
+func Open(path string, mode os.FileMode, options *bolt.Options) (*bolt.DB, error) {
 
 	migrations := []migration.Migration{}
 
@@ -32,8 +38,6 @@ func Open(path string, mode os.FileMode, options *bolt.Options) (*DB, error) {
 		return nil, err
 	}
 
-	return &DB{
-		bolt: db,
-	}, err
+	return db, nil
 
 }

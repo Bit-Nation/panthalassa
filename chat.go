@@ -5,253 +5,118 @@ import (
 	"encoding/json"
 	"errors"
 
-	chat "github.com/Bit-Nation/panthalassa/chat"
-	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
+	"github.com/Bit-Nation/panthalassa/crypto/aes"
+	bpb "github.com/Bit-Nation/protobuffers"
+	proto "github.com/gogo/protobuf/proto"
 )
 
-// create new pre key bundle
-func NewPreKeyBundle() (string, error) {
+func SendMessage(partner, message string) error {
 
+	// make sure panthalassa has been started
 	if panthalassaInstance == nil {
-		return "", errors.New("please start panthalassa first")
+		return errors.New("you have to start panthalassa first")
 	}
 
-	// create new per key bundle
-	bundle, err := panthalassaInstance.chat.NewPreKeyBundle()
+	// partner public key
+	partnerPub, err := hex.DecodeString(partner)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	// marshal private part and encrypt
-	privatePart, err := bundle.PrivatePart.Marshal()
-	if err != nil {
-		return "", err
+	// make sure public key has the right length
+	if len(partnerPub) != 32 {
+		return errors.New("partner must have a length of 32 bytes")
 	}
 
-	// encrypt private part
-	privtePartCipherText, err := panthalassaInstance.km.AESEncrypt(privatePart)
-	if err != nil {
-		return "", err
-	}
-
-	exportedBundle := chat.ExportedPreKeyBundle{
-		PublicPart:  bundle.PublicPart,
-		PrivatePart: privtePartCipherText,
-	}
-
-	// marshal pre key bundle
-	marshaledExportedBundle, err := json.Marshal(exportedBundle)
-	if err != nil {
-		return "", err
-	}
-
-	return string(marshaledExportedBundle), nil
+	// persist private message
+	return panthalassaInstance.chat.SavePrivateMessage(partnerPub, []byte(message))
 
 }
 
-// initialize chat with given identity key and pre key bundle
-func InitializeChat(identityPublicKey, preKeyBundle string) (string, error) {
+func AllChats() (string, error) {
 
+	// make sure panthalassa has been started
 	if panthalassaInstance == nil {
-		return "", errors.New("please start panthalassa first")
+		return "", errors.New("you have to start panthalassa first")
 	}
 
-	// decode public key
-	pubKey, err := hex.DecodeString(identityPublicKey)
-	if err != nil {
-		return "", err
-	}
-	if len(pubKey) != 32 {
-		return "", errors.New("public key must have length of 32 bytes")
-	}
-
-	// decode exported pre key bundle
-	pp := chat.PreKeyBundlePublic{}
-	if err := json.Unmarshal([]byte(preKeyBundle), &pp); err != nil {
-		return "", err
-	}
-
-	msg, initializedProtocol, err := panthalassaInstance.chat.InitializeChat(pubKey, pp)
+	chats, err := panthalassaInstance.chat.AllChats()
 	if err != nil {
 		return "", err
 	}
 
-	exportedSecret, err := chat.EncryptX3DHSecret(initializedProtocol.SharedSecret, panthalassaInstance.km)
+	chatsStr := []string{}
+	for _, chat := range chats {
+		chatsStr = append(chatsStr, hex.EncodeToString(chat))
+	}
+
+	chatList, err := json.Marshal(chatsStr)
 	if err != nil {
 		return "", err
 	}
 
-	initialProtocol, err := json.Marshal(struct {
-		Message chat.Message   `json:"message"`
-		Secret  aes.CipherText `json:"shared_chat_secret"`
-	}{
-		Message: msg,
-		Secret:  exportedSecret,
-	})
-
-	return string(initialProtocol), err
-
+	return string(chatList), nil
 }
 
-// create a dapp message
-// secret should be a aes cipher text as string
-func CreateDAppMessage(rawMsg, secretID, secret string, receiverIdKey string) (string, error) {
+func Messages(partner string, start int64, amount int) (string, error) {
 
+	// make sure panthalassa has been started
 	if panthalassaInstance == nil {
-		return "", errors.New("please start panthalassa first")
+		return "", errors.New("you have to start panthalassa first")
 	}
 
-	// unmarshal raw secret (secret is a cipher text)
-	cipherText, err := aes.Unmarshal([]byte(secret))
+	// partner public key
+	partnerPub, err := hex.DecodeString(partner)
 	if err != nil {
 		return "", err
 	}
 
-	// shared secret
-	sharedSecret, err := chat.DecryptX3DHSecret(cipherText, panthalassaInstance.km)
+	// make sure public key has the right length
+	if len(partnerPub) != 32 {
+		return "", errors.New("partner must have a length of 32 bytes")
+	}
+
+	// database messages
+	databaseMessages, err := panthalassaInstance.chat.Messages(partnerPub, int64(start), uint(amount))
 	if err != nil {
 		return "", err
 	}
 
-	// receiver public key
-	receiverRawIdKey, err := hex.DecodeString(receiverIdKey)
+	// plain messages
+	plainMessages := []map[string]interface{}{}
+
+	// decrypt message
+	for key, dbMessage := range databaseMessages {
+		// unmarshal aes cipher text
+		ct, err := aes.Unmarshal(dbMessage.Message)
+		if err != nil {
+			return "", err
+		}
+
+		// decrypt aes
+		plainMessage, err := panthalassaInstance.km.AESDecrypt(ct)
+		if err != nil {
+			return "", err
+		}
+		msg := bpb.PlainChatMessage{}
+		if err := proto.Unmarshal(plainMessage, &msg); err != nil {
+			return "", err
+		}
+		plainMessages = append(plainMessages, map[string]interface{}{
+			"message_id": key,
+			"message": map[string]interface{}{
+				"content":    string(msg.Message),
+				"created_at": msg.CreatedAt,
+			},
+		})
+	}
+
+	// marshal messages
+	messages, err := json.Marshal(plainMessages)
 	if err != nil {
 		return "", err
 	}
 
-	// create message
-	msg, err := panthalassaInstance.chat.CreateDAppMessage(rawMsg, secretID, sharedSecret, receiverRawIdKey)
-	if err != nil {
-		return "", err
-	}
-
-	// marshal message
-	m, err := msg.Marshal()
-	if err != nil {
-		return "", err
-	}
-
-	return string(m), nil
-
-}
-
-// create message
-// secret should be a aes cipher text as string
-func CreateHumanMessage(rawMsg, secretID, secret string, receiverIdKey string) (string, error) {
-
-	if panthalassaInstance == nil {
-		return "", errors.New("please start panthalassa first")
-	}
-
-	// unmarshal raw secret (secret is a cipher text)
-	cipherText, err := aes.Unmarshal([]byte(secret))
-	if err != nil {
-		return "", err
-	}
-
-	// shared secret
-	sharedSecret, err := chat.DecryptX3DHSecret(cipherText, panthalassaInstance.km)
-	if err != nil {
-		return "", err
-	}
-
-	// receiver public key
-	receiverRawIdKey, err := hex.DecodeString(receiverIdKey)
-	if err != nil {
-		return "", err
-	}
-
-	// create message
-	msg, err := panthalassaInstance.chat.CreateHumanMessage(rawMsg, secretID, sharedSecret, receiverRawIdKey)
-	if err != nil {
-		return "", err
-	}
-
-	// marshal message
-	m, err := msg.Marshal()
-	if err != nil {
-		return "", err
-	}
-
-	return string(m), nil
-
-}
-
-// decrypt a chat message
-// secret should be a cipher text as string
-func DecryptMessage(message, secret string) (string, error) {
-
-	if panthalassaInstance == nil {
-		return "", errors.New("please start panthalassa first")
-	}
-
-	ct, err := aes.Unmarshal([]byte(secret))
-	if err != nil {
-		return "", err
-	}
-
-	// shared secret
-	sharedSecret, err := chat.DecryptX3DHSecret(ct, panthalassaInstance.km)
-	if err != nil {
-		return "", err
-	}
-
-	// unmarshal message
-	var m chat.Message
-	if err := json.Unmarshal([]byte(message), &m); err != nil {
-		return "", err
-	}
-
-	return panthalassaInstance.chat.DecryptMessage(sharedSecret, m)
-
-}
-
-// return a encrypted shared secret used by the double rachet
-func HandleInitialMessage(message, preKeyBundlePrivatePart string) (string, error) {
-
-	if panthalassaInstance == nil {
-		return "", errors.New("please start panthalassa first")
-	}
-
-	// unmarshal message
-	var m chat.Message
-	if err := json.Unmarshal([]byte(message), &m); err != nil {
-		return "", err
-	}
-
-	// unmarshal private part CT
-	privPartCT, err := aes.Unmarshal([]byte(preKeyBundlePrivatePart))
-	if err != nil {
-		return "", err
-	}
-	
-	// decrypt private part
-	privPart, err := panthalassaInstance.km.AESDecrypt(privPartCT)
-	if err != nil {
-		return "", err
-	}
-	
-	// unmarshal pre key bundle private part
-	var p chat.PreKeyBundlePrivate
-	if err := json.Unmarshal(privPart, &p); err != nil {
-		return "", err
-	}
-
-	sec, err := panthalassaInstance.chat.HandleInitialMessage(m, p)
-	if err != nil {
-		return "", err
-	}
-
-	ct, err := chat.EncryptX3DHSecret(sec, panthalassaInstance.km)
-	if err != nil {
-		return "", err
-	}
-
-	ctRaw, err := ct.Marshal()
-	if err != nil {
-		return "", err
-	}
-
-	return string(ctRaw), err
+	return string(messages), nil
 
 }

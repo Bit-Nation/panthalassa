@@ -1,26 +1,20 @@
 package api
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"time"
 
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
-	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-func (a *API) ShowModal(title, layout string, dAppIDKey ed25519.PublicKey) error {
-	return a.dAppApi.ShowModal(title, layout, dAppIDKey)
+func (a *API) RenderModal(uiID, layout string, dAppIDKey ed25519.PublicKey) error {
+	return a.dAppApi.RenderModal(uiID, layout, dAppIDKey)
 }
 
 func (a *API) SendEthereumTransaction(value, to, data string) (string, error) {
 	return a.dAppApi.SendEthereumTransaction(value, to, data)
-}
-
-func (a *API) SaveDApp(dApp dapp.JsonRepresentation) error {
-	return a.dAppApi.SaveDApp(dApp)
 }
 
 type DAppApi struct {
@@ -28,13 +22,13 @@ type DAppApi struct {
 }
 
 // request to show a modal
-func (a *DAppApi) ShowModal(title, layout string, dAppPubKey ed25519.PublicKey) error {
+func (a *DAppApi) RenderModal(uiID, layout string, dAppPubKey ed25519.PublicKey) error {
 
 	// send request
 	resp, err := a.api.request(&pb.Request{
-		ShowModal: &pb.Request_ShowModal{
+		ShowModal: &pb.Request_RenderModal{
 			DAppPublicKey: dAppPubKey,
-			Title:         title,
+			UiID:          uiID,
 			Layout:        layout,
 		},
 	}, time.Second*20)
@@ -91,25 +85,4 @@ func (a *DAppApi) SendEthereumTransaction(value, to, data string) (string, error
 
 	return string(raw), nil
 
-}
-
-// save DApp
-func (a *DAppApi) SaveDApp(dApp dapp.JsonRepresentation) error {
-
-	resp, err := a.api.request(&pb.Request{
-		SaveDApp: &pb.Request_SaveDApp{
-			AppName:          dApp.Name,
-			Code:             dApp.Code,
-			Signature:        hex.EncodeToString(dApp.Signature),
-			SigningPublicKey: hex.EncodeToString(dApp.SignaturePublicKey),
-		},
-	}, time.Second*10)
-
-	if err != nil {
-		return err
-	}
-
-	resp.Closer <- nil
-
-	return err
 }

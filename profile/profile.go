@@ -1,241 +1,309 @@
 package profile
 
 import (
+	"bytes"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"time"
 
+	"encoding/binary"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
+	pb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	ethCrypto "github.com/ethereum/go-ethereum/crypto"
-	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
+	common "github.com/ethereum/go-ethereum/common"
+	crypto "github.com/ethereum/go-ethereum/crypto"
+	mh "github.com/multiformats/go-multihash"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-const profileVersion = 1
+const (
+	profileVersion = 2
+)
+
+var (
+	InvalidIdentityPublicKey = errors.New("identity public key invalid - must have 32 bytes")
+	InvalidEthereumPublicKey = errors.New("ethereum public key invalid - must have 33 bytes")
+	InvalidChatIDKey         = errors.New("chat identity key invalid - must have 32 bytes")
+)
 
 type Information struct {
-	Name           string         `json:"name"`
-	Location       string         `json:"location"`
-	Image          string         `json:"image"`
-	IdentityPubKey string         `json:"identity_pub_key"`
-	EthereumPubKey string         `json:"ethereum_pub_Key"`
-	ChatIDKey      x3dh.PublicKey `json:"chat_id_key"`
-	Timestamp      time.Time      `json:"timestamp"`
-	Version        uint16         `json:"version"`
+	Name           string
+	Location       string
+	Image          string
+	IdentityPubKey []byte
+	EthereumPubKey []byte
+	ChatIDKey      x3dh.PublicKey
+	Timestamp      time.Time
+	Version        uint8
 }
 
 type Signatures struct {
-	IdentityKey string `json:"identity_key"`
-	EthereumKey string `json:"ethereum_key"`
+	IdentityKey []byte
+	EthereumKey []byte
 }
 
 type Profile struct {
-	Information Information `json:"information"`
-	Signatures  Signatures  `json:"signatures"`
+	Information Information
+	Signatures  Signatures
 }
 
-func (p *Profile) Marshal() ([]byte, error) {
+func ProtobufToProfile(prof *pb.Profile) (*Profile, error) {
 
-	return json.Marshal(p)
+	if len(prof.IdentityPubKey) != 32 {
+		return nil, InvalidIdentityPublicKey
+	}
+
+	if len(prof.EthereumPubKey) != 33 {
+		return nil, InvalidEthereumPublicKey
+	}
+
+	if len(prof.ChatIdentityPubKey) != 32 {
+		return nil, InvalidChatIDKey
+	}
+
+	chatIDPubKey := x3dh.PublicKey{}
+	copy(chatIDPubKey[:], prof.ChatIdentityPubKey[:32])
+
+	return &Profile{
+		Information: Information{
+			Name:           prof.Name,
+			Location:       prof.Location,
+			Image:          prof.Image,
+			IdentityPubKey: prof.IdentityPubKey,
+			EthereumPubKey: prof.EthereumPubKey,
+			ChatIDKey:      chatIDPubKey,
+			Timestamp:      time.Unix(prof.Timestamp, 0),
+			Version:        uint8(prof.Version),
+		},
+		Signatures: Signatures{
+			IdentityKey: prof.IdentityKeySignature,
+			EthereumKey: prof.EthereumKeySignature,
+		},
+	}, nil
 
 }
 
-func (p *Profile) GetIdentityKey() (ed25519.PublicKey, error) {
+// hash all information about a profile
+func (p *Profile) Hash() (mh.Multihash, error) {
+	b := bytes.NewBuffer([]byte(p.Information.Name))
 
-	pubStr := p.Information.IdentityPubKey
-	rawPub, err := hex.DecodeString(pubStr)
+	timeStamp := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutVarint(timeStamp, p.Information.Timestamp.Unix())
 
+	toWrite := [][]byte{
+		[]byte(p.Information.Location),
+		[]byte(p.Information.Image),
+		p.Information.IdentityPubKey,
+		p.Information.EthereumPubKey,
+		p.Information.ChatIDKey[:],
+		timeStamp[:n],
+	}
+
+	for _, tw := range toWrite {
+		if _, err := b.Write(tw); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := b.WriteByte(p.Information.Version); err != nil {
+		return nil, err
+	}
+
+	return mh.Sum(b.Bytes(), mh.SHA2_256, -1)
+
+}
+
+func (p *Profile) IdentityPublicKey() (ed25519.PublicKey, error) {
+	if len(p.Information.IdentityPubKey) != 32 {
+		return nil, InvalidIdentityPublicKey
+	}
+	return p.Information.IdentityPubKey, nil
+}
+
+func (p *Profile) EthereumPublicKey() ([]byte, error) {
+	if len(p.Information.EthereumPubKey) != 33 {
+		return nil, InvalidEthereumPublicKey
+	}
+	return p.Information.EthereumPubKey, nil
+}
+
+// Validate signature based on identity pubic key
+func (p *Profile) ValidIdentitySignature(msg, signature []byte) (bool, error) {
+	idPubKey, err := p.IdentityPublicKey()
 	if err != nil {
-		return ed25519.PublicKey{}, err
+		return false, err
 	}
-
-	if len(rawPub) != 32 {
-		return ed25519.PublicKey{}, errors.New("public key must have 32 bytes")
-	}
-
-	return rawPub, nil
-
+	return ed25519.Verify(idPubKey, msg, signature), nil
 }
 
-// fetch chat public key
-func (p Profile) GetChatIDPublicKey() x3dh.PublicKey {
-	return p.Information.ChatIDKey
+// Validate signature based on the ethereum public key
+func (p *Profile) ValidEthereumSignature(msg [32]byte, signature [65]byte) (bool, error) {
+	ethPubKey, err := p.EthereumPublicKey()
+	if err != nil {
+		return false, err
+	}
+	// an the signature contain's [R || S || V] - but we only need R and S
+	return crypto.VerifySignature(ethPubKey, msg[:], signature[:64]), nil
 }
 
 // check if signatures of profile are correct
 func (p Profile) SignaturesValid() (bool, error) {
 
-	// unmarshal id pub key
-	rawIdPubKey, err := hex.DecodeString(p.Information.IdentityPubKey)
+	h, err := p.Hash()
 	if err != nil {
 		return false, err
 	}
 
-	// unmarshal eth pub key
-	rawEthPubKey, err := hex.DecodeString(p.Information.EthereumPubKey)
-	if err != nil {
-		return false, err
-	}
-
-	// concat data to verify (all information data)
-	dataToVerify := []byte(p.Information.Name)
-	dataToVerify = append(dataToVerify, []byte(p.Information.Location)...)
-	dataToVerify = append(dataToVerify, []byte(p.Information.Image)...)
-	dataToVerify = append(dataToVerify, []byte(p.Information.Timestamp.String())...)
-	dataToVerify = append(dataToVerify, rawIdPubKey...)
-	dataToVerify = append(dataToVerify, rawEthPubKey...)
-	dataToVerify = append(dataToVerify, p.Information.ChatIDKey[:]...)
-	version := make([]byte, 2)
-	binary.LittleEndian.PutUint16(version, p.Information.Version)
-	dataToVerify = append(dataToVerify, version...)
-
-	// hash to verify
-	dataHash := sha256.Sum256(dataToVerify)
-
-	// check data signature of id key
-	idPubKey, err := lp2pCrypto.UnmarshalEd25519PublicKey(rawIdPubKey)
-	if err != nil {
-		return false, err
-	}
-	idSig, err := hex.DecodeString(p.Signatures.IdentityKey)
-	if err != nil {
-		return false, err
-	}
-	valid, err := idPubKey.Verify(dataHash[:], idSig)
+	// check identity key signature
+	valid, err := p.ValidIdentitySignature(h, p.Signatures.IdentityKey)
 	if err != nil {
 		return false, err
 	}
 	if !valid {
-		return false, errors.New("identity public key signature is invalid")
+		return false, errors.New("invalid identity signature")
 	}
 
-	// check data signature of eth key
-	ethSig, err := hex.DecodeString(p.Signatures.EthereumKey)
+	// check ethereum key signature
+	var sig [65]byte
+	copy(sig[:], p.Signatures.EthereumKey[:65])
+	valid, err = p.ValidEthereumSignature(sha256.Sum256(h), sig)
 	if err != nil {
 		return false, err
 	}
-	// an the signature contain's [R || S || V] - but we only need R and S
-	valid = ethCrypto.VerifySignature(rawEthPubKey, dataHash[:], ethSig[:64])
 	if !valid {
-		return false, errors.New("ethereum public key signature is invalid")
+		return false, errors.New("invalid ethereum signature")
 	}
 
 	return true, nil
 
 }
 
-// parse json profile to Profile
-func Unmarshal(jsonProf string) (Profile, error) {
+// Convert profile to protobuf
+func (p *Profile) ToProtobuf() (*pb.Profile, error) {
 
-	var profile Profile
-
-	if err := json.Unmarshal([]byte(jsonProf), &profile); err != nil {
-		return Profile{}, err
+	if len(p.Information.IdentityPubKey) != 32 {
+		return nil, InvalidIdentityPublicKey
 	}
 
-	//@todo check if profile is valid (at least the field's)
+	if len(p.Information.EthereumPubKey) != 33 {
+		return nil, InvalidEthereumPublicKey
+	}
 
-	return profile, nil
+	if len(p.Information.ChatIDKey) != 32 {
+		return nil, InvalidChatIDKey
+	}
+
+	pp := pb.Profile{}
+	pp.Name = p.Information.Name
+	pp.Location = p.Information.Location
+	pp.Image = p.Information.Image
+	pp.IdentityPubKey = p.Information.IdentityPubKey
+	pp.EthereumPubKey = p.Information.EthereumPubKey
+	pp.ChatIdentityPubKey = p.Information.ChatIDKey[:]
+	pp.Timestamp = p.Information.Timestamp.Unix()
+	pp.Version = uint32(p.Information.Version)
+
+	pp.IdentityKeySignature = p.Signatures.IdentityKey
+	pp.EthereumKeySignature = p.Signatures.EthereumKey
+
+	return &pp, nil
 
 }
 
-// sign the metadata with identity and ethereum key
-func SignProfile(name, location, image string, km km.KeyManager) (Profile, error) {
+// get ethereum address based on profile ethereum public key
+func (p *Profile) EthereumAddress() (common.Address, error) {
 
-	// id public key
+	// validate profile signature
+	valid, err := p.SignaturesValid()
+	if err != nil {
+		return common.Address{}, err
+	}
+	if !valid {
+		return common.Address{}, errors.New("invalid profile signature")
+	}
+
+	// raw ethereum key
+	ethPubKey, err := p.EthereumPublicKey()
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	// decompressed ethereum key
+	decPubKey, err := crypto.DecompressPubkey(ethPubKey)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return crypto.PubkeyToAddress(*decPubKey), nil
+}
+
+// sign the metadata with identity and ethereum key
+func SignProfile(name, location, image string, km km.KeyManager) (*Profile, error) {
+
+	// chat id key pair
+	chatIDKeys, err := km.ChatIdKeyPair()
+	if err != nil {
+		return nil, err
+	}
+
+	// identity pub key
 	idPubKeyStr, err := km.IdentityPublicKey()
 	if err != nil {
-		return Profile{}, err
+		return nil, err
 	}
-	idPubKey, err := hex.DecodeString(idPubKeyStr)
+	idPubKeyRaw, err := hex.DecodeString(idPubKeyStr)
 	if err != nil {
-		return Profile{}, err
+		return nil, err
 	}
 
-	// ethereum public key
+	// ethereum pub key
 	ethPubKeyStr, err := km.GetEthereumPublicKey()
 	if err != nil {
-		return Profile{}, err
+		return nil, err
 	}
-	ethPubKey, err := hex.DecodeString(ethPubKeyStr)
+	ethPubKeyRaw, err := hex.DecodeString(ethPubKeyStr)
 	if err != nil {
-		return Profile{}, err
+		return nil, err
 	}
 
-	// now
-	now := time.Now().UTC()
-
-	// chat id public key
-	pair, err := km.ChatIdKeyPair()
-	if err != nil {
-		return Profile{}, err
-	}
-	chatPub := pair.PublicKey
-
-	// concat profile information
-	dataToSign := []byte(name)
-	dataToSign = append(dataToSign, []byte(location)...)
-	dataToSign = append(dataToSign, []byte(image)...)
-	dataToSign = append(dataToSign, []byte(now.String())...)
-	dataToSign = append(dataToSign, idPubKey...)
-	dataToSign = append(dataToSign, ethPubKey...)
-	dataToSign = append(dataToSign, chatPub[:]...)
-	version := make([]byte, 2)
-	binary.LittleEndian.PutUint16(version, profileVersion)
-	dataToSign = append(dataToSign, version...)
-
-	// hash of profile data
-	dataHash := sha256.Sum256(dataToSign)
-
-	// hash the profile data
-	if err != nil {
-		return Profile{}, err
-	}
-
-	// sign hash of data with id key
-	idKeySignature, err := km.IdentitySign(dataHash[:])
-	if err != nil {
-		return Profile{}, err
-	}
-
-	// sign hash of data with eth key
-	ethKeySignature, err := km.EthereumSign(dataHash)
-	if err != nil {
-		return Profile{}, err
-	}
-
-	// profile
-	prof := Profile{
+	p := Profile{
 		Information: Information{
 			Name:           name,
 			Location:       location,
 			Image:          image,
-			IdentityPubKey: idPubKeyStr,
-			EthereumPubKey: ethPubKeyStr,
-			Timestamp:      now,
-			ChatIDKey:      chatPub,
+			ChatIDKey:      chatIDKeys.PublicKey,
+			Timestamp:      time.Now(),
 			Version:        profileVersion,
-		},
-		Signatures: Signatures{
-			IdentityKey: hex.EncodeToString(idKeySignature),
-			EthereumKey: hex.EncodeToString(ethKeySignature),
+			IdentityPubKey: idPubKeyRaw,
+			EthereumPubKey: ethPubKeyRaw,
 		},
 	}
 
-	return prof, nil
+	hash, err := p.Hash()
+	if err != nil {
+		return nil, err
+	}
+
+	p.Signatures.IdentityKey, err = km.IdentitySign(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	// sadly we have to hash the hash again to have 32 bytes
+	// multihash adds a few bytes to identify what type of hash has been used
+	p.Signatures.EthereumKey, err = km.EthereumSign(sha256.Sum256(hash))
+
+	return &p, nil
 
 }
 
 // sign's a profile without the need to start panthalassa
-func SignWithKeyManagerStore(name, location, image string, keyManagerStore km.Store, password string) (Profile, error) {
+func SignWithKeyManagerStore(name, location, image string, keyManagerStore km.Store, password string) (*Profile, error) {
 
 	keyManager, err := km.OpenWithPassword(keyManagerStore, password)
 	if err != nil {
-		return Profile{}, err
+		return &Profile{}, err
 	}
 
 	return SignProfile(name, location, image, *keyManager)

@@ -23,10 +23,6 @@ func New(logger *logger.Logger, ethWS *ethws.EthereumWS) *EthWS {
 	}
 }
 
-func (ws *EthWS) Name() string {
-	return "ETHEREUM_WEB_SOCKET"
-}
-
 func (ws *EthWS) Register(vm *otto.Otto) error {
 	ws.vm = vm
 	// ethereumRequest expect an JSON object with the params

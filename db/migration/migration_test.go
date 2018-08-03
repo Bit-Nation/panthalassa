@@ -130,7 +130,7 @@ func TestMigrateTimeoutOnOpen(t *testing.T) {
 	path, err := randomTempDBPath()
 	require.Nil(t, err)
 
-	db, err := bolt.Open(path, dbFileMode, &bolt.Options{Timeout: time.Second})
+	db, err := bolt.Open(path, 0600, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
 
 	migrations := []Migration{
@@ -143,10 +143,15 @@ func TestMigrateTimeoutOnOpen(t *testing.T) {
 
 func TestMigrateSystemBucketError(t *testing.T) {
 
+	// fake set system bucket
+	setupSystemBucket = func(db *bolt.DB) error {
+		return nil
+	}
+
 	dbPath, err := randomTempDBPath()
 	require.Nil(t, err)
 
-	db, err := bolt.Open(dbPath, dbFileMode, &bolt.Options{Timeout: time.Second})
+	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
 
 	migrations := []Migration{
@@ -164,7 +169,7 @@ func TestMigrateVersionError(t *testing.T) {
 	dbPath, err := randomTempDBPath()
 	require.Nil(t, err)
 
-	db, err := bolt.Open(dbPath, dbFileMode, &bolt.Options{Timeout: time.Second})
+	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
@@ -188,7 +193,7 @@ func TestMigrateSuccess(t *testing.T) {
 	dbPath, err := randomTempDBPath()
 	require.Nil(t, err)
 
-	db, err := bolt.Open(dbPath, dbFileMode, &bolt.Options{Timeout: time.Second})
+	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
@@ -221,7 +226,7 @@ func TestMigrateSuccess(t *testing.T) {
 	require.Nil(t, db.Close())
 	require.Nil(t, Migrate(dbPath, migrations))
 
-	db, err = bolt.Open(dbPath, dbFileMode, &bolt.Options{Timeout: time.Second})
+	db, err = bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
 
 	err = db.View(func(tx *bolt.Tx) error {
@@ -240,7 +245,7 @@ func TestMigrateRevertChangesOnError(t *testing.T) {
 	dbPath, err := randomTempDBPath()
 	require.Nil(t, err)
 
-	db, err := bolt.Open(dbPath, dbFileMode, &bolt.Options{Timeout: time.Second})
+	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
@@ -275,7 +280,7 @@ func TestMigrateRevertChangesOnError(t *testing.T) {
 	require.Nil(t, db.Close())
 	require.EqualError(t, Migrate(dbPath, migrations), "i am an error returned by a migration")
 
-	db, err = bolt.Open(dbPath, dbFileMode, &bolt.Options{Timeout: time.Second})
+	db, err = bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
 
 	err = db.View(func(tx *bolt.Tx) error {

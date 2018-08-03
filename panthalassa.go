@@ -6,27 +6,36 @@ import (
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	chat "github.com/Bit-Nation/panthalassa/chat"
+	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
+	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	p2p "github.com/Bit-Nation/panthalassa/p2p"
+	bolt "github.com/coreos/bbolt"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 
 type Panthalassa struct {
-	km       *keyManager.KeyManager
-	upStream api.UpStream
-	api      *api.API
-	p2p      *p2p.Network
-	chat     *chat.Chat
-	dAppReg  *dAppReg.Registry
+	km          *keyManager.KeyManager
+	upStream    api.UpStream
+	api         *api.API
+	p2p         *p2p.Network
+	dAppReg     *dAppReg.Registry
+	chat        *chat.Chat
+	msgDB       *db.BoltChatMessageStorage
+	db          *bolt.DB
+	dAppStorage dapp.Storage
 }
 
 //Stop the panthalassa instance
 //this becomes interesting when we start
 //to use the mesh network
 func (p *Panthalassa) Stop() error {
-	return p.p2p.Close()
+	var err error
+	err = p.db.Close()
+	err = p.p2p.Close()
+	return err
 }
 
 //Export account with the given password

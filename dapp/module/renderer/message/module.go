@@ -16,13 +16,9 @@ type Module struct {
 	vm       *otto.Otto
 }
 
-func (m *Module) Name() string {
-	return "RENDERER:MESSAGE"
-}
-
 // register module function in the VM
 // setOpenHandler must be called with a callback
-// the callback that is passed to `setOpenHandler`
+// the callback that is passed to `setMessageRenderer`
 // should accept two parameters:
 // 1. The "data" will hold the data (object) passed into the open call
 //    (will e.g. hold the message and the context)
@@ -31,7 +27,7 @@ func (m *Module) Name() string {
 // 		2. the rendered layout
 func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
-	return vm.Set("setMessageHandler", func(call otto.FunctionCall) otto.Value {
+	return vm.Set("setMessageRenderer", func(call otto.FunctionCall) otto.Value {
 
 		// validate function call
 		v := validator.New()
@@ -80,6 +76,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 	go func() {
 
 		// call the message renderer
+		// @todo what happens if we call the callback twice?
 		_, err = m.renderer.Call(*m.renderer, payloadObj, func(call otto.FunctionCall) otto.Value {
 
 			// fetch params from the callback call

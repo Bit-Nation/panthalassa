@@ -1,6 +1,10 @@
 package sendEthTx
 
 import (
+	"errors"
+	"time"
+
+	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
@@ -14,18 +18,16 @@ type SendEthereumTransaction interface {
 
 func New(ethApi SendEthereumTransaction, l *log.Logger) *Module {
 	return &Module{
-		logger: l,
-		ethApi: ethApi,
+		logger:     l,
+		ethApi:     ethApi,
+		throttling: reqLim.NewThrottling(6, time.Minute, 50, errors.New("can't add more signing requests to stack")),
 	}
 }
 
 type Module struct {
-	logger *log.Logger
-	ethApi SendEthereumTransaction
-}
-
-func (m *Module) Name() string {
-	return "SEND_ETH_TX"
+	logger     *log.Logger
+	ethApi     SendEthereumTransaction
+	throttling *reqLim.Throttling
 }
 
 func (m *Module) Register(vm *otto.Otto) error {
@@ -56,8 +58,9 @@ func (m *Module) Register(vm *otto.Otto) error {
 			return otto.Value{}
 		}
 
-		// make the request async
-		go func() {
+		// execute in the context of the throttling
+		// request limitation
+		m.throttling.Exec(func() {
 
 			to, err := obj.Get("to")
 			if err != nil {
@@ -93,7 +96,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			// call callback with transaction
 			cb.Call(cb, nil, tx)
 
-		}()
+		})
 
 		return otto.Value{}
 

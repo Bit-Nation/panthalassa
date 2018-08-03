@@ -17,8 +17,8 @@ import (
 type DApp struct {
 	vm           *otto.Otto
 	logger       *logger.Logger
-	app          *JsonRepresentation
-	closeChan    chan<- *JsonRepresentation
+	app          *Data
+	closeChan    chan<- *Data
 	dAppRenderer *dAppRenderer.Module
 	msgRenderer  *msgRenderer.Module
 	cbMod        *cbModule.Module
@@ -27,13 +27,13 @@ type DApp struct {
 // close DApp
 func (d *DApp) Close() {
 	d.vm.Interrupt <- func() {
-		d.logger.Info(fmt.Sprintf("shutting down: %s (%s)", hex.EncodeToString(d.app.SignaturePublicKey), d.app.Name))
+		d.logger.Info(fmt.Sprintf("shutting down: %s (%s)", hex.EncodeToString(d.app.UsedSigningKey), d.app.Name))
 		d.closeChan <- d.app
 	}
 }
 
 func (d *DApp) ID() string {
-	return hex.EncodeToString(d.app.SignaturePublicKey)
+	return hex.EncodeToString(d.app.UsedSigningKey)
 }
 
 func (d *DApp) RenderDApp(context string) error {
@@ -49,8 +49,7 @@ func (d *DApp) CallFunction(id uint, args string) error {
 }
 
 // will start a DApp based on the given config file
-//
-func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, closer chan<- *JsonRepresentation, timeOut time.Duration) (*DApp, error) {
+func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *Data, timeOut time.Duration) (*DApp, error) {
 
 	// check if app is valid
 	valid, err := app.VerifySignature()
@@ -105,7 +104,9 @@ func New(l *logger.Logger, app *JsonRepresentation, vmModules []module.Module, c
 	// start the DApp async
 	go func() {
 		_, err := vm.Run(app.Code)
-		fmt.Println(err)
+		if err != nil {
+			l.Errorf(err.Error())
+		}
 		wait <- err
 	}()
 

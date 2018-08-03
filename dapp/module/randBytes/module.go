@@ -20,10 +20,6 @@ type Module struct {
 	logger *log.Logger
 }
 
-func (m *Module) Name() string {
-	return "RAND_BYTES"
-}
-
 func (m *Module) Register(vm *otto.Otto) error {
 	return vm.Set("randomBytes", func(call otto.FunctionCall) otto.Value {
 

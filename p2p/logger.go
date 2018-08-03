@@ -2,9 +2,7 @@ package p2p
 
 import (
 	"context"
-	"log"
 
-	formatter "github.com/ipfs/go-log/writer"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	goLog "github.com/whyrusleeping/go-logging"
 )
@@ -26,10 +24,16 @@ func (n *Network) ConnectLogger(pInfo ps.PeerInfo) error {
 	}
 
 	// set formatter
-	goLog.SetFormatter(&formatter.PoliteJSONFormatter{})
+	formatter, err := goLog.NewStringFormatter("%{time} - %{shortfile} (%{level}): %{module} %{message}")
+	if err != nil {
+		return err
+	}
+	goLog.SetFormatter(formatter)
 
 	// set log backend
-	goLog.SetBackend(goLog.NewLogBackend(str, "", log.Ltime|log.Llongfile))
+	b := goLog.NewLogBackend(str, "", 0)
+	b.Color = true
+	goLog.SetBackend(b)
 
 	return nil
 

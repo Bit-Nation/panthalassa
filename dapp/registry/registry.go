@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"sync"
 	"time"
@@ -16,16 +17,19 @@ import (
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
 	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
 	randBytes "github.com/Bit-Nation/panthalassa/dapp/module/randBytes"
+	renderDApp "github.com/Bit-Nation/panthalassa/dapp/module/renderer/dapp"
+	renderMsg "github.com/Bit-Nation/panthalassa/dapp/module/renderer/message"
 	sendEthTxMod "github.com/Bit-Nation/panthalassa/dapp/module/sendEthTx"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
-	"github.com/Bit-Nation/panthalassa/keyManager"
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	log "github.com/ipfs/go-log"
 	host "github.com/libp2p/go-libp2p-host"
 	net "github.com/libp2p/go-libp2p-net"
 	pstore "github.com/libp2p/go-libp2p-peerstore"
 	ma "github.com/multiformats/go-multiaddr"
 	golog "github.com/op/go-logging"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 var logger = log.Logger("dapp - registry")
@@ -36,11 +40,12 @@ type Registry struct {
 	lock           sync.Mutex
 	dAppDevStreams map[string]net.Stream
 	dAppInstances  map[string]*dapp.DApp
-	closeChan      chan *dapp.JsonRepresentation
+	closeChan      chan *dapp.Data
 	conf           Config
 	ethWS          *ethws.EthereumWS
 	api            *api.API
 	km             *keyManager.KeyManager
+	dAppDB         dapp.Storage
 }
 
 type Config struct {
@@ -48,21 +53,22 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager) *Registry {
+func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage) *Registry {
 
 	r := &Registry{
 		host:           h,
 		lock:           sync.Mutex{},
 		dAppDevStreams: map[string]net.Stream{},
 		dAppInstances:  map[string]*dapp.DApp{},
-		closeChan:      make(chan *dapp.JsonRepresentation),
+		closeChan:      make(chan *dapp.Data),
 		conf:           conf,
 		ethWS: ethws.New(ethws.Config{
 			Retry: time.Second,
 			WSUrl: conf.EthWSEndpoint,
 		}),
-		api: api,
-		km:  km,
+		api:    api,
+		km:     km,
+		dAppDB: dAppDB,
 	}
 
 	// add worker to remove DApps
@@ -71,7 +77,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 			select {
 			case cc := <-r.closeChan:
 				r.lock.Lock()
-				delete(r.dAppInstances, hex.EncodeToString(cc.SignaturePublicKey))
+				delete(r.dAppInstances, hex.EncodeToString(cc.UsedSigningKey))
 				// @todo send signal to client that this app was shut down
 				r.lock.Unlock()
 			}
@@ -83,28 +89,39 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 }
 
 // start a DApp
-func (r *Registry) StartDApp(dApp *dapp.JsonRepresentation, timeOut time.Duration) error {
+func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Duration) error {
 
-	var l *golog.Logger
-	l, err := golog.GetLogger("app name")
+	// fetch DApp
+	dApp, err := r.dAppDB.Get(dAppSigningKey)
 	if err != nil {
+		return err
+	}
+	if dApp == nil {
+		return fmt.Errorf("failed to fetch DApp for signing key: %x", dAppSigningKey)
+	}
+
+	// get logger
+	var l *golog.Logger
+	if l, err = golog.GetLogger("app name"); err != nil {
 		return err
 	}
 
 	vmModules := []module.Module{
 		uuidv4Mod.New(l),
 		ethWSMod.New(l, r.ethWS),
-		modalMod.New(l, r.api, dApp.SignaturePublicKey),
+		modalMod.New(l, r.api, dApp.UsedSigningKey),
 		sendEthTxMod.New(r.api, l),
 		randBytes.New(l),
 		ethAddrMod.New(r.km),
+		renderMsg.New(l),
+		renderDApp.New(l),
 	}
 
 	// if there is a stream for this DApp
 	// we would like to mutate the logger
 	// to write to the stream we have for development
 	// this will write logs to the stream
-	exist, stream := r.getDAppDevStream(dApp.SignaturePublicKey)
+	exist, stream := r.getDAppDevStream(dApp.UsedSigningKey)
 	if exist {
 		// append log module
 		logger, err := loggerMod.New(stream)
@@ -180,6 +197,7 @@ func (r *Registry) ConnectDevelopmentServer(addr ma.Multiaddr) error {
 }
 
 // call a function in a DApp
+// @todo when the function call takes too long the lock could stay locked. We should "free" it asap
 func (r *Registry) CallFunction(dAppID string, funcId uint, args string) error {
 
 	r.lock.Lock()
@@ -194,11 +212,11 @@ func (r *Registry) CallFunction(dAppID string, funcId uint, args string) error {
 
 }
 
-func (r *Registry) ShutDown(dAppJson dapp.JsonRepresentation) error {
+func (r *Registry) ShutDown(signingKey ed25519.PublicKey) error {
 
 	// shut down DApp & remove from state
 	r.lock.Lock()
-	dApp, exist := r.dAppInstances[hex.EncodeToString(dAppJson.SignaturePublicKey)]
+	dApp, exist := r.dAppInstances[hex.EncodeToString(signingKey)]
 	if !exist {
 		return errors.New("DApp is not running")
 	}

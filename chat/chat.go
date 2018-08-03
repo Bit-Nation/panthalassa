@@ -2,104 +2,113 @@ package chat
 
 import (
 	"crypto/rand"
-	"crypto/sha512"
-	"errors"
+	"crypto/sha256"
+	"time"
 
-	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
+	backend "github.com/Bit-Nation/panthalassa/backend"
+	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
+	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	queue "github.com/Bit-Nation/panthalassa/queue"
+	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
+	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	doubleratchet "github.com/tiabc/doubleratchet"
+	log "github.com/ipfs/go-log"
+	dr "github.com/tiabc/doubleratchet"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-const ProtocolName = "pangea-chat"
+const (
+	SignedPreKeyValidTimeFrame = time.Hour * 24 * 60
+)
+
+var logger = log.Logger("chat")
+
+type Backend interface {
+	FetchPreKeyBundle(userIDPubKey ed25519.PublicKey) (x3dh.PreKeyBundle, error)
+	SubmitMessages(messages []*bpb.ChatMessage) error
+	FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error)
+	AddRequestHandler(handler backend.RequestHandler)
+}
 
 type Chat struct {
-	doubleRachetKeyStore doubleratchet.KeysStorage
-	x3dh                 x3dh.X3dh
+	messageDB            db.ChatMessageStorage
+	backend              Backend
+	sharedSecStorage     db.SharedSecretStorage
+	x3dh                 *x3dh.X3dh
 	km                   *keyManager.KeyManager
+	drKeyStorage         dr.KeysStorage
+	signedPreKeyStorage  db.SignedPreKeyStorage
+	oneTimePreKeyStorage db.OneTimePreKeyStorage
+	userStorage          db.UserStorage
+	uiApi                *uiapi.Api
+	queue                *queue.Queue
+}
+
+func (c *Chat) AllChats() ([]ed25519.PublicKey, error) {
+	return c.messageDB.AllChats()
+}
+
+func (c *Chat) Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error) {
+	return c.messageDB.Messages(partner, start, amount)
 }
 
 type Config struct {
-	// url of the websocket to connect to
-	WSUrl string
-	// url of the http endpoint
-	HttpEndpoint string
-	// access token for http endpoint and websocket
-	AccessKey string
+	MessageDB            db.ChatMessageStorage
+	Backend              Backend
+	SharedSecretDB       db.SharedSecretStorage
+	KM                   *keyManager.KeyManager
+	DRKeyStorage         dr.KeysStorage
+	SignedPreKeyStorage  db.SignedPreKeyStorage
+	OneTimePreKeyStorage db.OneTimePreKeyStorage
+	UserStorage          db.UserStorage
+	UiApi                *uiapi.Api
+	Queue                *queue.Queue
 }
 
-// create a new chat
-func New(chatIdentityKey x3dh.KeyPair, km *keyManager.KeyManager, dRKeyStore doubleratchet.KeysStorage) (Chat, error) {
+func NewChat(conf Config) (*Chat, error) {
 
-	c := x3dh.NewCurve25519(rand.Reader)
-
-	x := x3dh.New(&c, sha512.New(), ProtocolName, chatIdentityKey)
-
-	return Chat{
-		doubleRachetKeyStore: dRKeyStore,
-		x3dh:                 x,
-		km:                   km,
-	}, nil
-
-}
-
-// create a new pre key bundle
-func (c *Chat) NewPreKeyBundle() (PanthalassaPreKeyBundle, error) {
-
-	// @todo usually this should be kept for longer time. Need to change that later on.
-	signedPreKey, err := c.x3dh.NewKeyPair()
+	// my chat id key pair
+	myChatIDKeyPair, err := conf.KM.ChatIdKeyPair()
 	if err != nil {
-		return PanthalassaPreKeyBundle{}, nil
+		return nil, err
 	}
 
-	oneTimePreKey, err := c.x3dh.NewKeyPair()
+	// curve 25519
+	c25519 := x3dh.NewCurve25519(rand.Reader)
+	myX3dh := x3dh.New(&c25519, sha256.New(), "pangea-chat", myChatIDKeyPair)
+
+	c := &Chat{
+		messageDB:            conf.MessageDB,
+		backend:              conf.Backend,
+		sharedSecStorage:     conf.SharedSecretDB,
+		x3dh:                 &myX3dh,
+		km:                   conf.KM,
+		drKeyStorage:         conf.DRKeyStorage,
+		signedPreKeyStorage:  conf.SignedPreKeyStorage,
+		oneTimePreKeyStorage: conf.OneTimePreKeyStorage,
+		userStorage:          conf.UserStorage,
+		uiApi:                conf.UiApi,
+		queue:                conf.Queue,
+	}
+
+	err = c.queue.RegisterProcessor(&SubmitMessagesProcessor{
+		chat:  c,
+		msgDB: c.messageDB,
+		queue: c.queue,
+	})
 	if err != nil {
-		return PanthalassaPreKeyBundle{}, err
+		return nil, err
 	}
 
-	chatIdKey, err := c.km.ChatIdKeyPair()
-	if err != nil {
-		return PanthalassaPreKeyBundle{}, err
-	}
+	// add message handler that will inform the ui about updates
+	c.messageDB.AddListener(c.handlePersistedMessage)
 
-	idPubKeyStr, err := c.km.IdentityPublicKey()
+	// register messages handler
+	c.backend.AddRequestHandler(c.messagesHandler)
 
-	preKeyB := PanthalassaPreKeyBundle{
-		PublicPart: PreKeyBundlePublic{
-			BChatIdentityKey: chatIdKey.PublicKey,
-			BSignedPreKey:    signedPreKey.PublicKey,
-			BOneTimePreKey:   oneTimePreKey.PublicKey,
-			BIdentityKey:     idPubKeyStr,
-		},
-		PrivatePart: PreKeyBundlePrivate{
-			OneTimePreKey: oneTimePreKey.PrivateKey,
-			SignedPreKey:  signedPreKey.PrivateKey,
-		},
-	}
+	// register now one time pre key handler
+	c.backend.AddRequestHandler(c.oneTimePreKeysHandler)
 
-	if err := preKeyB.PublicPart.Sign(*c.km); err != nil {
-		return PanthalassaPreKeyBundle{}, err
-	}
-
-	return preKeyB, nil
-
-}
-
-// export X3DH secret
-func EncryptX3DHSecret(b x3dh.SharedSecret, km *keyManager.KeyManager) (aes.CipherText, error) {
-	return km.AESEncrypt(b[:])
-}
-
-// decrypt x3dh secret
-func DecryptX3DHSecret(secret aes.CipherText, km *keyManager.KeyManager) (x3dh.SharedSecret, error) {
-	sec, err := km.AESDecrypt(secret)
-	if err != nil {
-		return x3dh.SharedSecret{}, err
-	}
-	if len(sec) != 32 {
-		return x3dh.SharedSecret{}, errors.New("x3dh shared secret must have 32 bytes")
-	}
-	sh := [32]byte{}
-	copy(sh[:], sec[:])
-	return sh, nil
+	return c, nil
 }
