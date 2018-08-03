@@ -19,6 +19,8 @@ type Migration interface {
 	Version() uint32
 }
 
+var systemBucketName = []byte("system")
+
 func randomTempDBPath() (string, error) {
 	file := make([]byte, 50)
 	_, err := rand.Read(file)
@@ -58,6 +60,26 @@ func doubleMigration(migrations []Migration) Migration {
 	return nil
 }
 
+var setupSystemBucket = func(db *bolt.DB) error {
+	return db.Update(func(tx *bolt.Tx) error {
+
+		// fetch system bucket
+		systemBucket, err := tx.CreateBucketIfNotExists(systemBucketName)
+		if err != nil {
+			return err
+		}
+
+		// get database version
+		dbVersion := systemBucket.Get([]byte("database_version"))
+		if dbVersion == nil {
+			v := make([]byte, 4)
+			binary.BigEndian.PutUint32(v, 0)
+			return systemBucket.Put([]byte("database_version"), v)
+		}
+		return nil
+	})
+}
+
 // migrate migrates a bold db database
 func Migrate(prodDBPath string, migrations []Migration) error {
 
@@ -75,6 +97,11 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 	// open production database
 	prodDB, err := bolt.Open(prodDBPath, 0644, &bolt.Options{Timeout: time.Second})
 	if err != nil {
+		return err
+	}
+
+	// make sure the system bucket exist and is setup correct
+	if err := setupSystemBucket(prodDB); err != nil {
 		return err
 	}
 
@@ -104,7 +131,7 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 		// read version of the migration database
 		err := migrationDB.View(func(tx *bolt.Tx) error {
 			// fetch system bucket
-			buck := tx.Bucket([]byte("system"))
+			buck := tx.Bucket(systemBucketName)
 			if buck == nil {
 				return errors.New("system bucket does not exist")
 			}
@@ -139,7 +166,7 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 		// update version of last migration on database
 		err = migrationDB.Update(func(tx *bolt.Tx) error {
 			// fetch bucket
-			buck := tx.Bucket([]byte("system"))
+			buck := tx.Bucket(systemBucketName)
 			if buck == nil {
 				return errors.New("system bucket does not exist")
 			}

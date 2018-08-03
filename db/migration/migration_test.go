@@ -143,6 +143,11 @@ func TestMigrateTimeoutOnOpen(t *testing.T) {
 
 func TestMigrateSystemBucketError(t *testing.T) {
 
+	// fake set system bucket
+	setupSystemBucket = func(db *bolt.DB) error {
+		return nil
+	}
+
 	dbPath, err := randomTempDBPath()
 	require.Nil(t, err)
 
