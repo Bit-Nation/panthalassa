@@ -33,6 +33,8 @@ func Open(path, userPath string, mode os.FileMode, options *bolt.Options) (*bolt
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		return nil, err
 	}
 
 	// open database
