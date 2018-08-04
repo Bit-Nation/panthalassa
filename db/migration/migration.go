@@ -228,9 +228,9 @@ func Migrate(prodDBPath, userPath string, migrations []Migration) error {
 	if err := prodBackupDB.Close(); err != nil {
 		return err
 	}
- 	if err := os.Remove(prodDBBackupPath); err != nil {
- 		return err
- 	}
+	if err := os.Remove(prodDBBackupPath); err != nil {
+		return err
+	}
 
 	// delete migration database
 	if err := migrationDB.Close(); err != nil {

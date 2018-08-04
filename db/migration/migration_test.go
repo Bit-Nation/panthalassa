@@ -111,7 +111,7 @@ func TestMigrateDoubleMigration(t *testing.T) {
 		&migration{version: 1},
 	}
 
-	require.EqualError(t, Migrate("", migrations), "a migration with id (3) was already registered")
+	require.EqualError(t, Migrate("", "", migrations), "a migration with id (3) was already registered")
 
 }
 
@@ -119,7 +119,7 @@ func TestMigrationDBDoesNotExist(t *testing.T) {
 
 	require.EqualError(
 		t,
-		Migrate("i_do_not_exist.db", []Migration{}),
+		Migrate("i_do_not_exist.db", "", []Migration{}),
 		"stat i_do_not_exist.db: no such file or directory",
 	)
 
@@ -127,7 +127,7 @@ func TestMigrationDBDoesNotExist(t *testing.T) {
 
 func TestMigrateTimeoutOnOpen(t *testing.T) {
 
-	path, err := randomTempDBPath()
+	path, err := randomTempDBPath("")
 	require.Nil(t, err)
 
 	db, err := bolt.Open(path, 0600, &bolt.Options{Timeout: time.Second})
@@ -137,7 +137,7 @@ func TestMigrateTimeoutOnOpen(t *testing.T) {
 		&migration{version: 1},
 	}
 
-	require.EqualError(t, Migrate(db.Path(), migrations), "timeout")
+	require.EqualError(t, Migrate(db.Path(), "userHomPath", migrations), "timeout")
 
 }
 
@@ -148,7 +148,7 @@ func TestMigrateSystemBucketError(t *testing.T) {
 		return nil
 	}
 
-	dbPath, err := randomTempDBPath()
+	dbPath, err := randomTempDBPath("")
 	require.Nil(t, err)
 
 	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
@@ -160,13 +160,13 @@ func TestMigrateSystemBucketError(t *testing.T) {
 
 	require.Nil(t, db.Close())
 
-	require.EqualError(t, Migrate(dbPath, migrations), "system bucket does not exist")
+	require.EqualError(t, Migrate(dbPath, "", migrations), "system bucket does not exist")
 
 }
 
 func TestMigrateVersionError(t *testing.T) {
 
-	dbPath, err := randomTempDBPath()
+	dbPath, err := randomTempDBPath("")
 	require.Nil(t, err)
 
 	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
@@ -184,13 +184,13 @@ func TestMigrateVersionError(t *testing.T) {
 
 	require.Nil(t, db.Close())
 
-	require.EqualError(t, Migrate(dbPath, migrations), "no version present in this schema")
+	require.EqualError(t, Migrate(dbPath, "", migrations), "no version present in this schema")
 
 }
 
 func TestMigrateSuccess(t *testing.T) {
 
-	dbPath, err := randomTempDBPath()
+	dbPath, err := randomTempDBPath("")
 	require.Nil(t, err)
 
 	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
@@ -224,7 +224,7 @@ func TestMigrateSuccess(t *testing.T) {
 	}
 
 	require.Nil(t, db.Close())
-	require.Nil(t, Migrate(dbPath, migrations))
+	require.Nil(t, Migrate(dbPath, "", migrations))
 
 	db, err = bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
@@ -242,7 +242,7 @@ func TestMigrateSuccess(t *testing.T) {
 // in the case of an error the database should not change
 func TestMigrateRevertChangesOnError(t *testing.T) {
 
-	dbPath, err := randomTempDBPath()
+	dbPath, err := randomTempDBPath("")
 	require.Nil(t, err)
 
 	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
@@ -278,7 +278,7 @@ func TestMigrateRevertChangesOnError(t *testing.T) {
 	}
 
 	require.Nil(t, db.Close())
-	require.EqualError(t, Migrate(dbPath, migrations), "i am an error returned by a migration")
+	require.EqualError(t, Migrate(dbPath, "", migrations), "i am an error returned by a migration")
 
 	db, err = bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
 	require.Nil(t, err)
