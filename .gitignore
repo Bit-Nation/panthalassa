@@ -7,4 +7,3 @@ panthalassa
 vendor
 .vendor-new
 .DS_Store
-Gopkg.lock
