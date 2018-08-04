@@ -22,14 +22,14 @@ func KMToDBPath(dir string, km *km.KeyManager) (string, error) {
 }
 
 // open a database
-func Open(path string, mode os.FileMode, options *bolt.Options) (*bolt.DB, error) {
+func Open(path, userPath string, mode os.FileMode, options *bolt.Options) (*bolt.DB, error) {
 
 	migrations := []migration.Migration{}
 
 	// check if production database exist
 	if _, err := os.Stat(path); err == nil {
 		// migrate the database
-		err := migration.Migrate(path, migrations)
+		err := migration.Migrate(path, userPath, migrations)
 		if err != nil {
 			return nil, err
 		}
