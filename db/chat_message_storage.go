@@ -45,6 +45,7 @@ type ChatMessageStorage interface {
 	Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]Message, error)
 	AddListener(func(e MessagePersistedEvent))
 	GetMessage(partner ed25519.PublicKey, messageID int64) (*Message, error)
+	PersistDAppMessage(partner ed25519.PublicKey, msg DAppMessage) error
 }
 
 type DAppMessage struct {
@@ -380,4 +381,20 @@ func (s *BoltChatMessageStorage) PersistReceivedMessage(partner ed25519.PublicKe
 
 func (s *BoltChatMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID int64, newStatus Status) error {
 	return errors.New("currently not implemented")
+}
+
+func (s *BoltChatMessageStorage) PersistDAppMessage(partner ed25519.PublicKey, msg DAppMessage) error {
+
+	m := Message{}
+
+	id, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+	m.ID = id.String()
+	m.Received = false
+	m.Status = StatusPersisted
+
+	return s.persistMessage(partner, m)
+
 }

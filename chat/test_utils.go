@@ -20,6 +20,7 @@ type testMessageStorage struct {
 	allChats               func() ([]ed25519.PublicKey, error)
 	addListener            func(fn func(e db.MessagePersistedEvent))
 	getMessage             func(partner ed25519.PublicKey, messageID int64) (*db.Message, error)
+	persistDAppMessage     func(partner ed25519.PublicKey, msg db.DAppMessage) error
 }
 
 type testSharedSecretStorage struct {
@@ -187,6 +188,10 @@ func (s *testUserStorage) HasSignedPreKey(idKey ed25519.PublicKey) (bool, error)
 
 func (s *testUserStorage) PutSignedPreKey(idKey ed25519.PublicKey, key preKey.PreKey) error {
 	return s.putSignedPreKey(idKey, key)
+}
+
+func (s *testMessageStorage) PersistDAppMessage(partner ed25519.PublicKey, msg db.DAppMessage) error {
+	return s.persistDAppMessage(partner, msg)
 }
 
 func createKeyManager() *km.KeyManager {
