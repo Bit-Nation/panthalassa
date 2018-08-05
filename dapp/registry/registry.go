@@ -15,12 +15,14 @@ import (
 	ethAddrMod "github.com/Bit-Nation/panthalassa/dapp/module/ethAddress"
 	ethWSMod "github.com/Bit-Nation/panthalassa/dapp/module/ethWebSocket"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
+	messageModule "github.com/Bit-Nation/panthalassa/dapp/module/message"
 	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
 	randBytes "github.com/Bit-Nation/panthalassa/dapp/module/randBytes"
 	renderDApp "github.com/Bit-Nation/panthalassa/dapp/module/renderer/dapp"
 	renderMsg "github.com/Bit-Nation/panthalassa/dapp/module/renderer/message"
 	sendEthTxMod "github.com/Bit-Nation/panthalassa/dapp/module/sendEthTx"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
+	db "github.com/Bit-Nation/panthalassa/db"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	log "github.com/ipfs/go-log"
@@ -46,6 +48,7 @@ type Registry struct {
 	api            *api.API
 	km             *keyManager.KeyManager
 	dAppDB         dapp.Storage
+	msgDB          db.ChatMessageStorage
 }
 
 type Config struct {
@@ -53,7 +56,7 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage) *Registry {
+func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage, msgDB db.ChatMessageStorage) *Registry {
 
 	r := &Registry{
 		host:           h,
@@ -69,6 +72,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 		api:    api,
 		km:     km,
 		dAppDB: dAppDB,
+		msgDB:  msgDB,
 	}
 
 	// add worker to remove DApps
@@ -115,6 +119,7 @@ func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Dura
 		ethAddrMod.New(r.km),
 		renderMsg.New(l),
 		renderDApp.New(l),
+		messageModule.New(r.msgDB, dAppSigningKey, l),
 	}
 
 	// if there is a stream for this DApp
