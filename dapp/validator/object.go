@@ -26,7 +26,22 @@ var ObjTypeAddress = func(value otto.Value, objKey string) error {
 // Validate if value is a string
 var ObjTypeString = func(value otto.Value, objKey string) error {
 	if !value.IsString() {
-		return errors.New(fmt.Sprintf("Expected %s to be an string", objKey))
+		return errors.New(fmt.Sprintf("Expected %s to be a string", objKey))
+	}
+	return nil
+}
+
+// validate if value is an object
+var ObjTypeObject = func(value otto.Value, objKey string) error {
+	if !value.IsObject() {
+		return fmt.Errorf("expected %s to be a object", objKey)
+	}
+	return nil
+}
+
+var ObjTypeBool = func(value otto.Value, objKey string) error {
+	if !value.IsBoolean() {
+		return fmt.Errorf("expected %s to be a bool", objKey)
 	}
 	return nil
 }

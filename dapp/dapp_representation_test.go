@@ -26,7 +26,7 @@ func TestDAppRepresentationHash(t *testing.T) {
 		Image:          "aGk=",
 		Engine:         "1.2.3",
 		Signature:      testHash.String(),
-		Version:        1,
+		Version:        "1",
 	}
 
 	// calculate hash
@@ -76,6 +76,7 @@ func TestDAppVerifySignature(t *testing.T) {
 		Image:          "aGk=",
 		Engine:         "1.2.3",
 		Signature:      fakeSignature.String(),
+		Version:        "1",
 	}
 
 	// validate signature

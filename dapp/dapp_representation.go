@@ -35,7 +35,7 @@ type Data struct {
 	Image          []byte            `json:"image"`
 	Signature      []byte            `json:"signature"`
 	Engine         SV                `json:"engine"`
-	Version        uint32            `json:"version"`
+	Version        int               `json:"version"`
 }
 
 // hash the published DApp
@@ -155,7 +155,7 @@ type RawData struct {
 	Image          string            `json:"image"`
 	Signature      string            `json:"signature"`
 	Engine         string            `json:"engine"`
-	Version        uint32            `json:"version"`
+	Version        string            `json:"version"`
 }
 
 func ParseJsonToData(b RawData) (Data, error) {
@@ -187,6 +187,12 @@ func ParseJsonToData(b RawData) (Data, error) {
 		return Data{}, err
 	}
 
+	// turn string version into integer
+	v, err := strconv.Atoi(b.Version)
+	if err != nil {
+		return Data{}, err
+	}
+
 	return Data{
 		Name:           b.Name,
 		UsedSigningKey: usedSigningKey,
@@ -194,7 +200,7 @@ func ParseJsonToData(b RawData) (Data, error) {
 		Image:          image,
 		Signature:      rawSignature,
 		Engine:         sv,
-		Version:        b.Version,
+		Version:        v,
 	}, nil
 
 }
