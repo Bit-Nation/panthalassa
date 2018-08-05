@@ -33,7 +33,11 @@ func Open(path, userPath string, mode os.FileMode, options *bolt.Options) (*bolt
 		if err != nil {
 			return nil, err
 		}
-	} else {
+	}
+	
+	// migrate the database
+	err := migration.Migrate(path, migrations)
+	if err != nil {
 		return nil, err
 	}
 
