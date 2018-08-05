@@ -108,7 +108,7 @@ var ValidMessage = func(m Message) error {
 	}
 
 	// validate sender
-	if len(m.Sender) != 32 {
+	if len(m.Sender) != 32 && m.DApp == nil {
 		return fmt.Errorf("invalid sender of length %d", len(m.Sender))
 	}
 
