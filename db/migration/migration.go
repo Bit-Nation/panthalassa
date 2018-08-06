@@ -21,13 +21,13 @@ type Migration interface {
 
 var systemBucketName = []byte("system")
 
-func randomTempDBPath() (string, error) {
+func randomTempDBPath(userPath string) (string, error) {
 	file := make([]byte, 50)
 	_, err := rand.Read(file)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Abs(filepath.Join(os.TempDir(), hex.EncodeToString(file)+".bolt"))
+	return filepath.Abs(filepath.Join(userPath, hex.EncodeToString(file)+".bolt"))
 }
 
 func findNextMigration(currentVersion uint32, migrations []Migration) (Migration, error) {
@@ -81,7 +81,7 @@ var setupSystemBucket = func(db *bolt.DB) error {
 }
 
 // migrate migrates a bold db database
-func Migrate(prodDBPath string, migrations []Migration) error {
+func Migrate(prodDBPath, userPath string, migrations []Migration) error {
 
 	// make sure there are no double migrations
 	mig := doubleMigration(migrations)
@@ -106,7 +106,7 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 	}
 
 	// migration database
-	migrationDBFile, err := randomTempDBPath()
+	migrationDBFile, err := randomTempDBPath(userPath)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 	}
 
 	// create path for production backup DB
-	prodDBBackupPath, err := filepath.Abs(filepath.Join(os.TempDir(), time.Now().String()))
+	prodDBBackupPath, err := filepath.Abs(filepath.Join(userPath, time.Now().String()))
 	if err != nil {
 		return err
 	}
@@ -221,6 +221,14 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 				recErr.Error(),
 			))
 		}
+		return err
+	}
+
+	// deleting migration file
+	if err := prodBackupDB.Close(); err != nil {
+		return err
+	}
+	if err := os.Remove(prodDBBackupPath); err != nil {
 		return err
 	}
 
