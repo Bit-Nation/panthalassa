@@ -39,7 +39,7 @@ func (d *DApp) ID() string {
 	return hex.EncodeToString(d.app.UsedSigningKey)
 }
 
-func (d *DApp) RenderDApp(context string) error {
+func (d *DApp) OpenDApp(context string) error {
 	return d.dAppRenderer.OpenDApp(context)
 }
 
