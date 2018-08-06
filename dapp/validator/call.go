@@ -62,7 +62,7 @@ func (v *CallValidator) Validate(vm *otto.Otto, call otto.FunctionCall) *otto.Va
 	}
 	sort.Ints(keys)
 
-	for k := range keys {
+	for _, k := range keys {
 
 		validator, exist := v.rules[k]
 		if !exist {

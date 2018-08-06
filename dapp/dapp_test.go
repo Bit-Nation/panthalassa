@@ -40,7 +40,7 @@ func TestStartDAppSuccess(t *testing.T) {
 
 	closer := make(chan *Data)
 
-	_, err = New(log.MustGetLogger(""), &app, []dAppMod.Module{}, closer, time.Second)
+	_, err = New(log.MustGetLogger(""), &app, []dAppMod.Module{}, closer, time.Second, nil)
 	require.Nil(t, err)
 
 }
@@ -74,7 +74,7 @@ func TestStartDAppHalting(t *testing.T) {
 
 	closer := make(chan *Data, 1)
 
-	dApp, err := New(log.MustGetLogger(""), &app, []dAppMod.Module{}, closer, time.Second)
+	dApp, err := New(log.MustGetLogger(""), &app, []dAppMod.Module{}, closer, time.Second, nil)
 	require.Nil(t, dApp)
 	require.EqualError(t, err, "timeout - failed to start DApp")
 
@@ -113,7 +113,7 @@ func TestStartInvalidSignature(t *testing.T) {
 
 	closer := make(chan *Data, 1)
 
-	dApp, err := New(log.MustGetLogger(""), &app, []dAppMod.Module{}, closer, time.Second)
+	dApp, err := New(log.MustGetLogger(""), &app, []dAppMod.Module{}, closer, time.Second, nil)
 	require.Nil(t, dApp)
 	require.EqualError(t, err, "failed to verify signature for DApp")
 
