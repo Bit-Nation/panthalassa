@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"time"
@@ -20,15 +21,6 @@ type Migration interface {
 }
 
 var systemBucketName = []byte("system")
-
-func randomTempDBPath() (string, error) {
-	file := make([]byte, 50)
-	_, err := rand.Read(file)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Abs(filepath.Join(os.TempDir(), hex.EncodeToString(file)+".bolt"))
-}
 
 func findNextMigration(currentVersion uint32, migrations []Migration) (Migration, error) {
 	mig := doubleMigration(migrations)
@@ -80,22 +72,42 @@ var setupSystemBucket = func(db *bolt.DB) error {
 	})
 }
 
-// migrate migrates a bold db database
-func Migrate(prodDBPath string, migrations []Migration) error {
+// create a migration file and create the directory
+// structure needed for the file
+var prepareMigration = func(file string) (string, error) {
 
-	// make sure there are no double migrations
+	// create migration file
+	currentDir := path.Dir(file)
+	migFileName := make([]byte, 50)
+	if _, err := rand.Read(migFileName); err != nil {
+		return "", err
+	}
+	migrationFile, err := filepath.Abs(filepath.Join(currentDir, hex.EncodeToString(migFileName)+".db.backup"))
+	if err != nil {
+		return "", err
+	}
+
+	return migrationFile, nil
+}
+
+// migrate migrates a bold db database
+func Migrate(prodDBFile string, migrations []Migration) error {
+
+	// make su
+	// re there are no double migrations
 	mig := doubleMigration(migrations)
 	if mig != nil {
 		return errors.New(fmt.Sprintf("a migration with id (%d) was already registered", mig.Version()))
 	}
 
 	// check if production database exist
-	if _, err := os.Stat(prodDBPath); err != nil {
+	if _, err := os.Stat(prodDBFile); err != nil {
 		return err
 	}
 
 	// open production database
-	prodDB, err := bolt.Open(prodDBPath, 0644, &bolt.Options{Timeout: time.Second})
+	prodDB, err := bolt.Open(prodDBFile, 0644, &bolt.Options{Timeout: time.Second})
+	defer prodDB.Close()
 	if err != nil {
 		return err
 	}
@@ -105,22 +117,19 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 		return err
 	}
 
-	// migration database
-	migrationDBFile, err := randomTempDBPath()
+	// backup production database
+	dbBackupFile, err := prepareMigration(prodDBFile)
 	if err != nil {
 		return err
 	}
-	// copy production database over to migration database
 	err = prodDB.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(migrationDBFile, 0644)
+		return tx.CopyFile(dbBackupFile, 0644)
 	})
-	defer prodDB.Close()
 	if err != nil {
 		return err
 	}
-
-	// open migration database
-	migrationDB, err := bolt.Open(migrationDBFile, 0644, bolt.DefaultOptions)
+	dbBackup, err := bolt.Open(dbBackupFile, 0644, &bolt.Options{Timeout: time.Second})
+	defer dbBackup.Close()
 	if err != nil {
 		return err
 	}
@@ -129,7 +138,7 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 		var version uint32
 
 		// read version of the migration database
-		err := migrationDB.View(func(tx *bolt.Tx) error {
+		err := prodDB.View(func(tx *bolt.Tx) error {
 			// fetch system bucket
 			buck := tx.Bucket(systemBucketName)
 			if buck == nil {
@@ -159,12 +168,28 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 		}
 
 		// migrate up
-		if err := nextMigr.Migrate(migrationDB); err != nil {
-			return err
+		if migErr := nextMigr.Migrate(prodDB); migErr != nil {
+
+			// recover old database on error
+			// which requires to copy the backup to production
+			// and delete the migration DB
+			if err := prodDB.Close(); err != nil {
+				// @todo is it really clever to return at this point? Maybe we can continue the recovery process even with an close error.
+				return err
+			}
+			err := dbBackup.View(func(tx *bolt.Tx) error {
+				return tx.CopyFile(prodDBFile, 0644)
+			})
+			if err != nil {
+				return err
+			}
+
+			return migErr
+
 		}
 
 		// update version of last migration on database
-		err = migrationDB.Update(func(tx *bolt.Tx) error {
+		err = prodDB.Update(func(tx *bolt.Tx) error {
 			// fetch bucket
 			buck := tx.Bucket(systemBucketName)
 			if buck == nil {
@@ -179,55 +204,6 @@ func Migrate(prodDBPath string, migrations []Migration) error {
 		}
 	}
 
-	// create path for production backup DB
-	prodDBBackupPath, err := filepath.Abs(filepath.Join(os.TempDir(), time.Now().String()))
-	if err != nil {
-		return err
-	}
-	prodBackupDB, err := bolt.Open(prodDBBackupPath, 0644, &bolt.Options{Timeout: time.Second})
-	if err != nil {
-		return err
-	}
-
-	// backup production database
-	err = prodDB.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(prodDBBackupPath, 0644)
-	})
-	if err != nil {
-		return err
-	}
-
-	// remove old production database
-	if err := prodDB.Close(); err != nil {
-		return err
-	}
-	if err := os.Remove(prodDBPath); err != nil {
-		return err
-	}
-
-	// copy migrated database to production
-	err = migrationDB.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(prodDBPath, 0644)
-	})
-	if err != nil {
-		// try to recover production database
-		recErr := prodBackupDB.Update(func(tx *bolt.Tx) error {
-			return tx.CopyFile(prodDBPath, 0644)
-		})
-		if recErr != nil {
-			return errors.New(fmt.Sprintf(
-				"failed to recover database after attempt to copy over migrated db. original error: %s. database recover error: %s",
-				err.Error(),
-				recErr.Error(),
-			))
-		}
-		return err
-	}
-
-	// delete migration database
-	if err := migrationDB.Close(); err != nil {
-		return err
-	}
-	return os.Remove(migrationDBFile)
+	return os.Remove(dbBackupFile)
 
 }
