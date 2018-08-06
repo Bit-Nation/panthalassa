@@ -160,13 +160,13 @@ func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Dura
 }
 
 // open DApp
-func (r *Registry) OpenDApp(id, context string) error {
+func (r *Registry) OpenDApp(signingKey ed25519.PublicKey, context string) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	if _, exist := r.dAppInstances[id]; !exist {
+	if _, exist := r.dAppInstances[hex.EncodeToString(signingKey)]; !exist {
 		return errors.New("it seems like that this app hasn't been started yet")
 	}
-	return r.dAppInstances[id].RenderDApp(context)
+	return r.dAppInstances[hex.EncodeToString(signingKey)].OpenDApp(context)
 }
 
 func (r *Registry) RenderMessage(id, msg, context string) (string, error) {
