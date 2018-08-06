@@ -35,11 +35,9 @@ func (db *inMemoryDB) Delete(key []byte) error {
 
 func TestModulePut(t *testing.T) {
 
-	m := Module{
-		dAppDB: &inMemoryDB{
-			storage: map[string][]byte{},
-		},
-	}
+	m := New(&inMemoryDB{
+		storage: map[string][]byte{},
+	})
 
 	vm := otto.New()
 
