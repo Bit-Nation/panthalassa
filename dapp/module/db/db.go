@@ -2,7 +2,10 @@ package db
 
 import (
 	"encoding/json"
+	"errors"
+	"time"
 
+	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
 	otto "github.com/robertkrimen/otto"
@@ -12,11 +15,13 @@ var logger = log.Logger("db module")
 
 type Module struct {
 	dAppDB Storage
+	reqLim *reqLim.CountThrottling
 }
 
 func New(s Storage) *Module {
 	return &Module{
 		dAppDB: s,
+		reqLim: reqLim.NewCountThrottling(5, time.Second*60, 40, errors.New("can't add more write requests")),
 	}
 }
 
@@ -56,16 +61,20 @@ func (m *Module) Register(vm *otto.Otto) error {
 				return handleError(err.Error(), cb)
 			}
 
-			// persist key and value
-			if err := m.dAppDB.Put([]byte(key.String()), byteValue); err != nil {
-				return handleError(err.Error(), cb)
-			}
+			m.reqLim.Exec(func() {
 
-			// call callback
-			_, err = cb.Call(cb)
-			if err != nil {
-				logger.Error(err.Error())
-			}
+				// persist key and value
+				if err := m.dAppDB.Put([]byte(key.String()), byteValue); err != nil {
+					handleError(err.Error(), cb)
+				}
+
+				// call callback
+				_, err = cb.Call(cb)
+				if err != nil {
+					logger.Error(err.Error())
+				}
+
+			})
 
 			return otto.Value{}
 
