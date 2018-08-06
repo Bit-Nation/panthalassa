@@ -130,11 +130,7 @@ func TestMigrateDoubleMigration(t *testing.T) {
 
 func TestMigrationDBDoesNotExist(t *testing.T) {
 
-	require.EqualError(
-		t,
-		Migrate("i_do_not_exist.db", []Migration{}),
-		"stat i_do_not_exist.db: no such file or directory",
-	)
+	require.Nil(t, Migrate("i_do_not_exist.db", []Migration{}))
 
 }
 
