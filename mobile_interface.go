@@ -110,7 +110,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		p2p:      p2pNetwork,
 		dAppReg: dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
 			EthWSEndpoint: config.EthWsEndpoint,
-		}, deviceApi, km, dAppStorage, messageStorage),
+		}, deviceApi, km, dAppStorage, messageStorage, dbInstance),
 		chat:        chatInstance,
 		db:          dbInstance,
 		dAppStorage: dAppStorage,

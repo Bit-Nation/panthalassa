@@ -25,6 +25,7 @@ import (
 	db "github.com/Bit-Nation/panthalassa/db"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	bolt "github.com/coreos/bbolt"
 	log "github.com/ipfs/go-log"
 	host "github.com/libp2p/go-libp2p-host"
 	net "github.com/libp2p/go-libp2p-net"
@@ -49,6 +50,7 @@ type Registry struct {
 	km             *keyManager.KeyManager
 	dAppDB         dapp.Storage
 	msgDB          db.ChatMessageStorage
+	db             *bolt.DB
 }
 
 type Config struct {
@@ -56,7 +58,7 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage, msgDB db.ChatMessageStorage) *Registry {
+func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage, msgDB db.ChatMessageStorage, db *bolt.DB) *Registry {
 
 	r := &Registry{
 		host:           h,
@@ -73,6 +75,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 		km:     km,
 		dAppDB: dAppDB,
 		msgDB:  msgDB,
+		db:     db,
 	}
 
 	// add worker to remove DApps
@@ -142,7 +145,7 @@ func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Dura
 		l.SetBackend(golog.AddModuleLevel(golog.NewLogBackend(ioutil.Discard, "", 0)))
 	}
 
-	app, err := dapp.New(l, dApp, vmModules, r.closeChan, timeOut)
+	app, err := dapp.New(l, dApp, vmModules, r.closeChan, timeOut, r.db)
 	if err != nil {
 		return err
 	}

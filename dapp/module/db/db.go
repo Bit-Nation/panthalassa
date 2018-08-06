@@ -4,19 +4,19 @@ import (
 	"encoding/json"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/op/go-logging"
+	log "github.com/ipfs/go-log"
 	otto "github.com/robertkrimen/otto"
 )
 
+var logger = log.Logger("db module")
+
 type Module struct {
 	dAppDB Storage
-	logger *log.Logger
 }
 
-func New(s Storage, l *log.Logger) *Module {
+func New(s Storage) *Module {
 	return &Module{
 		dAppDB: s,
-		logger: l,
 	}
 }
 
@@ -27,7 +27,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			cb.Call(cb, errMsg)
 			return otto.Value{}
 		}
-		m.logger.Error(errMsg)
+		logger.Error(errMsg)
 		return otto.Value{}
 	}
 
@@ -64,7 +64,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			// call callback
 			_, err = cb.Call(cb)
 			if err != nil {
-				m.logger.Error(err.Error())
+				logger.Error(err.Error())
 			}
 
 			return otto.Value{}
@@ -91,7 +91,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			}
 			_, err = cb.Call(cb, nil, has)
 			if err != nil {
-				m.logger.Error(err.Error())
+				logger.Error(err.Error())
 			}
 			return otto.Value{}
 
@@ -125,7 +125,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			// call callback with error
 			_, err = cb.Call(cb, nil, unmarshalledValue)
 			if err != nil {
-				m.logger.Error(err.Error())
+				logger.Error(err.Error())
 			}
 			return otto.Value{}
 
@@ -148,7 +148,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			}
 
 			if _, err := cb.Call(cb); err != nil {
-				m.logger.Error(err.Error())
+				logger.Error(err.Error())
 			}
 
 			return otto.Value{}
