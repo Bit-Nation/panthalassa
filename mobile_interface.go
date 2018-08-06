@@ -320,7 +320,16 @@ func OpenDApp(id, context string) error {
 		return errors.New("you have to start panthalassa first")
 	}
 
-	return panthalassaInstance.dAppReg.OpenDApp(id, context)
+	// decode public key
+	dAppSigningKey, err := hex.DecodeString(id)
+	if err != nil {
+		return err
+	}
+	if len(dAppSigningKey) != 32 {
+		return errors.New("invalid DApp signing key")
+	}
+
+	return panthalassaInstance.dAppReg.OpenDApp(dAppSigningKey, context)
 
 }
 
