@@ -15,7 +15,7 @@ func TestCount_Increase(t *testing.T) {
 
 func TestCount_Decrease(t *testing.T) {
 	mc := NewCount(2, nil)
-	mc.count = 1
+	mc.Increase()
 	mc.Decrease()
 	require.Equal(t, uint(0), mc.count)
 
@@ -26,7 +26,7 @@ func TestCount_Decrease(t *testing.T) {
 
 func TestCount_Count(t *testing.T) {
 	mc := NewCount(2, nil)
-	mc.count = 1
+	mc.Increase()
 	require.Equal(t, uint(1), mc.Count())
 }
 
