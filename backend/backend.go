@@ -26,20 +26,19 @@ type ServerConfig struct {
 type Backend struct {
 	transport Transport
 	// all outgoing requests
-	outReqQueue    chan *request
-	lock           sync.Mutex
-	stack          requestStack
-	requestHandler []RequestHandler
-	km             *km.KeyManager
-	authenticated  bool
-	closer         chan struct{}
+	outReqQueue   chan *request
+	stack         requestStack
+	km            *km.KeyManager
+	closer        chan struct{}
+	addReqHandler chan RequestHandler
+	reqHandlers   chan chan []RequestHandler
+	authenticated chan chan bool
+	authenticate  chan bool
 }
 
 // Add request handler that will be executed
 func (b *Backend) AddRequestHandler(handler RequestHandler) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.requestHandler = append(b.requestHandler, handler)
+	b.addReqHandler <- handler
 }
 
 func (b *Backend) Start() error {
@@ -48,6 +47,10 @@ func (b *Backend) Start() error {
 
 func (b *Backend) Close() error {
 	b.closer <- struct{}{}
+	close(b.addReqHandler)
+	close(b.reqHandlers)
+	close(b.authenticate)
+	close(b.authenticated)
 	return b.transport.Close()
 }
 
@@ -56,21 +59,48 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 	b := &Backend{
 		transport:   trans,
 		outReqQueue: make(chan *request, 150),
-		lock:        sync.Mutex{},
 		stack: requestStack{
 			stack: map[string]chan *response{},
 			lock:  sync.Mutex{},
 		},
-		requestHandler: []RequestHandler{},
-		km:             km,
-		closer:         make(chan struct{}, 1),
+		km:            km,
+		closer:        make(chan struct{}, 1),
+		addReqHandler: make(chan RequestHandler),
+		reqHandlers:   make(chan chan []RequestHandler),
+		authenticated: make(chan chan bool),
+		authenticate:  make(chan bool),
 	}
+
+	// backend state
+	go func() {
+
+		reqHandlers := []RequestHandler{}
+		authenticated := false
+
+		for {
+
+			// exist if channels have been closed
+			if b.addReqHandler == nil || b.reqHandlers == nil || b.authenticated == nil || b.authenticate == nil {
+				return
+			}
+
+			select {
+			case rh := <-b.addReqHandler:
+				reqHandlers = append(reqHandlers, rh)
+			case respChan := <-b.reqHandlers:
+				respChan <- reqHandlers
+			case a := <-b.authenticate:
+				authenticated = a
+			case respChan := <-b.authenticated:
+				respChan <- authenticated
+			}
+		}
+
+	}()
 
 	// handle incoming message and iterate over
 	// the registered message handlers
 	trans.OnMessage(func(msg *bpb.BackendMessage) error {
-		b.lock.Lock()
-		defer b.lock.Unlock()
 
 		// make sure we don't get a response & a request at the same time
 		// we don't accept it. It's invalid!
@@ -78,9 +108,13 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 			return errors.New("a message can’t have a response and a request at the same time")
 		}
 
+		// ask the state for the request handlers
+		reqHandlersChan := make(chan []RequestHandler)
+		b.reqHandlers <- reqHandlersChan
+
 		// handle requests
 		if msg.Request != nil {
-			for _, handler := range b.requestHandler {
+			for _, handler := range <-reqHandlersChan {
 				// handler
 				h := handler
 				resp, err := h(msg.Request)
@@ -130,7 +164,7 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 			// in the case this was a auth request we need to apply some special logic
 			// this will only be executed when this message was a auth request
 			if resp.Auth != nil {
-				b.authenticated = true
+				b.authenticate <- true
 			}
 
 			// send received response to response channel
@@ -152,14 +186,14 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 	go func() {
 		for {
 
+			authCheck := make(chan bool)
+			b.authenticated <- authCheck
+
 			// wait for authentication
-			b.lock.Lock()
-			if !b.authenticated {
+			if !<-authCheck {
 				time.Sleep(time.Second * 1)
-				b.lock.Unlock()
 				continue
 			}
-			b.lock.Unlock()
 
 			select {
 			case <-b.closer:

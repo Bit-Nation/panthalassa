@@ -57,7 +57,7 @@ func TestBackend_FetchSignedPreKey(t *testing.T) {
 	}
 
 	b, err := NewBackend(&transport, nil)
-	b.authenticated = true
+	b.authenticate <- true
 	require.Nil(t, err)
 
 	// fetched signed pre key
@@ -114,7 +114,7 @@ func TestBackend_FetchSignedPreKeyInvalidSignature(t *testing.T) {
 	}
 
 	b, err := NewBackend(&transport, nil)
-	b.authenticated = true
+	b.authenticate <- true
 	require.Nil(t, err)
 
 	// the chat partner of which we would like to receive the signed pre key
@@ -183,7 +183,7 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 	}
 
 	b, err := NewBackend(&transport, nil)
-	b.authenticated = true
+	b.authenticate <- true
 	require.Nil(t, err)
 
 	fetchedSignedPreKey, err := b.FetchPreKeyBundle(rawIdentityKey)
@@ -210,7 +210,7 @@ func TestBackend_SubmitMessage(t *testing.T) {
 	}
 
 	b, err := NewBackend(&transport, nil)
-	b.authenticated = true
+	b.authenticate <- true
 	require.Nil(t, err)
 
 	err = b.SubmitMessages([]*bpb.ChatMessage{
