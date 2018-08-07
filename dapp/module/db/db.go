@@ -63,13 +63,14 @@ func (m *Module) Register(vm *otto.Otto) error {
 				return handleError(err.Error(), cb)
 			}
 
-			m.reqLim.Exec(func() {
+			m.reqLim.Exec(func(dec chan struct{}) {
 
 				// persist key and value
 				if err := m.dAppDB.Put([]byte(key.String()), byteValue); err != nil {
+					dec <- struct{}{}
 					handleError(err.Error(), cb)
 				}
-
+				dec <- struct{}{}
 				// call callback
 				_, err = cb.Call(cb)
 				if err != nil {
