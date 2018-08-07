@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+	"encoding/base64"
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
@@ -258,7 +259,7 @@ func SignProfile(name, location, image string) (string, error) {
 		return "", err
 	}
 
-	return string(rawProfile), nil
+	return base64.StdEncoding.EncodeToString(rawProfile), nil
 
 }
 
