@@ -1,7 +1,6 @@
 package request_limitation
 
 import (
-	"sync"
 	"time"
 )
 
@@ -9,9 +8,7 @@ type Throttling struct {
 	concurrency    uint
 	coolDown       time.Duration
 	stack          chan func()
-	lock           sync.Mutex
 	maxQueue       uint
-	inWork         uint
 	queueFullError error
 }
 
@@ -22,31 +19,62 @@ func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint, queu
 		concurrency:    concurrency,
 		coolDown:       coolDown,
 		stack:          make(chan func(), maxQueue),
-		lock:           sync.Mutex{},
 		maxQueue:       maxQueue,
 		queueFullError: queueFullError,
 	}
 
+	inWorkChan := make(chan chan uint)
+	incInWork := make(chan struct{})
+	decInWork := make(chan struct{})
+
+	// state
+	go func() {
+
+		var inWork uint
+
+		for {
+
+			// exit when stack got closed
+			if t.stack == nil {
+				return
+			}
+
+			select {
+			case respChan := <-inWorkChan:
+				respChan <- inWork
+			case <-incInWork:
+				inWork++
+			case <-decInWork:
+				inWork--
+			}
+
+		}
+
+	}()
+
 	go func() {
 		for {
-			t.lock.Lock()
-			if t.inWork >= t.concurrency {
-				t.lock.Unlock()
+
+			// exit when stack got closed
+			if t.stack == nil {
+				return
+			}
+
+			iw := make(chan uint)
+			inWorkChan <- iw
+
+			if <-iw >= t.concurrency {
 				time.Sleep(time.Second)
 				continue
 			}
-			t.lock.Unlock()
+
 			select {
 			case job := <-t.stack:
-				t.lock.Lock()
-				t.inWork++
-				t.lock.Unlock()
+				incInWork <- struct{}{}
 				go job()
 				go func() {
 					<-time.After(t.coolDown)
-					t.lock.Lock()
-					t.inWork--
-					t.lock.Unlock()
+					decInWork <- struct{}{}
 				}()
 			}
 		}
