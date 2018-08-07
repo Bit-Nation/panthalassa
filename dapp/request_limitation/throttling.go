@@ -12,6 +12,11 @@ type Throttling struct {
 	queueFullError error
 }
 
+func (t *Throttling) Close() error {
+	close(t.stack)
+	return nil
+}
+
 // create new throttling request limitation
 func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint, queueFullError error) *Throttling {
 
