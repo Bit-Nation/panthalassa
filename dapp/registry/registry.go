@@ -224,12 +224,13 @@ func (r *Registry) ShutDown(signingKey ed25519.PublicKey) error {
 
 	// shut down DApp & remove from state
 	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	dApp, exist := r.dAppInstances[hex.EncodeToString(signingKey)]
 	if !exist {
 		return errors.New("DApp is not running")
 	}
 	dApp.Close()
-	r.lock.Unlock()
 
 	return nil
 
