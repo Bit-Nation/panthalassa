@@ -1,7 +1,6 @@
 package request_limitation
 
 import (
-	"sync"
 	"time"
 )
 
@@ -9,14 +8,14 @@ import (
 // throttling and count. It will have a count of current jobs
 // that must be decreased AND the throttling based on time
 type CountThrottling struct {
-	concurrency    uint
-	coolDown       time.Duration
-	stack          chan func()
-	lock           sync.Mutex
+	concurrency uint
+	coolDown    time.Duration
+	// the channel should be called when the function succeed
+	stack          chan func(chan struct{})
 	maxQueue       uint
-	inWork         uint
 	queueFullError error
-	current        uint
+	currentChan    chan chan uint
+	inWorkChan     chan chan uint
 }
 
 var countThrottlingSleep = time.Second
@@ -27,33 +26,81 @@ func NewCountThrottling(concurrency uint, coolDown time.Duration, maxQueue uint,
 	t := &CountThrottling{
 		concurrency:    concurrency,
 		coolDown:       coolDown,
-		stack:          make(chan func(), maxQueue),
-		lock:           sync.Mutex{},
+		stack:          make(chan func(chan struct{}), maxQueue),
 		maxQueue:       maxQueue,
 		queueFullError: queueFullError,
+		currentChan:    make(chan chan uint),
+		inWorkChan:     make(chan chan uint),
 	}
 
+	// "in work" related channels
+	incInWork := make(chan struct{})
+	decInWork := make(chan struct{})
+
+	// "current" related channels
+	incCurrent := make(chan struct{})
+	decCurrent := make(chan struct{})
+
+	// state
 	go func() {
+
+		var inWork uint
+		var current uint
+
 		for {
-			t.lock.Lock()
-			if t.inWork >= t.concurrency || t.current >= t.concurrency {
-				t.lock.Unlock()
+
+			// exit when stack got closed
+			if t.stack == nil {
+				return
+			}
+
+			select {
+
+			case <-incInWork:
+				inWork++
+			case <-decInWork:
+				if inWork > 0 {
+					inWork--
+				}
+			case <-incCurrent:
+				current++
+			case <-decCurrent:
+				if current > 0 {
+					current--
+				}
+			case resp := <-t.inWorkChan:
+				resp <- inWork
+			case resp := <-t.currentChan:
+				resp <- current
+			}
+
+		}
+
+	}()
+
+	// worker
+	go func() {
+
+		for {
+
+			// exit when stack got closed
+			if t.stack == nil {
+				return
+			}
+
+			if t.inWork() >= t.concurrency || t.Current() >= t.concurrency {
 				time.Sleep(countThrottlingSleep)
 				continue
 			}
-			t.lock.Unlock()
+
 			select {
 			case job := <-t.stack:
-				t.lock.Lock()
-				t.inWork++
-				t.current++
-				t.lock.Unlock()
-				go job()
+				incInWork <- struct{}{}
+				incCurrent <- struct{}{}
+				go job(decCurrent)
 				go func() {
 					<-time.After(t.coolDown)
-					t.lock.Lock()
-					t.inWork--
-					t.lock.Unlock()
+					decInWork <- struct{}{}
 				}()
 			}
 		}
@@ -62,22 +109,24 @@ func NewCountThrottling(concurrency uint, coolDown time.Duration, maxQueue uint,
 	return t
 }
 
+func (t *CountThrottling) Close() error {
+	close(t.stack)
+	return nil
+}
+
+func (t *CountThrottling) inWork() uint {
+	iw := make(chan uint)
+	t.inWorkChan <- iw
+	return <-iw
+}
+
 func (t *CountThrottling) Current() uint {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	return t.current
+	cq := make(chan uint)
+	t.currentChan <- cq
+	return <-cq
 }
 
-func (t *CountThrottling) Decrease() {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	if t.current == 0 {
-		return
-	}
-	t.current--
-}
-
-func (t *CountThrottling) Exec(cb func()) error {
+func (t *CountThrottling) Exec(cb func(dec chan struct{})) error {
 	if len(t.stack) >= int(t.maxQueue) {
 		return t.queueFullError
 	}
