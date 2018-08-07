@@ -107,27 +107,3 @@ func TestCountThrottlingFullError(t *testing.T) {
 	require.EqualError(t, ct.Exec(func(dec chan struct{}) {}), "queue full error")
 
 }
-
-/**
-func TestCountThrottling_Decrease(t *testing.T) {
-
-	ct := NewCountThrottling(
-		1,
-		time.Second*1,
-		5,
-		errors.New("queue full error"),
-	)
-
-	ct.current = 1
-
-	// must decrease current by one
-	ct.Decrease()
-	require.Equal(t, uint(0), ct.current)
-
-	// if current is zero, calling Decrease shouldn't decrease by one
-	ct.Decrease()
-	require.Equal(t, uint(0), ct.current)
-
-}
-
-*/
