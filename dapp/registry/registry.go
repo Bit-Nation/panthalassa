@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"sync"
 	"time"
 
 	api "github.com/Bit-Nation/panthalassa/api"
@@ -37,20 +36,36 @@ import (
 
 var logger = log.Logger("dapp - registry")
 
+type fetchDAppChanStr struct {
+	signingKey ed25519.PublicKey
+	respChan   chan *dapp.DApp
+}
+
+type addDevStreamChanStr struct {
+	signingKey ed25519.PublicKey
+	stream     net.Stream
+}
+
+type fetchDAppStreamStr struct {
+	signingKey ed25519.PublicKey
+	respChan   chan net.Stream
+}
+
 // keep track of all running DApps
 type Registry struct {
-	host           host.Host
-	lock           sync.Mutex
-	dAppDevStreams map[string]net.Stream
-	dAppInstances  map[string]*dapp.DApp
-	closeChan      chan *dapp.Data
-	conf           Config
-	ethWS          *ethws.EthereumWS
-	api            *api.API
-	km             *keyManager.KeyManager
-	dAppDB         dapp.Storage
-	msgDB          db.ChatMessageStorage
-	db             *bolt.DB
+	host               host.Host
+	closeChan          chan *dapp.Data
+	conf               Config
+	ethWS              *ethws.EthereumWS
+	api                *api.API
+	km                 *keyManager.KeyManager
+	dAppDB             dapp.Storage
+	msgDB              db.ChatMessageStorage
+	db                 *bolt.DB
+	addDAppChan        chan *dapp.DApp
+	fetchDAppChan      chan fetchDAppChanStr
+	addDevStreamChan   chan addDevStreamChanStr
+	fetchDevStreamChan chan fetchDAppStreamStr
 }
 
 type Config struct {
@@ -61,32 +76,55 @@ type Config struct {
 func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage, msgDB db.ChatMessageStorage, db *bolt.DB) *Registry {
 
 	r := &Registry{
-		host:           h,
-		lock:           sync.Mutex{},
-		dAppDevStreams: map[string]net.Stream{},
-		dAppInstances:  map[string]*dapp.DApp{},
-		closeChan:      make(chan *dapp.Data),
-		conf:           conf,
+		host:      h,
+		closeChan: make(chan *dapp.Data),
+		conf:      conf,
 		ethWS: ethws.New(ethws.Config{
 			Retry: time.Second,
 			WSUrl: conf.EthWSEndpoint,
 		}),
-		api:    api,
-		km:     km,
-		dAppDB: dAppDB,
-		msgDB:  msgDB,
-		db:     db,
+		api:                api,
+		km:                 km,
+		dAppDB:             dAppDB,
+		msgDB:              msgDB,
+		db:                 db,
+		addDAppChan:        make(chan *dapp.DApp),
+		fetchDAppChan:      make(chan fetchDAppChanStr),
+		addDevStreamChan:   make(chan addDevStreamChanStr),
+		fetchDevStreamChan: make(chan fetchDAppStreamStr),
 	}
 
 	// add worker to remove DApps
 	go func() {
+
+		dAppInstances := map[string]*dapp.DApp{}
+		streams := map[string]net.Stream{}
+
 		for {
 			select {
+			// remove DApp from state
 			case cc := <-r.closeChan:
-				r.lock.Lock()
-				delete(r.dAppInstances, hex.EncodeToString(cc.UsedSigningKey))
+				delete(dAppInstances, hex.EncodeToString(cc.UsedSigningKey))
 				// @todo send signal to client that this app was shut down
-				r.lock.Unlock()
+			// fetch dApp from state
+			case dAppFetch := <-r.fetchDAppChan:
+				dApp, exist := dAppInstances[hex.EncodeToString(dAppFetch.signingKey)]
+				if !exist {
+					dAppFetch.respChan <- nil
+					continue
+				}
+				dAppFetch.respChan <- dApp
+			// add dev stream to state
+			case addStream := <-r.addDevStreamChan:
+				streams[hex.EncodeToString(addStream.signingKey)] = addStream.stream
+			// fetch dev stream from state
+			case fetchDevStream := <-r.fetchDevStreamChan:
+				stream, exist := streams[hex.EncodeToString(fetchDevStream.signingKey)]
+				if !exist {
+					fetchDevStream.respChan <- nil
+					continue
+				}
+				fetchDevStream.respChan <- stream
 			}
 		}
 	}()
@@ -129,8 +167,13 @@ func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Dura
 	// we would like to mutate the logger
 	// to write to the stream we have for development
 	// this will write logs to the stream
-	exist, stream := r.getDAppDevStream(dApp.UsedSigningKey)
-	if exist {
+	fetchDAppChan := make(chan net.Stream)
+	r.fetchDevStreamChan <- fetchDAppStreamStr{
+		signingKey: dAppSigningKey,
+		respChan:   fetchDAppChan,
+	}
+	stream := <-fetchDAppChan
+	if stream != nil {
 		// append log module
 		logger, err := loggerMod.New(stream)
 		l = logger.Logger
@@ -151,31 +194,43 @@ func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Dura
 	}
 
 	// add DApp to state
-	r.lock.Lock()
-	r.dAppInstances[app.ID()] = app
-	r.lock.Unlock()
+	r.addDAppChan <- app
 
 	return nil
 
 }
 
-// open DApp
-func (r *Registry) OpenDApp(signingKey ed25519.PublicKey, context string) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-	if _, exist := r.dAppInstances[hex.EncodeToString(signingKey)]; !exist {
-		return errors.New("it seems like that this app hasn't been started yet")
+func (r *Registry) fetchDApp(signingKey ed25519.PublicKey) *dapp.DApp {
+
+	dAppRespChan := make(chan *dapp.DApp)
+
+	// fetch DApp
+	r.fetchDAppChan <- fetchDAppChanStr{
+		signingKey: signingKey,
+		respChan:   dAppRespChan,
 	}
-	return r.dAppInstances[hex.EncodeToString(signingKey)].OpenDApp(context)
+
+	return <-dAppRespChan
+
 }
 
-func (r *Registry) RenderMessage(id, msg, context string) (string, error) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-	if _, exist := r.dAppInstances[id]; !exist {
+// open DApp
+func (r *Registry) OpenDApp(signingKey ed25519.PublicKey, context string) error {
+
+	dApp := r.fetchDApp(signingKey)
+	if dApp == nil {
+		return errors.New("it seems like that this app hasn't been started yet")
+	}
+
+	return dApp.OpenDApp(context)
+}
+
+func (r *Registry) RenderMessage(signingKey ed25519.PublicKey, payload string) (string, error) {
+	dApp := r.fetchDApp(signingKey)
+	if dApp == nil {
 		return "", errors.New("it seems like that this app hasn't been started yet")
 	}
-	return r.dAppInstances[id].RenderMessage(context)
+	return dApp.RenderMessage(payload)
 }
 
 // use this to connect to a development server
@@ -205,33 +260,19 @@ func (r *Registry) ConnectDevelopmentServer(addr ma.Multiaddr) error {
 }
 
 // call a function in a DApp
-// @todo when the function call takes too long the lock could stay locked. We should "free" it asap
-func (r *Registry) CallFunction(dAppID string, funcId uint, args string) error {
-
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	dApp, exist := r.dAppInstances[dAppID]
-	if !exist {
-		return errors.New("can't call function of dApp that hasn't started")
+func (r *Registry) CallFunction(signingKey ed25519.PublicKey, funcId uint, args string) error {
+	dApp := r.fetchDApp(signingKey)
+	if dApp == nil {
+		return errors.New("it seems like that this app hasn't been started yet")
 	}
-
 	return dApp.CallFunction(funcId, args)
-
 }
 
 func (r *Registry) ShutDown(signingKey ed25519.PublicKey) error {
-
-	// shut down DApp & remove from state
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	dApp, exist := r.dAppInstances[hex.EncodeToString(signingKey)]
-	if !exist {
-		return errors.New("DApp is not running")
+	dApp := r.fetchDApp(signingKey)
+	if dApp == nil {
+		return errors.New("it seems like that this app hasn't been started yet")
 	}
 	dApp.Close()
-
 	return nil
-
 }
