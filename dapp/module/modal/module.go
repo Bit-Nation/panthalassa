@@ -8,7 +8,8 @@ import (
 
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/op/go-logging"
+	log "github.com/ipfs/go-log"
+	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	uuid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"
@@ -18,9 +19,11 @@ type Device interface {
 	RenderModal(uiID, layout string, dAppPubKey ed25519.PublicKey) error
 }
 
+var sysLog = log.Logger("modal")
+
 type Module struct {
 	device         Device
-	logger         *log.Logger
+	logger         *logger.Logger
 	dAppIDKey      ed25519.PublicKey
 	modalIDs       map[string]*otto.Value
 	modalIDsReqLim *reqLim.CountThrottling
@@ -30,7 +33,7 @@ type Module struct {
 const renderType = "modal"
 
 // create new Modal Module
-func New(l *log.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
+func New(l *logger.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
 	return &Module{
 		device:         device,
 		logger:         l,
@@ -49,6 +52,8 @@ func New(l *log.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
 func (m *Module) Register(vm *otto.Otto) error {
 
 	err := vm.Set("renderModal", func(call otto.FunctionCall) otto.Value {
+
+		sysLog.Debug("render modal")
 
 		// validate function call
 		v := validator.New()

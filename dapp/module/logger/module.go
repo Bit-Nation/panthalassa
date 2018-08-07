@@ -5,10 +5,13 @@ import (
 	"encoding/base64"
 	"strings"
 
+	log "github.com/ipfs/go-log"
 	net "github.com/libp2p/go-libp2p-net"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
+
+var sysLog = log.Logger("logger module logger")
 
 type streamLogger struct {
 	writer *bufio.Writer
@@ -56,8 +59,12 @@ func (l *Logger) Register(vm *otto.Otto) error {
 
 	return vm.Set("console", map[string]interface{}{
 		"log": func(call otto.FunctionCall) otto.Value {
+
+			sysLog.Debug("write log statement")
+
 			toLog := []string{}
 			for _, arg := range call.ArgumentList {
+				sysLog.Debug("log: ", toLog)
 				toLog = append(toLog, arg.String())
 			}
 			l.Logger.Info(strings.Join(toLog, ","))

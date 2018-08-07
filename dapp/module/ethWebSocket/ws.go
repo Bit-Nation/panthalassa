@@ -2,13 +2,16 @@ package ethWebSocket
 
 import (
 	"encoding/json"
-
 	"fmt"
+
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	ethws "github.com/Bit-Nation/panthalassa/ethws"
+	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
+
+var sysLogger = log.Logger("eth websocket")
 
 type EthWS struct {
 	logger *logger.Logger
@@ -29,6 +32,8 @@ func (ws *EthWS) Register(vm *otto.Otto) error {
 	// needed for an ethereum transaction and an callback
 	// that will be called with an error and the json response data
 	return vm.Set("ethereumRequest", func(call otto.FunctionCall) otto.Value {
+
+		sysLogger.Debug("ethereum request")
 
 		// validate function call
 		v := validator.New()
@@ -72,6 +77,8 @@ func (ws *EthWS) Register(vm *otto.Otto) error {
 				}
 				return
 			}
+
+			sysLogger.Debug("finished ethereum request")
 
 			if _, err := cb.Call(cb, nil, string(rawResponse)); err != nil {
 				ws.logger.Error(err.Error())

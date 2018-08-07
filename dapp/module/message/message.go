@@ -9,7 +9,8 @@ import (
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	db "github.com/Bit-Nation/panthalassa/db"
-	log "github.com/op/go-logging"
+	log "github.com/ipfs/go-log"
+	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -17,11 +18,13 @@ import (
 type Module struct {
 	msgStorage db.ChatMessageStorage
 	dAppPubKey ed25519.PublicKey
-	logger     *log.Logger
+	logger     *logger.Logger
 	reqLim     *reqLim.CountThrottling
 }
 
-func New(msgStorage db.ChatMessageStorage, dAppPubKey ed25519.PublicKey, logger *log.Logger) *Module {
+var sysLog = log.Logger("messsage")
+
+func New(msgStorage db.ChatMessageStorage, dAppPubKey ed25519.PublicKey, logger *logger.Logger) *Module {
 	return &Module{
 		msgStorage: msgStorage,
 		dAppPubKey: dAppPubKey,
@@ -41,6 +44,8 @@ func hasKey(stack []string, search string) bool {
 
 func (m *Module) Register(vm *otto.Otto) error {
 	return vm.Set("sendMessage", func(call otto.FunctionCall) otto.Value {
+
+		sysLog.Debug("send message")
 
 		// validate function call
 		v := validator.New()

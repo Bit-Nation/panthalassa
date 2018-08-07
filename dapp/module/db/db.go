@@ -39,6 +39,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 	return vm.Set("db", map[string]interface{}{
 		"put": func(call otto.FunctionCall) otto.Value {
 
+			logger.Debug("put value")
+
 			// validate call
 			v := validator.New()
 			v.Set(0, &validator.TypeString)
@@ -81,6 +83,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 		},
 		"has": func(call otto.FunctionCall) otto.Value {
 
+			logger.Errorf("check if value exist")
+
 			// validate function call
 			v := validator.New()
 			v.Set(0, &validator.TypeString)
@@ -106,6 +110,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 
 		},
 		"get": func(call otto.FunctionCall) otto.Value {
+
+			logger.Debug("get value")
 
 			// validate function call
 			v := validator.New()
@@ -140,6 +146,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 
 		},
 		"delete": func(call otto.FunctionCall) otto.Value {
+
+			logger.Debug("delete value")
 
 			// validate function call
 			v := validator.New()

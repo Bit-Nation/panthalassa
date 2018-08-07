@@ -4,24 +4,29 @@ import (
 	"crypto/rand"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/op/go-logging"
+	log "github.com/ipfs/go-log"
+	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
 
 var randSource = rand.Reader
 
-func New(l *log.Logger) *Module {
+var sysLog = log.Logger("rand bytes")
+
+func New(l *logger.Logger) *Module {
 	return &Module{
 		logger: l,
 	}
 }
 
 type Module struct {
-	logger *log.Logger
+	logger *logger.Logger
 }
 
 func (m *Module) Register(vm *otto.Otto) error {
 	return vm.Set("randomBytes", func(call otto.FunctionCall) otto.Value {
+
+		sysLog.Debug("generate random bytes")
 
 		// validate call
 		v := validator.New()

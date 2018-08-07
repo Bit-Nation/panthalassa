@@ -7,9 +7,12 @@ import (
 
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
+	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
+
+var debugger = log.Logger("callbacks")
 
 // with this module it's possible to register functions
 // from inside of the vm and call them by there id
@@ -37,6 +40,8 @@ type Module struct {
 // e.g. myRegisteredFunction(payloadObj, cb)
 // the callback must be called in order to "return" from the function
 func (m *Module) CallFunction(id uint, payload string) error {
+
+	debugger.Debug(fmt.Errorf("call function with id: %d and payload: %s", id, payload))
 
 	// lock
 	m.lock.Lock()

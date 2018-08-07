@@ -6,9 +6,12 @@ import (
 
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/op/go-logging"
+	log "github.com/ipfs/go-log"
+	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
+
+var sysLogger = log.Logger("send eth tx")
 
 type SendEthereumTransaction interface {
 	// will return a JSON serialized transaction
@@ -16,7 +19,7 @@ type SendEthereumTransaction interface {
 	SendEthereumTransaction(value, to, data string) (string, error)
 }
 
-func New(ethApi SendEthereumTransaction, l *log.Logger) *Module {
+func New(ethApi SendEthereumTransaction, l *logger.Logger) *Module {
 	return &Module{
 		logger:     l,
 		ethApi:     ethApi,
@@ -25,7 +28,7 @@ func New(ethApi SendEthereumTransaction, l *log.Logger) *Module {
 }
 
 type Module struct {
-	logger     *log.Logger
+	logger     *logger.Logger
 	ethApi     SendEthereumTransaction
 	throttling *reqLim.Throttling
 }
@@ -35,6 +38,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 	// send an ethereum transaction
 	// musst be called with an object that holds value, to and data
 	return vm.Set("sendETHTransaction", func(call otto.FunctionCall) otto.Value {
+
+		sysLogger.Debug("send eth transaction")
 
 		// validate function call
 		v := validator.New()

@@ -5,16 +5,19 @@ import (
 	"sync"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/op/go-logging"
+	log "github.com/ipfs/go-log"
+	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
 
 type Module struct {
 	lock     sync.Mutex
-	logger   *log.Logger
+	logger   *logger.Logger
 	renderer *otto.Value
 	vm       *otto.Otto
 }
+
+var sysLog = log.Logger("renderer - message")
 
 // register module function in the VM
 // setOpenHandler must be called with a callback
@@ -28,6 +31,8 @@ type Module struct {
 func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
 	return vm.Set("setMessageRenderer", func(call otto.FunctionCall) otto.Value {
+
+		sysLog.Debug("set message renderer")
 
 		// validate function call
 		v := validator.New()
@@ -112,7 +117,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 	return r.layout, r.error
 }
 
-func New(l *log.Logger) *Module {
+func New(l *logger.Logger) *Module {
 	return &Module{
 		lock:   sync.Mutex{},
 		logger: l,

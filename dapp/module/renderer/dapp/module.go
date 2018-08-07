@@ -5,16 +5,19 @@ import (
 	"sync"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/op/go-logging"
+	log "github.com/ipfs/go-log"
+	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
 
 type Module struct {
 	lock     sync.Mutex
-	logger   *log.Logger
+	logger   *logger.Logger
 	renderer *otto.Value
 	vm       *otto.Otto
 }
+
+var sysLog = log.Logger("renderer - dapp")
 
 func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
@@ -24,6 +27,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 	// the callback should be called (with an optional error)
 	// in order to return from the function
 	return vm.Set("setOpenHandler", func(call otto.FunctionCall) otto.Value {
+
+		sysLog.Debug("set open handler")
 
 		// validate function call
 		v := validator.New()
@@ -93,7 +98,7 @@ func (m *Module) OpenDApp(payload string) error {
 	return <-c
 }
 
-func New(l *log.Logger) *Module {
+func New(l *logger.Logger) *Module {
 	return &Module{
 		lock:   sync.Mutex{},
 		logger: l,
