@@ -63,7 +63,7 @@ func (c *Count) Count() uint {
 }
 
 func (c *Count) Increase() error {
-	if c.Count() > c.max {
+	if c.Count() >= c.max {
 		return c.canNotIncreaseErr
 	}
 	c.increase <- struct{}{}
