@@ -16,6 +16,7 @@ type CountThrottling struct {
 	queueFullError error
 	currentChan    chan chan uint
 	inWorkChan     chan chan uint
+	decCurrent     chan struct{}
 }
 
 var countThrottlingSleep = time.Second
@@ -31,6 +32,7 @@ func NewCountThrottling(concurrency uint, coolDown time.Duration, maxQueue uint,
 		queueFullError: queueFullError,
 		currentChan:    make(chan chan uint),
 		inWorkChan:     make(chan chan uint),
+		decCurrent:     make(chan struct{}),
 	}
 
 	// "in work" related channels
@@ -39,7 +41,6 @@ func NewCountThrottling(concurrency uint, coolDown time.Duration, maxQueue uint,
 
 	// "current" related channels
 	incCurrent := make(chan struct{})
-	decCurrent := make(chan struct{})
 
 	// state
 	go func() {
@@ -64,7 +65,7 @@ func NewCountThrottling(concurrency uint, coolDown time.Duration, maxQueue uint,
 				}
 			case <-incCurrent:
 				current++
-			case <-decCurrent:
+			case <-t.decCurrent:
 				if current > 0 {
 					current--
 				}
@@ -97,7 +98,7 @@ func NewCountThrottling(concurrency uint, coolDown time.Duration, maxQueue uint,
 			case job := <-t.stack:
 				incInWork <- struct{}{}
 				incCurrent <- struct{}{}
-				go job(decCurrent)
+				go job(t.decCurrent)
 				go func() {
 					<-time.After(t.coolDown)
 					decInWork <- struct{}{}
@@ -118,6 +119,10 @@ func (t *CountThrottling) inWork() uint {
 	iw := make(chan uint)
 	t.inWorkChan <- iw
 	return <-iw
+}
+
+func (t *CountThrottling) Decrease() {
+	t.decCurrent <- struct{}{}
 }
 
 func (t *CountThrottling) Current() uint {
