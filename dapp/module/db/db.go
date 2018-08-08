@@ -25,6 +25,10 @@ func New(s Storage) *Module {
 	}
 }
 
+func (m *Module) Close() error {
+	return nil
+}
+
 func (m *Module) Register(vm *otto.Otto) error {
 
 	handleError := func(errMsg string, cb otto.Value) otto.Value {
