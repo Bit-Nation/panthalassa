@@ -50,6 +50,9 @@ func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint, queu
 			case <-incInWork:
 				inWork++
 			case <-decInWork:
+				if inWork == 0 {
+					continue
+				}
 				inWork--
 			}
 

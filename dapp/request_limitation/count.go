@@ -35,6 +35,9 @@ func NewCount(max uint, canNotIncreaseErr error) *Count {
 			case <-c.increase:
 				count++
 			case <-c.decrease:
+				if count == 0 {
+					continue
+				}
 				count--
 			case c := <-c.count:
 				c <- count
