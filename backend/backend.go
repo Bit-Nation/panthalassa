@@ -98,86 +98,96 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 
 	}()
 
-	// handle incoming message and iterate over
-	// the registered message handlers
-	trans.OnMessage(func(msg *bpb.BackendMessage) error {
+	go func() {
 
-		// make sure we don't get a response & a request at the same time
-		// we don't accept it. It's invalid!
-		if msg.Request != nil && msg.Response != nil {
-			return errors.New("a message can’t have a response and a request at the same time")
-		}
+		for {
 
-		// ask the state for the request handlers
-		reqHandlersChan := make(chan []RequestHandler)
-		b.reqHandlers <- reqHandlersChan
+			msg, err := trans.NextMessage()
+			if err != nil {
+				logger.Error(err)
+				continue
+			}
 
-		// handle requests
-		if msg.Request != nil {
-			for _, handler := range <-reqHandlersChan {
-				// handler
-				h := handler
-				resp, err := h(msg.Request)
-				// exit on error
-				if err != nil {
-					return b.transport.Send(&bpb.BackendMessage{
+			// make sure we don't get a response & a request at the same time
+			// we don't accept it. It's invalid!
+			if msg.Request != nil && msg.Response != nil {
+				logger.Error(errors.New("a message can’t have a response and a request at the same time"))
+				continue
+			}
+
+			// ask the state for the request handlers
+			reqHandlersChan := make(chan []RequestHandler)
+			b.reqHandlers <- reqHandlersChan
+
+			// handle requests
+			if msg.Request != nil {
+				for _, handler := range <-reqHandlersChan {
+					// handler
+					h := handler
+					resp, err := h(msg.Request)
+					// exit on error
+					if err != nil {
+						b.transport.Send(&bpb.BackendMessage{
+							RequestID: msg.RequestID,
+							Error:     err.Error(),
+						})
+						continue
+					}
+					// if resp is nil we know that the handler didn't handle the request
+					if resp == nil {
+						continue
+					}
+					// send response
+					err = b.transport.Send(&bpb.BackendMessage{
+						Response:  resp,
 						RequestID: msg.RequestID,
-						Error:     err.Error(),
 					})
+					if err != nil {
+						logger.Error(err)
+						continue
+					}
+
 				}
-				// if resp is nil we know that the handler didn't handle the request
-				if resp == nil {
+			}
+
+			// handle responses
+			if msg.Response != nil {
+
+				resp := msg.Response
+				reqID := msg.RequestID
+
+				// err will be != nil in the case of no response channel
+				respChan := b.stack.Cut(reqID)
+				if respChan == nil {
+					logger.Error(fmt.Errorf("failed to fetch response channel for id: %s", msg.RequestID))
+				}
+
+				// send error from response to request channel
+				if msg.Error != "" {
+					respChan <- &response{
+						err: errors.New(msg.Error),
+					}
 					continue
 				}
-				// send response
-				err = b.transport.Send(&bpb.BackendMessage{
-					Response:  resp,
-					RequestID: msg.RequestID,
-				})
-				if err != nil {
-					return err
+
+				// in the case this was a auth request we need to apply some special logic
+				// this will only be executed when this message was a auth request
+				if resp.Auth != nil {
+					b.authenticate <- true
 				}
 
-			}
-		}
-
-		// handle responses
-		if msg.Response != nil {
-
-			resp := msg.Response
-			reqID := msg.RequestID
-
-			// err will be != nil in the case of no response channel
-			respChan := b.stack.Cut(reqID)
-			if respChan == nil {
-				return fmt.Errorf("failed to fetch response channel for id: %s", msg.RequestID)
-			}
-
-			// send error from response to request channel
-			if msg.Error != "" {
+				// send received response to response channel
 				respChan <- &response{
-					err: errors.New(msg.Error),
+					resp: resp,
 				}
-				return nil
+
 			}
 
-			// in the case this was a auth request we need to apply some special logic
-			// this will only be executed when this message was a auth request
-			if resp.Auth != nil {
-				b.authenticate <- true
-			}
-
-			// send received response to response channel
-			respChan <- &response{
-				resp: resp,
-			}
+			logger.Warning("dropping message: %s", msg)
 
 		}
 
-		logger.Warning("dropping message: %s", msg)
-
-		return nil
-	})
+	}()
 
 	// auth request handler
 	b.AddRequestHandler(b.auth)

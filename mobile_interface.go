@@ -1,11 +1,11 @@
 package panthalassa
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"time"
-	"encoding/base64"
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
@@ -55,9 +55,9 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	deviceApi := api.New(client)
 
 	// create backend
-	trans := &backend.WSTransport{}
+	trans := backend.WSTransport{}
 	defer trans.Start()
-	backend, err := backend.NewBackend(trans, km)
+	backend, err := backend.NewBackend(&trans, km)
 	if err != nil {
 		return err
 	}
