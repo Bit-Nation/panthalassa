@@ -45,15 +45,20 @@ func TestBackend_FetchSignedPreKey(t *testing.T) {
 
 	// transport
 	transport := testTransport{}
+	reqIDChan := make(chan string, 1)
 	transport.send = func(msg *bpb.BackendMessage) error {
 		require.Equal(t, identityKey, hex.EncodeToString(msg.Request.SignedPreKey))
+		reqIDChan <- msg.RequestID
 		// send response with signed protobuf back
-		return transport.onMessage(&bpb.BackendMessage{
-			RequestID: msg.RequestID,
+		return nil
+	}
+	transport.nextMessage = func() (*bpb.BackendMessage, error) {
+		return &bpb.BackendMessage{
+			RequestID: <-reqIDChan,
 			Response: &bpb.BackendMessage_Response{
 				SignedPreKey: &signedPreProto,
 			},
-		})
+		}, nil
 	}
 
 	b, err := NewBackend(&transport, nil)
@@ -100,17 +105,21 @@ func TestBackend_FetchSignedPreKeyInvalidSignature(t *testing.T) {
 
 	// transport
 	transport := testTransport{}
+	reqIDChan := make(chan string, 1)
 	transport.send = func(msg *bpb.BackendMessage) error {
 		// should be not equal since we testing what happens if the
 		// returned signed pre key is not the one the client ask for
 		require.NotEqual(t, identityKey, hex.EncodeToString(msg.Request.SignedPreKey))
-		// send response with signed protobuf back
-		return transport.onMessage(&bpb.BackendMessage{
-			RequestID: msg.RequestID,
+		reqIDChan <- msg.RequestID
+		return nil
+	}
+	transport.nextMessage = func() (*bpb.BackendMessage, error) {
+		return &bpb.BackendMessage{
+			RequestID: <-reqIDChan,
 			Response: &bpb.BackendMessage_Response{
 				SignedPreKey: &signedPreProto,
 			},
-		})
+		}, nil
 	}
 
 	b, err := NewBackend(&transport, nil)
@@ -168,18 +177,23 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 
 	// transport
 	transport := testTransport{}
+	reqIDChan := make(chan string)
 	transport.send = func(msg *bpb.BackendMessage) error {
 		require.Equal(t, identityKey, hex.EncodeToString(msg.Request.PreKeyBundle))
 		// send response with signed protobuf back
-		return transport.onMessage(&bpb.BackendMessage{
-			RequestID: msg.RequestID,
+		reqIDChan <- msg.RequestID
+		return nil
+	}
+	transport.nextMessage = func() (*bpb.BackendMessage, error) {
+		return &bpb.BackendMessage{
+			RequestID: <-reqIDChan,
 			Response: &bpb.BackendMessage_Response{
 				PreKeyBundle: &bpb.BackendMessage_PreKeyBundle{
 					SignedPreKey: &signedPreProto,
 					Profile:      protoProf,
 				},
 			},
-		})
+		}, nil
 	}
 
 	b, err := NewBackend(&transport, nil)
@@ -199,14 +213,17 @@ func TestBackend_SubmitMessage(t *testing.T) {
 
 	// transport
 	transport := testTransport{}
+	reqIDChan := make(chan string, 1)
 	transport.send = func(msg *bpb.BackendMessage) error {
 		require.Equal(t, 2, len(msg.Request.Messages))
-
-		// send response with signed protobuf back
-		return transport.onMessage(&bpb.BackendMessage{
-			RequestID: msg.RequestID,
+		reqIDChan <- msg.RequestID
+		return nil
+	}
+	transport.nextMessage = func() (*bpb.BackendMessage, error) {
+		return &bpb.BackendMessage{
+			RequestID: <-reqIDChan,
 			Response:  &bpb.BackendMessage_Response{},
-		})
+		}, nil
 	}
 
 	b, err := NewBackend(&transport, nil)

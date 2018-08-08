@@ -11,8 +11,8 @@ func (t *WSTransport) Send(msg *bpb.BackendMessage) error {
 	return nil
 }
 
-func (t *WSTransport) OnMessage(func(msg *bpb.BackendMessage) error) {
-
+func (t *WSTransport) NextMessage() (*bpb.BackendMessage, error) {
+	return nil, nil
 }
 
 func (t *WSTransport) Close() error {

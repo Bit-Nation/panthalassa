@@ -31,17 +31,19 @@ func TestBackend_Auth(t *testing.T) {
 
 		return nil
 	}
+	transport.nextMessage = func() (*bpb.BackendMessage, error) {
+		return &bpb.BackendMessage{
+			RequestID: "i_am_the_request_id",
+			Request: &bpb.BackendMessage_Request{
+				Auth: &bpb.BackendMessage_Auth{
+					ToSign: []byte{1, 2, 3, 4},
+				},
+			},
+		}, nil
+	}
 
 	_, err = NewBackend(&transport, km)
 	require.Nil(t, err)
-	err = transport.onMessage(&bpb.BackendMessage{
-		RequestID: "i_am_the_request_id",
-		Request: &bpb.BackendMessage_Request{
-			Auth: &bpb.BackendMessage_Auth{
-				ToSign: []byte{1, 2, 3, 4},
-			},
-		},
-	})
 	require.Nil(t, err)
 
 }
