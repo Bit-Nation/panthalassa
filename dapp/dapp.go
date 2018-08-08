@@ -12,25 +12,35 @@ import (
 	dAppRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/dapp"
 	msgRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/message"
 	bolt "github.com/coreos/bbolt"
+	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
 
+var sysLog = log.Logger("dapp")
+
 type DApp struct {
-	vm           *otto.Otto
-	logger       *logger.Logger
-	app          *Data
+	vm     *otto.Otto
+	logger *logger.Logger
+	app    *Data
+	// will be called when the app shut down
 	closeChan    chan<- *Data
 	dAppRenderer *dAppRenderer.Module
 	msgRenderer  *msgRenderer.Module
 	cbMod        *cbModule.Module
 	dbMod        *dbModule.BoltStorage
+	vmModules    []module.Module
 }
 
 // close DApp
 func (d *DApp) Close() {
 	d.vm.Interrupt <- func() {
 		d.logger.Info(fmt.Sprintf("shutting down: %s (%s)", hex.EncodeToString(d.app.UsedSigningKey), d.app.Name))
+		for _, mod := range d.vmModules {
+			if err := mod.Close(); err != nil {
+				sysLog.Error(err)
+			}
+		}
 		d.closeChan <- d.app
 	}
 }
@@ -76,18 +86,21 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 
 	// register DApp renderer
 	dr := dAppRenderer.New(l)
+	vmModules = append(vmModules, dr)
 	if err := dr.Register(vm); err != nil {
 		return nil, err
 	}
 
 	// register message renderer
 	mr := msgRenderer.New(l)
+	vmModules = append(vmModules, mr)
 	if err := dr.Register(vm); err != nil {
 		return nil, err
 	}
 
 	// register callbacks module
 	cbm := cbModule.New(l)
+	vmModules = append(vmModules, cbm)
 	if err := cbm.Register(vm); err != nil {
 		return nil, err
 	}
@@ -98,6 +111,7 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 		return nil, err
 	}
 	dbm := dbModule.New(dAppDBStorage)
+	vmModules = append(vmModules, dbm)
 	if err := dbm.Register(vm); err != nil {
 		return nil, err
 	}
@@ -111,6 +125,7 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 		msgRenderer:  mr,
 		cbMod:        cbm,
 		dbMod:        dAppDBStorage,
+		vmModules:    vmModules,
 	}
 
 	wait := make(chan error, 1)
