@@ -18,10 +18,6 @@ import (
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-const (
-	SignedPreKeyValidTimeFrame = time.Hour * 24 * 60
-)
-
 var logger = log.Logger("chat")
 
 type Backend interface {
