@@ -18,6 +18,10 @@ type Module struct {
 	km *keyManager.KeyManager
 }
 
+func (m *Module) Close() error {
+	return nil
+}
+
 func (m *Module) Register(vm *otto.Otto) error {
 
 	logger.Debug("get ethereum address")
