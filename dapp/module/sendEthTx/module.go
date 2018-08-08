@@ -33,6 +33,10 @@ type Module struct {
 	throttling *reqLim.Throttling
 }
 
+func (m *Module) Close() error {
+	return nil
+}
+
 func (m *Module) Register(vm *otto.Otto) error {
 
 	// send an ethereum transaction
