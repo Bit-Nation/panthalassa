@@ -12,7 +12,6 @@ import (
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	module "github.com/Bit-Nation/panthalassa/dapp/module"
 	ethAddrMod "github.com/Bit-Nation/panthalassa/dapp/module/ethAddress"
-	ethWSMod "github.com/Bit-Nation/panthalassa/dapp/module/ethWebSocket"
 	loggerMod "github.com/Bit-Nation/panthalassa/dapp/module/logger"
 	messageModule "github.com/Bit-Nation/panthalassa/dapp/module/message"
 	modalMod "github.com/Bit-Nation/panthalassa/dapp/module/modal"
@@ -153,7 +152,6 @@ func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Dura
 
 	vmModules := []module.Module{
 		uuidv4Mod.New(l),
-		ethWSMod.New(l, r.ethWS),
 		modalMod.New(l, r.api, dApp.UsedSigningKey),
 		sendEthTxMod.New(r.api, l),
 		randBytes.New(l),
