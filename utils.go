@@ -4,7 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
-
+	"encoding/base64"
+	
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
@@ -122,7 +123,7 @@ func SignProfileStandAlone(name, location, image, keyManagerStore, password stri
 		return "", err
 	}
 
-	return string(rawProfile), nil
+	return base64.StdEncoding.EncodeToString(rawProfile), nil
 
 }
 
