@@ -2,7 +2,6 @@ package dapp
 
 import (
 	"errors"
-	"sync"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
@@ -11,10 +10,10 @@ import (
 )
 
 type Module struct {
-	lock     sync.Mutex
-	logger   *logger.Logger
-	renderer *otto.Value
-	vm       *otto.Otto
+	logger          *logger.Logger
+	vm              *otto.Otto
+	setRendererChan chan *otto.Value
+	getRendererChan chan chan *otto.Value
 }
 
 var sysLog = log.Logger("renderer - message")
@@ -43,10 +42,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 		}
 
 		// set renderer
-		m.lock.Lock()
 		fn := call.Argument(0)
-		m.renderer = &fn
-		m.lock.Unlock()
+		m.setRendererChan <- &fn
 
 		return otto.Value{}
 	})
@@ -56,12 +53,13 @@ func (m *Module) Register(vm *otto.Otto) error {
 // should contain the "message" and the "context" tho
 func (m *Module) RenderMessage(payload string) (string, error) {
 
-	// lock
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	// fetch renderer
+	rendererChan := make(chan *otto.Value)
+	m.getRendererChan <- rendererChan
+	renderer := <-rendererChan
 
 	// make sure an renderer has been set
-	if m.renderer == nil {
+	if renderer == nil {
 		return "", errors.New("failed to render message - no open handler set")
 	}
 
@@ -82,7 +80,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 
 		// call the message renderer
 		// @todo what happens if we call the callback twice?
-		_, err = m.renderer.Call(*m.renderer, payloadObj, func(call otto.FunctionCall) otto.Value {
+		_, err = renderer.Call(*renderer, payloadObj, func(call otto.FunctionCall) otto.Value {
 
 			// fetch params from the callback call
 			err := call.Argument(0)
@@ -117,9 +115,40 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 	return r.layout, r.error
 }
 
+func (m *Module) Close() error {
+	close(m.getRendererChan)
+	close(m.setRendererChan)
+	return nil
+}
+
 func New(l *logger.Logger) *Module {
-	return &Module{
-		lock:   sync.Mutex{},
-		logger: l,
+	m := &Module{
+		logger:          l,
+		setRendererChan: make(chan *otto.Value),
+		getRendererChan: make(chan chan *otto.Value),
 	}
+
+	go func() {
+
+		renderer := new(otto.Value)
+
+		for {
+
+			// exit if channels got closed
+			if m.setRendererChan == nil || m.getRendererChan == nil {
+				return
+			}
+
+			select {
+			case r := <-m.setRendererChan:
+				renderer = r
+			case respChan := <-m.getRendererChan:
+				respChan <- renderer
+			}
+
+		}
+
+	}()
+
+	return m
 }
