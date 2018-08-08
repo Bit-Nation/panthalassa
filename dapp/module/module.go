@@ -6,4 +6,5 @@ import (
 
 type Module interface {
 	Register(vm *otto.Otto) error
+	Close() error
 }

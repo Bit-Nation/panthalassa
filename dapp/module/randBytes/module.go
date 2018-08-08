@@ -23,6 +23,10 @@ type Module struct {
 	logger *logger.Logger
 }
 
+func (m *Module) Close() error {
+	return nil
+}
+
 func (m *Module) Register(vm *otto.Otto) error {
 	return vm.Set("randomBytes", func(call otto.FunctionCall) otto.Value {
 

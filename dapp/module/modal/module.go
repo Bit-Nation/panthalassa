@@ -3,7 +3,6 @@ package modal
 import (
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
@@ -21,27 +20,79 @@ type Device interface {
 
 var sysLog = log.Logger("modal")
 
+type addModalID struct {
+	id     string
+	closer *otto.Value
+}
+
+type fetchModalCloser struct {
+	id       string
+	respChan chan *otto.Value
+}
+
 type Module struct {
-	device         Device
-	logger         *logger.Logger
-	dAppIDKey      ed25519.PublicKey
-	modalIDs       map[string]*otto.Value
-	modalIDsReqLim *reqLim.CountThrottling
-	lock           sync.Mutex
+	device               Device
+	logger               *logger.Logger
+	dAppIDKey            ed25519.PublicKey
+	modalIDsReqLim       *reqLim.CountThrottling
+	addModalIDChan       chan addModalID
+	fetchModalCloserChan chan fetchModalCloser
+	deleteModalID        chan string
 }
 
 const renderType = "modal"
 
 // create new Modal Module
 func New(l *logger.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
-	return &Module{
-		device:         device,
-		logger:         l,
-		dAppIDKey:      dAppIDKey,
-		modalIDs:       map[string]*otto.Value{},
-		modalIDsReqLim: reqLim.NewCountThrottling(6, time.Minute, 20, errors.New("can't put more show modal requests in queue")),
-		lock:           sync.Mutex{},
+	m := &Module{
+		device:               device,
+		logger:               l,
+		dAppIDKey:            dAppIDKey,
+		modalIDsReqLim:       reqLim.NewCountThrottling(6, time.Minute, 20, errors.New("can't put more show modal requests in queue")),
+		addModalIDChan:       make(chan addModalID),
+		fetchModalCloserChan: make(chan fetchModalCloser),
+		deleteModalID:        make(chan string),
 	}
+
+	go func() {
+
+		modals := map[string]*otto.Value{}
+
+		// exit if channels are closed
+		if m.addModalIDChan == nil || m.fetchModalCloserChan == nil || m.deleteModalID == nil {
+			return
+		}
+
+		for {
+			select {
+			// add
+			case add := <-m.addModalIDChan:
+				modals[add.id] = add.closer
+			// fetch
+			case fetch := <-m.fetchModalCloserChan:
+				closer, exist := modals[fetch.id]
+				if !exist {
+					fetch.respChan <- closer
+					continue
+				}
+				fetch.respChan <- closer
+			// delete
+			case delID := <-m.deleteModalID:
+				delete(modals, delID)
+				m.modalIDsReqLim.Decrease()
+			}
+		}
+
+	}()
+
+	return m
+}
+
+func (m *Module) Close() error {
+	close(m.addModalIDChan)
+	close(m.fetchModalCloserChan)
+	close(m.deleteModalID)
+	return nil
 }
 
 // renderModal provides a way to display a modal
@@ -75,9 +126,15 @@ func (m *Module) Register(vm *otto.Otto) error {
 		cb := call.Argument(2)
 
 		// make sure ui id is registered
-		m.lock.Lock()
-		defer m.lock.Unlock()
-		if _, exist := m.modalIDs[uiID]; !exist {
+		mIdChan := make(chan *otto.Value)
+		m.fetchModalCloserChan <- fetchModalCloser{
+			id:       uiID,
+			respChan: mIdChan,
+		}
+		modalCloser := <-mIdChan
+		// a modal closer can only exist with relation to a modal ID.
+		// So if the modal closer exist the modal id exist as well
+		if modalCloser == nil {
 			errMsg := fmt.Sprintf("modal UI ID: '%s' does not exist", uiID)
 			if _, err := cb.Call(cb, vm.MakeCustomError("MissingModalID", errMsg), uiID); err != nil {
 				m.logger.Error(errMsg)
@@ -123,9 +180,6 @@ func (m *Module) Register(vm *otto.Otto) error {
 
 		cb := call.Argument(1)
 
-		m.lock.Lock()
-		defer m.lock.Unlock()
-
 		// create new id
 		id, err := uuid.NewV4()
 		if err != nil {
@@ -137,19 +191,21 @@ func (m *Module) Register(vm *otto.Otto) error {
 		}
 
 		// increase request limitation counter
-		m.modalIDsReqLim.Exec(func() {
-			// add ui id to stack
+		m.modalIDsReqLim.Exec(func(dec chan struct{}) {
+
+			// add ui id & closer to stack
 			closer := call.Argument(0)
-			m.modalIDs[id.String()] = &closer
+			m.addModalIDChan <- addModalID{
+				id:     id.String(),
+				closer: &closer,
+			}
 
 			// call callback
 			_, err = cb.Call(cb, nil, id.String())
 			if err != nil {
 				// in the case of an error we would like to remove the id
 				// and decrease our request limitation
-				delete(m.modalIDs, id.String())
-				m.modalIDsReqLim.Decrease()
-
+				m.deleteModalID <- id.String()
 				m.logger.Error(err.Error())
 			}
 		})
@@ -163,21 +219,23 @@ func (m *Module) Register(vm *otto.Otto) error {
 // close the modal
 func (m *Module) CloseModal(uiID string) {
 
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	// fetch modal
-	closeModal, exist := m.modalIDs[uiID]
-	if !exist {
+	// fetch closer
+	respChan := make(chan *otto.Value)
+	m.fetchModalCloserChan <- fetchModalCloser{
+		id:       uiID,
+		respChan: respChan,
+	}
+	closer := <-respChan
+	if closer == nil {
 		return
 	}
+
 	// close modal
-	if _, err := closeModal.Call(*closeModal); err != nil {
+	if _, err := closer.Call(*closer); err != nil {
 		m.logger.Error(err.Error())
 	}
 
-	// finish close (decrease counter & delete from id's"
-	m.modalIDsReqLim.Decrease()
-	delete(m.modalIDs, uiID)
+	// finish close (decrease counter & delete from id's")
+	m.deleteModalID <- uiID
 
 }

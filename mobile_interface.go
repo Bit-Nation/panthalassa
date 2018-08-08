@@ -356,18 +356,27 @@ func StartDApp(dAppSingingKeyStr string, timeout int) error {
 
 }
 
-func RenderMessage(id, msg, context string) (string, error) {
+func RenderMessage(signingKey, payload string) (string, error) {
 
 	//Exit if not started
 	if panthalassaInstance == nil {
 		return "", errors.New("you have to start panthalassa first")
 	}
 
-	return panthalassaInstance.dAppReg.RenderMessage(id, msg, context)
+	// decode signing key
+	dAppSigningKey, err := hex.DecodeString(signingKey)
+	if err != nil {
+		return "", err
+	}
+	if len(dAppSigningKey) != 32 {
+		return "", errors.New("dapp signign key must be 32 bytes long")
+	}
+
+	return panthalassaInstance.dAppReg.RenderMessage(dAppSigningKey, payload)
 
 }
 
-func CallDAppFunction(dAppId string, id int, args string) error {
+func CallDAppFunction(signingKey string, id int, args string) error {
 
 	// make sure we get an uint value
 	if id < 0 {
@@ -379,7 +388,16 @@ func CallDAppFunction(dAppId string, id int, args string) error {
 		return errors.New("you have to start panthalassa first")
 	}
 
-	return panthalassaInstance.dAppReg.CallFunction(dAppId, uint(id), args)
+	// decode signing key
+	dAppSigningKey, err := hex.DecodeString(signingKey)
+	if err != nil {
+		return err
+	}
+	if len(dAppSigningKey) != 32 {
+		return errors.New("dapp signign key must be 32 bytes long")
+	}
+
+	return panthalassaInstance.dAppReg.CallFunction(dAppSigningKey, uint(id), args)
 
 }
 

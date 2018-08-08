@@ -56,7 +56,10 @@ func (r *Registry) devStreamHandler(str net.Stream) {
 
 			// add stream to registry so that we can
 			// associate it with the DApp
-			r.addDAppDevStream(dAppData.UsedSigningKey, str)
+			r.addDevStreamChan <- addDevStreamChanStr{
+				signingKey: dAppData.UsedSigningKey,
+				stream:     str,
+			}
 
 			valid, err := dAppData.VerifySignature()
 			if err != nil {

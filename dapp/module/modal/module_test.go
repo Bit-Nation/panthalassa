@@ -51,16 +51,23 @@ func TestModule_CloseModal(t *testing.T) {
 		require.Equal(t, modalID.String(), id.String())
 
 		// id must be registered in modal id map
-		_, exist := m.modalIDs[id.String()]
-		require.True(t, exist)
+		respChan := make(chan *otto.Value)
+		m.fetchModalCloserChan <- fetchModalCloser{
+			id:       id.String(),
+			respChan: respChan,
+		}
+		require.NotNil(t, <-respChan)
 
 		// close modal
 		m.CloseModal(id.String())
 
 		// id must NOT be registered in modal id map
-		_, exist = m.modalIDs[id.String()]
-		require.False(t, exist)
-
+		respChan = make(chan *otto.Value)
+		m.fetchModalCloserChan <- fetchModalCloser{
+			id:       id.String(),
+			respChan: respChan,
+		}
+		require.Nil(t, <-respChan)
 		require.True(t, closed)
 
 		// close test
@@ -101,9 +108,10 @@ func TestModule_RenderModal(t *testing.T) {
 
 	// we just register a fake it here to just
 	// make sure that we have an ID in the vm
-	m.lock.Lock()
-	m.modalIDs[uiID] = &otto.Value{}
-	m.lock.Unlock()
+	m.addModalIDChan <- addModalID{
+		id:     uiID,
+		closer: &otto.Value{},
+	}
 
 	done := make(chan struct{}, 1)
 
@@ -178,6 +186,9 @@ func TestModal_RequestLimitation(t *testing.T) {
 		// close modal with UI ID
 		id := call.Argument(1)
 		m.CloseModal(id.String())
+
+		// wait a bit to sync go routines
+		time.Sleep(time.Millisecond * 10)
 
 		// make sure id was removed from current
 		require.Equal(t, uint(0), m.modalIDsReqLim.Current())
