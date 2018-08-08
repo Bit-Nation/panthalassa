@@ -32,6 +32,7 @@ func NewBoltUserStorage() *BoltUserStorage {
 
 func (s *BoltUserStorage) GetSignedPreKey(idKey ed25519.PublicKey) (*preKey.PreKey, error) {
 	signedPreKey := new(preKey.PreKey)
+	signedPreKey = nil
 	err := s.db.View(func(tx *bolt.Tx) error {
 
 		// fetch user storage bucket
