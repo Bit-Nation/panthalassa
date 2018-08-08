@@ -42,6 +42,10 @@ func hasKey(stack []string, search string) bool {
 	return false
 }
 
+func (m *Module) Close() error {
+	return nil
+}
+
 func (m *Module) Register(vm *otto.Otto) error {
 	return vm.Set("sendMessage", func(call otto.FunctionCall) otto.Value {
 
@@ -151,7 +155,10 @@ func (m *Module) Register(vm *otto.Otto) error {
 		}
 
 		// persist message
-		m.reqLim.Exec(func() {
+		m.reqLim.Exec(func(dec chan struct{}) {
+			defer func() {
+				dec <- struct{}{}
+			}()
 			if err := m.msgStorage.PersistDAppMessage(chat, dAppMessage); err != nil {
 				handleError(err.Error())
 			}
