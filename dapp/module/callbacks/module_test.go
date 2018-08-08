@@ -2,7 +2,8 @@ package callbacks
 
 import (
 	"testing"
-
+	"time"
+	
 	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
@@ -27,22 +28,23 @@ func TestFuncRegistration(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, int64(1), id)
 
-	fn, exist := m.functions[1]
-	require.True(t, exist)
-	require.True(t, fn.IsFunction())
+	// fetch function and assert
+	respChan := make(chan *otto.Value)
+	m.fetchFunctionChan <- fetchFunction{
+		id:       1,
+		respChan: respChan,
+	}
+	require.NotNil(t, <-respChan)
 
 }
 
 func TestFuncUnRegisterSuccess(t *testing.T) {
 
 	m := New(nil)
-
 	vm := otto.New()
-
 	require.Nil(t, m.Register(vm))
 
 	// register function
-
 	funcId, err := vm.Call(`registerFunction`, vm, func(call otto.FunctionCall) otto.Value {
 		return otto.Value{}
 	})
@@ -53,18 +55,22 @@ func TestFuncUnRegisterSuccess(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, int64(1), id)
 
-	fn, exist := m.functions[1]
-	require.True(t, exist)
-	require.True(t, fn.IsFunction())
+	// make sure function exist
+	respChan := make(chan *otto.Value)
+	m.fetchFunctionChan <- fetchFunction{
+		id:       1,
+		respChan: respChan,
+	}
+	require.NotNil(t, <-respChan)
+	require.Equal(t, uint(1), m.reqLim.Count())
 
 	// un-register function that has never been registered
-	require.Equal(t, uint(1), m.reqLim.Count())
 	returnedValue, err := vm.Call(`unRegisterFunction`, vm, 23565)
 	require.Nil(t, err)
 	returnedValueStr, err := returnedValue.ToString()
 	require.Nil(t, err)
 	require.Equal(t, "undefined", returnedValueStr)
-	// request limitation must still be one since function that have not been registerd
+	// request limitation must still be one since function that have not been registered
 	// can't decrease the counter
 	require.Equal(t, uint(1), m.reqLim.Count())
 
@@ -74,6 +80,8 @@ func TestFuncUnRegisterSuccess(t *testing.T) {
 	returnedValueStr, err = returnedValue.ToString()
 	require.Nil(t, err)
 	require.Equal(t, "undefined", returnedValueStr)
+	// wait for the go routine to sync up
+	time.Sleep(time.Millisecond * 100)
 	// should be 0 since the the function id we passed in exists
 	require.Equal(t, uint(0), m.reqLim.Count())
 
@@ -82,9 +90,7 @@ func TestFuncUnRegisterSuccess(t *testing.T) {
 func TestFuncCallSuccess(t *testing.T) {
 
 	m := New(nil)
-
 	vm := otto.New()
-
 	require.Nil(t, m.Register(vm))
 
 	_, err := vm.Call(`registerFunction`, vm, func(call otto.FunctionCall) otto.Value {
@@ -111,11 +117,15 @@ func TestFuncCallSuccess(t *testing.T) {
 
 		return otto.Value{}
 	})
-
 	require.Nil(t, err)
-	fn, exist := m.functions[1]
-	require.True(t, exist)
-	require.True(t, fn.IsFunction())
+
+	// make sure function exist
+	respChan := make(chan *otto.Value)
+	m.fetchFunctionChan <- fetchFunction{
+		id:       1,
+		respChan: respChan,
+	}
+	require.NotNil(t, <-respChan)
 
 	require.Nil(t, m.CallFunction(1, `{key: "value"}`))
 
@@ -154,11 +164,15 @@ func TestFuncCallError(t *testing.T) {
 
 		return otto.Value{}
 	})
-
 	require.Nil(t, err)
-	fn, exist := m.functions[1]
-	require.True(t, exist)
-	require.True(t, fn.IsFunction())
+
+	// make sure function exist
+	respChan := make(chan *otto.Value)
+	m.fetchFunctionChan <- fetchFunction{
+		id:       1,
+		respChan: respChan,
+	}
+	require.NotNil(t, <-respChan)
 
 	require.Equal(t, "I am an error", m.CallFunction(1, `{key: "value"}`).Error())
 
@@ -208,11 +222,15 @@ func TestFuncCallBackTwice(t *testing.T) {
 		return otto.Value{}
 
 	})
-
 	require.Nil(t, err)
-	fn, exist := m.functions[1]
-	require.True(t, exist)
-	require.True(t, fn.IsFunction())
+
+	// make sure function exist
+	respChan := make(chan *otto.Value)
+	m.fetchFunctionChan <- fetchFunction{
+		id:       1,
+		respChan: respChan,
+	}
+	require.NotNil(t, <-respChan)
 
 	m.CallFunction(1, `{key: "value"}`)
 

@@ -3,7 +3,6 @@ package callbacks
 import (
 	"errors"
 	"fmt"
-	"sync"
 
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
@@ -18,21 +17,114 @@ var debugger = log.Logger("callbacks")
 // from inside of the vm and call them by there id
 
 func New(l *logger.Logger) *Module {
-	return &Module{
-		lock:      sync.Mutex{},
-		functions: map[uint]*otto.Value{},
-		logger:    l,
-		reqLim:    reqLim.NewCount(10000, errors.New("can't register more functions")),
+
+	m := &Module{
+		logger:             l,
+		reqLim:             reqLim.NewCount(10000, errors.New("can't register more functions")),
+		addFunctionChan:    make(chan addFunction),
+		fetchFunctionChan:  make(chan fetchFunction),
+		deleteFunctionChan: make(chan uint),
+	}
+
+	// state machine
+	go func() {
+
+		var count uint
+
+		functions := map[uint]*otto.Value{}
+
+		for {
+
+			// exit
+			if m.deleteFunctionChan == nil || m.addFunctionChan == nil || m.fetchFunctionChan == nil {
+				return
+			}
+
+			select {
+			// add function
+			case addFn := <-m.addFunctionChan:
+
+				// exit if function exist
+				if _, exist := functions[count+1]; exist {
+					addFn.respChan <- struct {
+						id    uint
+						error error
+					}{id: 0, error: fmt.Errorf("function for id: %d already registered", count+1)}
+					continue
+				}
+
+				// inc request limitation
+				err := m.reqLim.Increase()
+				if err != nil {
+					addFn.respChan <- struct {
+						id    uint
+						error error
+					}{id: 0, error: err}
+					continue
+				}
+
+				// inc counter
+				count++
+
+				// register function
+				functions[count] = addFn.fn
+				addFn.respChan <- struct {
+					id    uint
+					error error
+				}{id: count, error: nil}
+
+			// remove function
+			case remFn := <-m.deleteFunctionChan:
+				_, exist := functions[remFn]
+				if !exist {
+					continue
+				}
+				m.reqLim.Decrease()
+				delete(functions, remFn)
+			// fetch function
+			case fetchFn := <-m.fetchFunctionChan:
+				fn, exist := functions[fetchFn.id]
+				if !exist {
+					fetchFn.respChan <- nil
+					continue
+				}
+				fetchFn.respChan <- fn
+			}
+
+		}
+
+	}()
+
+	return m
+}
+
+type addFunction struct {
+	fn       *otto.Value
+	respChan chan struct {
+		id    uint
+		error error
 	}
 }
 
+type fetchFunction struct {
+	id       uint
+	respChan chan *otto.Value
+}
+
 type Module struct {
-	logger    *logger.Logger
-	lock      sync.Mutex
-	functions map[uint]*otto.Value
-	counter   uint
-	vm        *otto.Otto
-	reqLim    *reqLim.Count
+	logger             *logger.Logger
+	vm                 *otto.Otto
+	reqLim             *reqLim.Count
+	addFunctionChan    chan addFunction
+	fetchFunctionChan  chan fetchFunction
+	deleteFunctionChan chan uint
+}
+
+func (m *Module) Close() error {
+	close(m.addFunctionChan)
+	close(m.fetchFunctionChan)
+	close(m.deleteFunctionChan)
+	return nil
 }
 
 // this will call the given function (identified by the id)
@@ -43,12 +135,14 @@ func (m *Module) CallFunction(id uint, payload string) error {
 
 	debugger.Debug(fmt.Errorf("call function with id: %d and payload: %s", id, payload))
 
-	// lock
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	respChan := make(chan *otto.Value)
+	m.fetchFunctionChan <- fetchFunction{
+		id:       id,
+		respChan: respChan,
+	}
+	fn := <-respChan
 
 	// check if function is registered
-	fn := *m.functions[id]
 	if !fn.IsFunction() {
 		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
 	}
@@ -63,7 +157,7 @@ func (m *Module) CallFunction(id uint, payload string) error {
 
 	alreadyCalled := false
 
-	fn.Call(fn, objArgs, func(call otto.FunctionCall) otto.Value {
+	fn.Call(*fn, objArgs, func(call otto.FunctionCall) otto.Value {
 
 		// check if callback has already been called
 		if alreadyCalled {
@@ -106,23 +200,29 @@ func (m *Module) Register(vm *otto.Otto) error {
 			return *err
 		}
 
-		// lock
-		m.lock.Lock()
-		defer m.lock.Unlock()
-
-		// add function
-		m.counter++
-		// increase amount of registered functions
-		m.reqLim.Increase()
+		// callback
 		fn := call.Argument(0)
-		if _, exist := m.functions[m.counter]; exist {
-			vm.Run(fmt.Sprintf(`throw new Error("Failed to register function. Id (%d) already in use")`, m.counter))
+
+		// add function to stack
+		idRespChan := make(chan struct {
+			id    uint
+			error error
+		}, 1)
+		m.addFunctionChan <- addFunction{
+			respChan: idRespChan,
+			fn:       &fn,
+		}
+		// response
+		addResp := <-idRespChan
+
+		// exit vm on error
+		if addResp.error != nil {
+			vm.Run(fmt.Sprintf(`throw new Error(%s)`, addResp.error.Error()))
 			return otto.Value{}
 		}
 
-		m.functions[m.counter] = &fn
-
-		functionId, err := otto.ToValue(m.counter)
+		// convert function id to otto value
+		functionId, err := otto.ToValue(addResp.id)
 		if err != nil {
 			m.logger.Error(err.Error())
 		}
@@ -135,10 +235,6 @@ func (m *Module) Register(vm *otto.Otto) error {
 	}
 
 	return vm.Set("unRegisterFunction", func(call otto.FunctionCall) otto.Value {
-
-		// lock
-		m.lock.Lock()
-		defer m.lock.Unlock()
 
 		// validate function call
 		v := validator.New()
@@ -155,20 +251,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 			return otto.Value{}
 		}
 
-		// check if has been registered to make sure that
-		// dapp are not able to decrease the counter by
-		// calling unRegisterFunction with functions that
-		// don't exist
-		_, registered := m.functions[uint(id)]
-		if !registered {
-			return otto.Value{}
-		}
-
-		// delete function
-		delete(m.functions, uint(id))
-
-		// decrease amount of registered functions
-		m.reqLim.Decrease()
+		// delete function from channel
+		m.deleteFunctionChan <- uint(id)
 
 		return otto.Value{}
 	})
