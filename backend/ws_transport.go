@@ -5,6 +5,7 @@ import (
 )
 
 type WSTransport struct {
+	messages chan *bpb.BackendMessage
 }
 
 func (t *WSTransport) Send(msg *bpb.BackendMessage) error {
@@ -12,7 +13,7 @@ func (t *WSTransport) Send(msg *bpb.BackendMessage) error {
 }
 
 func (t *WSTransport) NextMessage() (*bpb.BackendMessage, error) {
-	return nil, nil
+	return <-t.messages, nil
 }
 
 func (t *WSTransport) Close() error {
