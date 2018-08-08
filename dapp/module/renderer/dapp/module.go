@@ -2,7 +2,6 @@ package dapp
 
 import (
 	"errors"
-	"sync"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
@@ -11,10 +10,10 @@ import (
 )
 
 type Module struct {
-	lock     sync.Mutex
-	logger   *logger.Logger
-	renderer *otto.Value
-	vm       *otto.Otto
+	logger             *logger.Logger
+	vm                 *otto.Otto
+	setOpenHandlerChan chan *otto.Value
+	getOpenHandlerChan chan chan *otto.Value
 }
 
 var sysLog = log.Logger("renderer - dapp")
@@ -39,10 +38,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 		}
 
 		// set renderer
-		m.lock.Lock()
 		fn := call.Argument(0)
-		m.renderer = &fn
-		m.lock.Unlock()
+		m.setOpenHandlerChan <- &fn
 
 		return otto.Value{}
 	})
@@ -51,12 +48,13 @@ func (m *Module) Register(vm *otto.Otto) error {
 // payload can be an arbitrary set of key value pairs (as a json string)
 func (m *Module) OpenDApp(payload string) error {
 
-	// lock
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	// fetch handler
+	handlerChan := make(chan *otto.Value)
+	m.getOpenHandlerChan <- handlerChan
+	handler := <-handlerChan
 
 	// make sure an renderer has been set
-	if m.renderer == nil {
+	if handler == nil {
 		return errors.New("failed to open DApp - no open handler set")
 	}
 
@@ -72,7 +70,7 @@ func (m *Module) OpenDApp(payload string) error {
 
 		// call the renderer
 		// we pass in data object and a callback
-		_, err = m.renderer.Call(*m.renderer, dataObj, func(call otto.FunctionCall) otto.Value {
+		_, err = handler.Call(*handler, dataObj, func(call otto.FunctionCall) otto.Value {
 
 			// fetch params from the callback call
 			err := call.Argument(0)
@@ -98,9 +96,41 @@ func (m *Module) OpenDApp(payload string) error {
 	return <-c
 }
 
+func (m *Module) Close() error {
+	close(m.setOpenHandlerChan)
+	close(m.getOpenHandlerChan)
+	return nil
+}
+
 func New(l *logger.Logger) *Module {
-	return &Module{
-		lock:   sync.Mutex{},
-		logger: l,
+
+	m := &Module{
+		logger:             l,
+		setOpenHandlerChan: make(chan *otto.Value),
+		getOpenHandlerChan: make(chan chan *otto.Value),
 	}
+
+	go func() {
+
+		openHandler := new(otto.Value)
+
+		for {
+
+			// exit if channels got closed
+			if m.setOpenHandlerChan == nil || m.getOpenHandlerChan == nil {
+				return
+			}
+
+			select {
+			case h := <-m.setOpenHandlerChan:
+				openHandler = h
+			case respChan := <-m.getOpenHandlerChan:
+				respChan <- openHandler
+			}
+
+		}
+
+	}()
+
+	return m
 }
