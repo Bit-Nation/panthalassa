@@ -118,6 +118,8 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 					continue
 				}
 				fetchDevStream.respChan <- stream
+			case dApp := <-r.addDAppChan:
+				dAppInstances[dApp.ID()] = dApp
 			}
 		}
 	}()
