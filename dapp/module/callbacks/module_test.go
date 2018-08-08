@@ -3,7 +3,7 @@ package callbacks
 import (
 	"testing"
 	"time"
-	
+
 	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
