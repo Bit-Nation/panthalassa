@@ -24,6 +24,10 @@ func New(l *logger.Logger) *UUIDV4 {
 	return &UUIDV4{logger: l}
 }
 
+func (r *UUIDV4) Close() error {
+	return nil
+}
+
 func (r *UUIDV4) Register(vm *otto.Otto) error {
 
 	return vm.Set("uuidV4", func(call otto.FunctionCall) otto.Value {
