@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"fmt"
 	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
@@ -249,7 +248,7 @@ func TestModule_Close(t *testing.T) {
 		return otto.Value{}
 	})
 	require.Nil(t, err)
-	fmt.Println("here")
-	require.EqualError(t, m.CallFunction(1, "{}"), "asdf")
+
+	require.EqualError(t, m.CallFunction(1, "{}"), "closed application")
 
 }

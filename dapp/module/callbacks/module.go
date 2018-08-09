@@ -26,7 +26,7 @@ func New(l *logger.Logger) *Module {
 		deleteFunctionChan: make(chan uint),
 		addCBChan:          make(chan *chan error),
 		rmCBChan:           make(chan *chan error),
-		nextCBChan:         make(chan chan *chan error),
+		closer: 			make(chan struct{}),
 	}
 
 	// state machine
@@ -38,18 +38,17 @@ func New(l *logger.Logger) *Module {
 		cbChans := map[*chan error]bool{}
 
 		for {
-
-			// exit
-			if m.deleteFunctionChan == nil || m.addFunctionChan == nil || m.fetchFunctionChan == nil {
-				return
-			}
-
+			
 			select {
+			// exit from go routine
+			case <-m.closer:
+				// close all callback's
+				for cbChan, _ := range cbChans {
+					*cbChan <- errors.New("closed application")
+				}
+				return
 			// add function
 			case addFn := <-m.addFunctionChan:
-				if addFn.respChan == nil || addFn.fn == nil {
-					continue
-				}
 				// exit if function exist
 				if _, exist := functions[count+1]; exist {
 					addFn.respChan <- struct {
@@ -81,7 +80,6 @@ func New(l *logger.Logger) *Module {
 
 			// remove function
 			case remFn := <-m.deleteFunctionChan:
-				fmt.Println(remFn)
 				_, exist := functions[remFn]
 				if !exist {
 					continue
@@ -90,10 +88,6 @@ func New(l *logger.Logger) *Module {
 				delete(functions, remFn)
 			// fetch function
 			case fetchFn := <-m.fetchFunctionChan:
-				// exit if resp chan
-				if fetchFn.respChan == nil {
-					continue
-				}
 				fn, exist := functions[fetchFn.id]
 				if !exist {
 					fetchFn.respChan <- nil
@@ -106,16 +100,6 @@ func New(l *logger.Logger) *Module {
 			// remove callback channel
 			case rmCB := <-m.rmCBChan:
 				delete(cbChans, rmCB)
-			// next callback channel
-			case nextCBChan := <-m.nextCBChan:
-				if len(cbChans) == 0 {
-					nextCBChan <- nil
-					continue
-				}
-				for cbChan, _ := range cbChans {
-					nextCBChan <- cbChan
-					break
-				}
 			}
 
 		}
@@ -149,12 +133,11 @@ type Module struct {
 	rmCBChan           chan *chan error
 	// returns a cb chan from the stack
 	nextCBChan chan chan *chan error
+	closer chan struct{}
 }
 
 func (m *Module) Close() error {
-	close(m.addFunctionChan)
-	close(m.fetchFunctionChan)
-	close(m.deleteFunctionChan)
+	m.closer <- struct{}{}
 	return nil
 }
 
@@ -286,7 +269,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			m.logger.Error(err.Error())
 			return otto.Value{}
 		}
-		fmt.Println("delete function")
+
 		// delete function from channel
 		m.deleteFunctionChan <- uint(id)
 
