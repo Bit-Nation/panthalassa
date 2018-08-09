@@ -63,17 +63,17 @@ func TestModule_RenderMessageSuccess(t *testing.T) {
 }
 
 func TestModule_Close(t *testing.T) {
-	
+
 	vm := otto.New()
-	m := New(nil)
+	m := New(log.MustGetLogger(""))
 	require.Nil(t, m.Register(vm))
-	
-	vm.Call("setMessageRenderer", func(call otto.FunctionCall) otto.Value {
+
+	vm.Call("setMessageRenderer", vm, func(call otto.FunctionCall) otto.Value {
 		m.Close()
 		return otto.Value{}
 	})
-	
+
 	_, err := m.RenderMessage("{}")
-	require.EqualError(t, err, "dick")
-	
+	require.EqualError(t, err, "closed application")
+
 }

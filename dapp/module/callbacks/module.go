@@ -24,6 +24,9 @@ func New(l *logger.Logger) *Module {
 		addFunctionChan:    make(chan addFunction),
 		fetchFunctionChan:  make(chan fetchFunction),
 		deleteFunctionChan: make(chan uint),
+		addCBChan:          make(chan *chan error),
+		rmCBChan:           make(chan *chan error),
+		nextCBChan:         make(chan chan *chan error),
 	}
 
 	// state machine
@@ -32,6 +35,7 @@ func New(l *logger.Logger) *Module {
 		var count uint
 
 		functions := map[uint]*otto.Value{}
+		cbChans := map[*chan error]bool{}
 
 		for {
 
@@ -43,7 +47,9 @@ func New(l *logger.Logger) *Module {
 			select {
 			// add function
 			case addFn := <-m.addFunctionChan:
-
+				if addFn.respChan == nil || addFn.fn == nil {
+					continue
+				}
 				// exit if function exist
 				if _, exist := functions[count+1]; exist {
 					addFn.respChan <- struct {
@@ -75,6 +81,7 @@ func New(l *logger.Logger) *Module {
 
 			// remove function
 			case remFn := <-m.deleteFunctionChan:
+				fmt.Println(remFn)
 				_, exist := functions[remFn]
 				if !exist {
 					continue
@@ -83,12 +90,32 @@ func New(l *logger.Logger) *Module {
 				delete(functions, remFn)
 			// fetch function
 			case fetchFn := <-m.fetchFunctionChan:
+				// exit if resp chan
+				if fetchFn.respChan == nil {
+					continue
+				}
 				fn, exist := functions[fetchFn.id]
 				if !exist {
 					fetchFn.respChan <- nil
 					continue
 				}
 				fetchFn.respChan <- fn
+			// add callback channel
+			case addCB := <-m.addCBChan:
+				cbChans[addCB] = true
+			// remove callback channel
+			case rmCB := <-m.rmCBChan:
+				delete(cbChans, rmCB)
+			// next callback channel
+			case nextCBChan := <-m.nextCBChan:
+				if len(cbChans) == 0 {
+					nextCBChan <- nil
+					continue
+				}
+				for cbChan, _ := range cbChans {
+					nextCBChan <- cbChan
+					break
+				}
 			}
 
 		}
@@ -118,6 +145,10 @@ type Module struct {
 	addFunctionChan    chan addFunction
 	fetchFunctionChan  chan fetchFunction
 	deleteFunctionChan chan uint
+	addCBChan          chan *chan error
+	rmCBChan           chan *chan error
+	// returns a cb chan from the stack
+	nextCBChan chan chan *chan error
 }
 
 func (m *Module) Close() error {
@@ -154,10 +185,15 @@ func (m *Module) CallFunction(id uint, payload string) error {
 	}
 
 	done := make(chan error, 1)
+	m.addCBChan <- &done
 
 	alreadyCalled := false
 
 	fn.Call(*fn, objArgs, func(call otto.FunctionCall) otto.Value {
+
+		defer func() {
+			m.rmCBChan <- &done
+		}()
 
 		// check if callback has already been called
 		if alreadyCalled {
@@ -250,7 +286,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			m.logger.Error(err.Error())
 			return otto.Value{}
 		}
-
+		fmt.Println("delete function")
 		// delete function from channel
 		m.deleteFunctionChan <- uint(id)
 

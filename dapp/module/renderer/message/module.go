@@ -14,9 +14,9 @@ type Module struct {
 	vm              *otto.Otto
 	setRendererChan chan *otto.Value
 	getRendererChan chan chan *otto.Value
-	addCBChan chan *chan resp
-	rmCBChan chan *chan resp
-	nextCBChanChan chan chan *chan resp
+	addCBChan       chan *chan resp
+	rmCBChan        chan *chan resp
+	nextCBChanChan  chan chan *chan resp
 }
 
 var sysLog = log.Logger("renderer - message")
@@ -67,7 +67,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 	renderer := <-rendererChan
 
 	// make sure an renderer has been set
-	if renderer == nil {
+	if renderer == nil || !renderer.IsDefined() {
 		return "", errors.New("failed to render message - no open handler set")
 	}
 
@@ -78,13 +78,19 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 	}
 
 	cbChan := make(chan resp, 1)
+	m.addCBChan <- &cbChan
 
 	go func() {
 
 		// call the message renderer
 		// @todo what happens if we call the callback twice?
 		_, err = renderer.Call(*renderer, payloadObj, func(call otto.FunctionCall) otto.Value {
-			
+
+			// delete cb chan from stack when we are done
+			defer func() {
+				m.rmCBChan <- &cbChan
+			}()
+
 			// fetch params from the callback call
 			err := call.Argument(0)
 			layout := call.Argument(1)
@@ -100,7 +106,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 			if layout.IsString() {
 				r.layout = layout.String()
 			}
-			
+
 			cbChan <- r
 
 			return otto.Value{}
@@ -129,7 +135,7 @@ func (m *Module) Close() error {
 		if cbChan == nil {
 			break
 		}
-		
+
 		// close render message attempt
 		*cbChan <- resp{
 			error: errors.New("closed application"),
@@ -146,12 +152,15 @@ func New(l *logger.Logger) *Module {
 		logger:          l,
 		setRendererChan: make(chan *otto.Value),
 		getRendererChan: make(chan chan *otto.Value),
+		addCBChan:       make(chan *chan resp),
+		rmCBChan:        make(chan *chan resp),
+		nextCBChanChan:  make(chan chan *chan resp),
 	}
 
 	go func() {
 
 		renderer := new(otto.Value)
-		
+
 		cbChans := map[*chan resp]bool{}
 
 		for {
@@ -165,8 +174,14 @@ func New(l *logger.Logger) *Module {
 			case r := <-m.setRendererChan:
 				renderer = r
 			case respChan := <-m.getRendererChan:
+				if respChan == nil {
+					continue
+				}
 				respChan <- renderer
-			case addCB := <- m.addCBChan:
+			case addCB := <-m.addCBChan:
+				if addCB == nil {
+					continue
+				}
 				cbChans[addCB] = true
 			case rmCB := <-m.rmCBChan:
 				delete(cbChans, rmCB)
