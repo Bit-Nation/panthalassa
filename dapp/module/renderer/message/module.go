@@ -16,7 +16,7 @@ type Module struct {
 	getRendererChan chan chan *otto.Value
 	addCBChan       chan *chan resp
 	rmCBChan        chan *chan resp
-	nextCBChanChan  chan chan *chan resp
+	closer          chan struct{}
 }
 
 var sysLog = log.Logger("renderer - message")
@@ -120,30 +120,11 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 	}()
 
 	r := <-cbChan
-
 	return r.layout, r.error
 }
 
 func (m *Module) Close() error {
-	close(m.getRendererChan)
-	close(m.setRendererChan)
-	for {
-		// fetch cb channel
-		respChan := make(chan *chan resp)
-		m.nextCBChanChan <- respChan
-		cbChan := <-respChan
-		if cbChan == nil {
-			break
-		}
-
-		// close render message attempt
-		*cbChan <- resp{
-			error: errors.New("closed application"),
-		}
-	}
-	close(m.addCBChan)
-	close(m.rmCBChan)
-	close(m.nextCBChanChan)
+	m.closer <- struct{}{}
 	return nil
 }
 
@@ -154,46 +135,32 @@ func New(l *logger.Logger) *Module {
 		getRendererChan: make(chan chan *otto.Value),
 		addCBChan:       make(chan *chan resp),
 		rmCBChan:        make(chan *chan resp),
-		nextCBChanChan:  make(chan chan *chan resp),
+		closer:          make(chan struct{}),
 	}
 
 	go func() {
 
 		renderer := new(otto.Value)
-
 		cbChans := map[*chan resp]bool{}
 
 		for {
 
-			// exit if channels got closed
-			if m.setRendererChan == nil || m.getRendererChan == nil {
-				return
-			}
-
 			select {
+			case <-m.closer:
+				for cbChan, _ := range cbChans {
+					*cbChan <- resp{
+						error: errors.New("closed the application"),
+					}
+				}
+				return
 			case r := <-m.setRendererChan:
 				renderer = r
 			case respChan := <-m.getRendererChan:
-				if respChan == nil {
-					continue
-				}
 				respChan <- renderer
 			case addCB := <-m.addCBChan:
-				if addCB == nil {
-					continue
-				}
 				cbChans[addCB] = true
 			case rmCB := <-m.rmCBChan:
 				delete(cbChans, rmCB)
-			case nexCB := <-m.nextCBChanChan:
-				if len(cbChans) == 0 {
-					nexCB <- nil
-					continue
-				}
-				for cbChan, _ := range cbChans {
-					nexCB <- cbChan
-					break
-				}
 			}
 
 		}

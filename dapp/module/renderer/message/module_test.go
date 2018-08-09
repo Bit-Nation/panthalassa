@@ -74,6 +74,6 @@ func TestModule_Close(t *testing.T) {
 	})
 
 	_, err := m.RenderMessage("{}")
-	require.EqualError(t, err, "closed application")
+	require.EqualError(t, err, "closed the application")
 
 }
