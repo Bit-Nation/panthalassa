@@ -138,6 +138,7 @@ func New(l *logger.Logger) *Module {
 				for cbChan, _ := range cbChans {
 					*cbChan <- errors.New("closed the application")
 				}
+				return
 			case h := <-m.setOpenHandlerChan:
 				openHandler = h
 			case respChan := <-m.getOpenHandlerChan:
