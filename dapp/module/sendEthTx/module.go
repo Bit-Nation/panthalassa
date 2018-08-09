@@ -73,19 +73,25 @@ func (m *Module) Register(vm *otto.Otto) error {
 
 			to, err := obj.Get("to")
 			if err != nil {
-				cb.Call(cb, err.Error())
+				if _, err := cb.Call(cb, err.Error()); err != nil {
+					m.logger.Error(err.Error())
+				}
 				return
 			}
 
 			value, err := obj.Get("value")
 			if err != nil {
-				cb.Call(cb, err.Error())
+				if _, err := cb.Call(cb, err.Error()); err != nil {
+					m.logger.Error(err.Error())
+				}
 				return
 			}
 
 			data, err := obj.Get("data")
 			if err != nil {
-				cb.Call(cb, err.Error())
+				if _, err := cb.Call(cb, err.Error()); err != nil {
+					m.logger.Error(err.Error())
+				}
 				return
 			}
 

@@ -150,11 +150,17 @@ func (m *Module) Register(vm *otto.Otto) error {
 		go func() {
 			// request to show modal
 			if err := m.device.RenderModal(uiID, layout, m.dAppIDKey); err != nil {
-				cb.Call(cb, vm.MakeCustomError("Error", "failed to render modal"))
+				_, err = cb.Call(cb, vm.MakeCustomError("Error", "failed to render modal"))
+				if err != nil {
+					m.logger.Error(err.Error())
+				}
 				return
 			}
 
-			cb.Call(cb)
+			if _, err := cb.Call(cb); err != nil {
+				m.logger.Error(err.Error())
+			}
+
 		}()
 
 		return otto.Value{}

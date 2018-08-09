@@ -184,6 +184,7 @@ func (r *Registry) StartDApp(dAppSigningKey ed25519.PublicKey, timeOut time.Dura
 
 	app, err := dapp.New(l, dApp, vmModules, r.closeChan, timeOut, r.db)
 	if err != nil {
+		l.Error(err.Error())
 		return err
 	}
 

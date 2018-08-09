@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
 )
@@ -37,7 +38,7 @@ func TestModulePut(t *testing.T) {
 
 	m := New(&inMemoryDB{
 		storage: map[string][]byte{},
-	})
+	}, log.MustGetLogger(""))
 
 	vm := otto.New()
 
@@ -109,6 +110,7 @@ func TestModuleGet(t *testing.T) {
 				"key": marshaledValue,
 			},
 		},
+		logger: log.MustGetLogger(""),
 	}
 
 	vm := otto.New()

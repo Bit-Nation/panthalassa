@@ -8,6 +8,7 @@ import (
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
+	opLogger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 )
 
@@ -16,10 +17,12 @@ var logger = log.Logger("db module")
 type Module struct {
 	dAppDB Storage
 	reqLim *reqLim.CountThrottling
+	logger *opLogger.Logger
 }
 
-func New(s Storage) *Module {
+func New(s Storage, l *opLogger.Logger) *Module {
 	return &Module{
+		logger: l,
 		dAppDB: s,
 		reqLim: reqLim.NewCountThrottling(5, time.Second*60, 40, errors.New("can't add more write requests")),
 	}
@@ -33,7 +36,10 @@ func (m *Module) Register(vm *otto.Otto) error {
 
 	handleError := func(errMsg string, cb otto.Value) otto.Value {
 		if cb.IsFunction() {
-			cb.Call(cb, errMsg)
+			_, err := cb.Call(cb, errMsg)
+			if err != nil {
+				m.logger.Error(errMsg)
+			}
 			return otto.Value{}
 		}
 		logger.Error(errMsg)
@@ -109,14 +115,14 @@ func (m *Module) Register(vm *otto.Otto) error {
 			}
 			_, err = cb.Call(cb, nil, has)
 			if err != nil {
-				logger.Error(err.Error())
+				m.logger.Error(err.Error())
 			}
 			return otto.Value{}
 
 		},
 		"get": func(call otto.FunctionCall) otto.Value {
 
-			logger.Debug("get value")
+			m.logger.Debug("get value")
 
 			// validate function call
 			v := validator.New()
@@ -145,7 +151,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 			// call callback with error
 			_, err = cb.Call(cb, nil, unmarshalledValue)
 			if err != nil {
-				logger.Error(err.Error())
+				m.logger.Error(err.Error())
 			}
 			return otto.Value{}
 

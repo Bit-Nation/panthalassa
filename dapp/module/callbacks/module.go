@@ -26,7 +26,7 @@ func New(l *logger.Logger) *Module {
 		deleteFunctionChan: make(chan uint),
 		addCBChan:          make(chan *chan error),
 		rmCBChan:           make(chan *chan error),
-		closer: 			make(chan struct{}),
+		closer:             make(chan struct{}),
 	}
 
 	// state machine
@@ -38,7 +38,7 @@ func New(l *logger.Logger) *Module {
 		cbChans := map[*chan error]bool{}
 
 		for {
-			
+
 			select {
 			// exit from go routine
 			case <-m.closer:
@@ -133,7 +133,7 @@ type Module struct {
 	rmCBChan           chan *chan error
 	// returns a cb chan from the stack
 	nextCBChan chan chan *chan error
-	closer chan struct{}
+	closer     chan struct{}
 }
 
 func (m *Module) Close() error {
@@ -156,6 +156,10 @@ func (m *Module) CallFunction(id uint, payload string) error {
 	}
 	fn := <-respChan
 
+	if fn == nil {
+		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
+	}
+
 	// check if function is registered
 	if !fn.IsFunction() {
 		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
@@ -172,7 +176,7 @@ func (m *Module) CallFunction(id uint, payload string) error {
 
 	alreadyCalled := false
 
-	fn.Call(*fn, objArgs, func(call otto.FunctionCall) otto.Value {
+	_, err = fn.Call(*fn, objArgs, func(call otto.FunctionCall) otto.Value {
 
 		defer func() {
 			m.rmCBChan <- &done
@@ -197,6 +201,9 @@ func (m *Module) CallFunction(id uint, payload string) error {
 		return otto.Value{}
 
 	})
+	if err != nil {
+		m.logger.Error(err.Error())
+	}
 
 	return <-done
 
@@ -215,7 +222,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		v := validator.New()
 		v.Set(0, &validator.TypeFunction)
 		if err := v.Validate(vm, call); err != nil {
-			vm.Run(fmt.Sprintf(`throw new Error("registerFunction needs a callback as it's first param %s")`, err.String()))
+			m.logger.Error(fmt.Sprintf(`registerFunction needs a callback as it's first param %s`, err.String()))
 			return *err
 		}
 
@@ -236,7 +243,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 
 		// exit vm on error
 		if addResp.error != nil {
-			vm.Run(fmt.Sprintf(`throw new Error(%s)`, addResp.error.Error()))
+			m.logger.Error(addResp.error.Error())
 			return otto.Value{}
 		}
 

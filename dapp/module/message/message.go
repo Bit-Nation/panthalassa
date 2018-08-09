@@ -63,7 +63,10 @@ func (m *Module) Register(vm *otto.Otto) error {
 		// utils to handle an occurred error
 		handleError := func(errMsg string) otto.Value {
 			if cb.IsFunction() {
-				cb.Call(cb, errMsg)
+				_, err := cb.Call(cb, errMsg)
+				if err != nil {
+					m.logger.Error(err.Error())
+				}
 				return otto.Value{}
 			}
 			m.logger.Error(errMsg)

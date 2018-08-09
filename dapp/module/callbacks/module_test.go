@@ -236,6 +236,17 @@ func TestFuncCallBackTwice(t *testing.T) {
 
 }
 
+func TestModule_CallFunctionThatIsNotRegistered(t *testing.T) {
+
+	m := New(log.MustGetLogger(""))
+	vm := otto.New()
+	require.Nil(t, m.Register(vm))
+
+	err := m.CallFunction(1, "{}")
+	require.EqualError(t, err, "function with id: 1 does not exist")
+
+}
+
 func TestModule_Close(t *testing.T) {
 
 	m := New(log.MustGetLogger(""))
