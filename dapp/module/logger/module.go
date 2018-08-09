@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"bufio"
 	"encoding/base64"
 	"strings"
 
@@ -14,22 +13,25 @@ import (
 var sysLog = log.Logger("logger module logger")
 
 type streamLogger struct {
-	writer *bufio.Writer
+	writer net.Stream
 }
 
 func (l *streamLogger) Write(data []byte) (int, error) {
 
-	// write log encoded as base64 to make sure there are no spaces in the dataset
-	if a, err := l.writer.Write([]byte(base64.StdEncoding.EncodeToString(data))); err != nil {
-		return a, err
+	// write log into stream
+	i, err := l.writer.Write([]byte(base64.StdEncoding.EncodeToString(data)))
+	if err != nil {
+		return i, err
 	}
 
-	// write line break as delimiter
-	if err := l.writer.WriteByte(0x0A); err != nil {
-		return 0, err
+	// write delimiter
+	_, err = l.writer.Write([]byte{'\n'})
+	if err != nil {
+		return i, err
 	}
 
-	return len(data), nil
+	// +1 because the delimiter is just one byte
+	return i + +1, nil
 }
 
 type Logger struct {
@@ -43,8 +45,7 @@ func New(stream net.Stream) (*Logger, error) {
 		return nil, err
 	}
 
-	w := bufio.NewWriter(stream)
-	loggerStream := &streamLogger{writer: w}
+	loggerStream := &streamLogger{writer: stream}
 
 	l.SetBackend(logger.AddModuleLevel(logger.NewLogBackend(loggerStream, "", 0)))
 
