@@ -2,11 +2,13 @@ package db
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/Bit-Nation/panthalassa/crypto/aes"
+	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bolt "github.com/coreos/bbolt"
 	uuid "github.com/satori/go.uuid"
@@ -367,9 +369,19 @@ func (s *BoltChatMessageStorage) PersistMessageToSend(partner ed25519.PublicKey,
 	if err != nil {
 		return err
 	}
+	myIdKeyStr, err := s.km.IdentityPublicKey()
+	if err != nil {
+		return err
+	}
+	myIdKey, err := hex.DecodeString(myIdKeyStr)
+	if len(myIdKey) != 32 {
+		return fmt.Errorf("my id key is invalid (%d bytes long)", len(myIdKey))
+	}
 	msg.ID = id.String()
 	msg.Received = false
 	msg.Status = StatusPersisted
+	msg.Sender = myIdKey
+	msg.CreatedAt = time.Now().UnixNano()
 	return s.persistMessage(partner, msg)
 }
 
