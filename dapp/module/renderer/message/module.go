@@ -14,6 +14,9 @@ type Module struct {
 	vm              *otto.Otto
 	setRendererChan chan *otto.Value
 	getRendererChan chan chan *otto.Value
+	addCBChan chan *chan resp
+	rmCBChan chan *chan resp
+	nextCBChanChan chan chan *chan resp
 }
 
 var sysLog = log.Logger("renderer - message")
@@ -49,6 +52,11 @@ func (m *Module) Register(vm *otto.Otto) error {
 	})
 }
 
+type resp struct {
+	layout string
+	error  error
+}
+
 // payload can be an arbitrary set of key value pairs
 // should contain the "message" and the "context" tho
 func (m *Module) RenderMessage(payload string) (string, error) {
@@ -69,19 +77,14 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 		return "", err
 	}
 
-	type resp struct {
-		layout string
-		error  error
-	}
-
-	c := make(chan resp, 1)
+	cbChan := make(chan resp, 1)
 
 	go func() {
 
 		// call the message renderer
 		// @todo what happens if we call the callback twice?
 		_, err = renderer.Call(*renderer, payloadObj, func(call otto.FunctionCall) otto.Value {
-
+			
 			// fetch params from the callback call
 			err := call.Argument(0)
 			layout := call.Argument(1)
@@ -97,8 +100,8 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 			if layout.IsString() {
 				r.layout = layout.String()
 			}
-
-			c <- r
+			
+			cbChan <- r
 
 			return otto.Value{}
 
@@ -110,7 +113,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 
 	}()
 
-	r := <-c
+	r := <-cbChan
 
 	return r.layout, r.error
 }
@@ -118,6 +121,23 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 func (m *Module) Close() error {
 	close(m.getRendererChan)
 	close(m.setRendererChan)
+	for {
+		// fetch cb channel
+		respChan := make(chan *chan resp)
+		m.nextCBChanChan <- respChan
+		cbChan := <-respChan
+		if cbChan == nil {
+			break
+		}
+		
+		// close render message attempt
+		*cbChan <- resp{
+			error: errors.New("closed application"),
+		}
+	}
+	close(m.addCBChan)
+	close(m.rmCBChan)
+	close(m.nextCBChanChan)
 	return nil
 }
 
@@ -131,6 +151,8 @@ func New(l *logger.Logger) *Module {
 	go func() {
 
 		renderer := new(otto.Value)
+		
+		cbChans := map[*chan resp]bool{}
 
 		for {
 
@@ -144,6 +166,19 @@ func New(l *logger.Logger) *Module {
 				renderer = r
 			case respChan := <-m.getRendererChan:
 				respChan <- renderer
+			case addCB := <- m.addCBChan:
+				cbChans[addCB] = true
+			case rmCB := <-m.rmCBChan:
+				delete(cbChans, rmCB)
+			case nexCB := <-m.nextCBChanChan:
+				if len(cbChans) == 0 {
+					nexCB <- nil
+					continue
+				}
+				for cbChan, _ := range cbChans {
+					nexCB <- cbChan
+					break
+				}
 			}
 
 		}
