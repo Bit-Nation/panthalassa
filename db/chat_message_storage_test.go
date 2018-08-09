@@ -3,6 +3,7 @@ package db
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -192,5 +193,62 @@ func TestBoltChatMessageStorage_persistSuccess(t *testing.T) {
 		return nil
 	})
 	require.Nil(t, err)
+
+}
+
+func TestBoltChatMessageStorage_AllChats(t *testing.T) {
+
+	// setup
+	db := createDB()
+	km := createKeyManager()
+	partnerOne, _, err := ed25519.GenerateKey(rand.Reader)
+	partnerTwo, _, err := ed25519.GenerateKey(rand.Reader)
+	require.Nil(t, err)
+	storage := NewChatMessageStorage(db, []func(event MessagePersistedEvent){}, km)
+
+	require.Nil(t, storage.PersistMessageToSend(partnerOne, Message{Message: []byte("hi @partner one")}))
+	require.Nil(t, storage.PersistMessageToSend(partnerTwo, Message{Message: []byte("hi @partner two")}))
+
+	// fetch all chat partners and make sure we get the once we expect
+	partners, err := storage.AllChats()
+	require.Nil(t, err)
+	require.Equal(t, 2, len(partners))
+	require.True(t, hex.EncodeToString(partners[0]) == hex.EncodeToString(partnerOne) || hex.EncodeToString(partners[0]) == hex.EncodeToString(partnerTwo))
+	require.True(t, hex.EncodeToString(partners[1]) == hex.EncodeToString(partnerOne) || hex.EncodeToString(partners[1]) == hex.EncodeToString(partnerTwo))
+
+	// assert message for partner one
+	messages, err := storage.Messages(partnerOne, 0, 10)
+	require.Nil(t, err)
+	for _, msg := range messages {
+		require.Equal(t, []byte("hi @partner one"), msg.Message)
+	}
+
+	// assert message for partner two
+	messages, err = storage.Messages(partnerTwo, 0, 10)
+	require.Nil(t, err)
+	for _, msg := range messages {
+		require.Equal(t, []byte("hi @partner two"), msg.Message)
+	}
+
+}
+
+func TestBoltChatMessageStorage_GetMessage(t *testing.T) {
+
+	// setup
+	db := createDB()
+	km := createKeyManager()
+	partner, _, err := ed25519.GenerateKey(rand.Reader)
+	require.Nil(t, err)
+	storage := NewChatMessageStorage(db, []func(event MessagePersistedEvent){}, km)
+
+	require.Nil(t, storage.PersistMessageToSend(partner, Message{Message: []byte("hi there")}))
+	messages, err := storage.Messages(partner, 0, 10)
+	require.Nil(t, err)
+	for id, _ := range messages {
+		msg, err := storage.GetMessage(partner, id)
+		require.Nil(t, err)
+		require.Equal(t, []byte("hi there"), msg.Message)
+		break
+	}
 
 }

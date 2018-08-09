@@ -276,14 +276,28 @@ func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64
 			rawMsg = value
 		}
 
-		// return in the case that the message doesn't exist
-		if rawMsg == nil {
-			return nil
+		decRawMsg := func(rawEncMsg []byte, km km.KeyManager) (Message, error) {
+
+			// unmarshal cipher text
+			ct, err := aes.Unmarshal(rawEncMsg)
+			if err != nil {
+				return Message{}, err
+			}
+
+			// decrypt cipher text
+			plainMsg, err := km.AESDecrypt(ct)
+			if err != nil {
+				return Message{}, err
+			}
+
+			msg := Message{}
+			return msg, json.Unmarshal(plainMsg, &msg)
+
 		}
 
 		// unmarshal message
-		msg := Message{}
-		if err := json.Unmarshal(rawMsg, &msg); err != nil {
+		msg, err := decRawMsg(rawMsg, *s.km)
+		if err != nil {
 			return err
 		}
 		messages[msgID] = msg
@@ -320,15 +334,15 @@ func (s *BoltChatMessageStorage) GetMessage(partner ed25519.PublicKey, dbID int6
 	err := s.db.View(func(tx *bolt.Tx) error {
 
 		// private chats bucket
-		privateChats, err := tx.CreateBucketIfNotExists(privateChatBucketName)
-		if err != nil {
-			return err
+		privateChats := tx.Bucket(privateChatBucketName)
+		if privateChats == nil {
+			return nil
 		}
 
 		// bucket with chat of partner
-		partnerMessages, err := privateChats.CreateBucketIfNotExists(partner)
-		if err != nil {
-			return err
+		partnerMessages := privateChats.Bucket(partner)
+		if partnerMessages == nil {
+			return nil
 		}
 
 		// turn numeric message id into byte message id
