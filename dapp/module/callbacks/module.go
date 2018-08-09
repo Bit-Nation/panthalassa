@@ -24,6 +24,9 @@ func New(l *logger.Logger) *Module {
 		addFunctionChan:    make(chan addFunction),
 		fetchFunctionChan:  make(chan fetchFunction),
 		deleteFunctionChan: make(chan uint),
+		addCBChan:          make(chan *chan error),
+		rmCBChan:           make(chan *chan error),
+		closer:             make(chan struct{}),
 	}
 
 	// state machine
@@ -32,18 +35,20 @@ func New(l *logger.Logger) *Module {
 		var count uint
 
 		functions := map[uint]*otto.Value{}
+		cbChans := map[*chan error]bool{}
 
 		for {
 
-			// exit
-			if m.deleteFunctionChan == nil || m.addFunctionChan == nil || m.fetchFunctionChan == nil {
-				return
-			}
-
 			select {
+			// exit from go routine
+			case <-m.closer:
+				// close all callback's
+				for cbChan, _ := range cbChans {
+					*cbChan <- errors.New("closed application")
+				}
+				return
 			// add function
 			case addFn := <-m.addFunctionChan:
-
 				// exit if function exist
 				if _, exist := functions[count+1]; exist {
 					addFn.respChan <- struct {
@@ -89,6 +94,12 @@ func New(l *logger.Logger) *Module {
 					continue
 				}
 				fetchFn.respChan <- fn
+			// add callback channel
+			case addCB := <-m.addCBChan:
+				cbChans[addCB] = true
+			// remove callback channel
+			case rmCB := <-m.rmCBChan:
+				delete(cbChans, rmCB)
 			}
 
 		}
@@ -118,12 +129,15 @@ type Module struct {
 	addFunctionChan    chan addFunction
 	fetchFunctionChan  chan fetchFunction
 	deleteFunctionChan chan uint
+	addCBChan          chan *chan error
+	rmCBChan           chan *chan error
+	// returns a cb chan from the stack
+	nextCBChan chan chan *chan error
+	closer     chan struct{}
 }
 
 func (m *Module) Close() error {
-	close(m.addFunctionChan)
-	close(m.fetchFunctionChan)
-	close(m.deleteFunctionChan)
+	m.closer <- struct{}{}
 	return nil
 }
 
@@ -142,6 +156,10 @@ func (m *Module) CallFunction(id uint, payload string) error {
 	}
 	fn := <-respChan
 
+	if fn == nil {
+		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
+	}
+
 	// check if function is registered
 	if !fn.IsFunction() {
 		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
@@ -154,10 +172,15 @@ func (m *Module) CallFunction(id uint, payload string) error {
 	}
 
 	done := make(chan error, 1)
+	m.addCBChan <- &done
 
 	alreadyCalled := false
 
-	fn.Call(*fn, objArgs, func(call otto.FunctionCall) otto.Value {
+	_, err = fn.Call(*fn, objArgs, func(call otto.FunctionCall) otto.Value {
+
+		defer func() {
+			m.rmCBChan <- &done
+		}()
 
 		// check if callback has already been called
 		if alreadyCalled {
@@ -178,6 +201,9 @@ func (m *Module) CallFunction(id uint, payload string) error {
 		return otto.Value{}
 
 	})
+	if err != nil {
+		m.logger.Error(err.Error())
+	}
 
 	return <-done
 
@@ -196,7 +222,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		v := validator.New()
 		v.Set(0, &validator.TypeFunction)
 		if err := v.Validate(vm, call); err != nil {
-			vm.Run(fmt.Sprintf(`throw new Error("registerFunction needs a callback as it's first param %s")`, err.String()))
+			m.logger.Error(fmt.Sprintf(`registerFunction needs a callback as it's first param %s`, err.String()))
 			return *err
 		}
 
@@ -217,7 +243,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 
 		// exit vm on error
 		if addResp.error != nil {
-			vm.Run(fmt.Sprintf(`throw new Error(%s)`, addResp.error.Error()))
+			m.logger.Error(addResp.error.Error())
 			return otto.Value{}
 		}
 

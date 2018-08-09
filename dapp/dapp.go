@@ -110,7 +110,7 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 	if err != nil {
 		return nil, err
 	}
-	dbm := dbModule.New(dAppDBStorage)
+	dbm := dbModule.New(dAppDBStorage, l)
 	vmModules = append(vmModules, dbm)
 	if err := dbm.Register(vm); err != nil {
 		return nil, err
