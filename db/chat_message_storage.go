@@ -276,6 +276,11 @@ func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64
 			rawMsg = value
 		}
 
+		// return in the case that the message doesn't exist
+		if rawMsg == nil {
+			return nil
+		}
+
 		// unmarshal message
 		msg := Message{}
 		if err := json.Unmarshal(rawMsg, &msg); err != nil {
