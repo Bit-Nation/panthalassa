@@ -145,6 +145,8 @@ func (m *Module) Register(vm *otto.Otto) error {
 		// get layout
 		layout := call.Argument(1).String()
 
+		sysLog.Debugf("going to render: %s with UI id %s", layout, uiID)
+
 		// execute show modal action in
 		// context of request limitation
 		go func() {

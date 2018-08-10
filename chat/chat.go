@@ -49,7 +49,7 @@ func (c *Chat) AllChats() ([]ed25519.PublicKey, error) {
 	return c.messageDB.AllChats()
 }
 
-func (c *Chat) Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error) {
+func (c *Chat) Messages(partner ed25519.PublicKey, start int64, amount uint) ([]db.Message, error) {
 	return c.messageDB.Messages(partner, start, amount)
 }
 

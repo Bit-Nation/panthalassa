@@ -232,6 +232,30 @@ func TestBoltChatMessageStorage_AllChats(t *testing.T) {
 
 }
 
+func TestBoltChatMessageStorage_Messages(t *testing.T) {
+
+	// setup
+	db := createDB()
+	km := createKeyManager()
+	partner, _, err := ed25519.GenerateKey(rand.Reader)
+	require.Nil(t, err)
+	storage := NewChatMessageStorage(db, []func(event MessagePersistedEvent){}, km)
+
+	// make sure persisted message is fetched
+	require.Nil(t, storage.PersistMessageToSend(partner, Message{Message: []byte("hi")}))
+	messages, err := storage.Messages(partner, 0, 10)
+	require.Nil(t, err)
+	require.Equal(t, []byte("hi"), messages[0].Message)
+
+	// persist another message and fetch it
+	require.Nil(t, storage.PersistMessageToSend(partner, Message{Message: []byte("another message")}))
+	messages, err = storage.Messages(partner, 0, 10)
+	require.Nil(t, err)
+	require.Equal(t, []byte("hi"), messages[0].Message)
+	require.Equal(t, []byte("another message"), messages[1].Message)
+
+}
+
 func TestBoltChatMessageStorage_GetMessage(t *testing.T) {
 
 	// setup
@@ -244,11 +268,9 @@ func TestBoltChatMessageStorage_GetMessage(t *testing.T) {
 	require.Nil(t, storage.PersistMessageToSend(partner, Message{Message: []byte("hi there")}))
 	messages, err := storage.Messages(partner, 0, 10)
 	require.Nil(t, err)
-	for id, _ := range messages {
-		msg, err := storage.GetMessage(partner, id)
-		require.Nil(t, err)
-		require.Equal(t, []byte("hi there"), msg.Message)
-		break
-	}
+
+	msg, err := storage.GetMessage(partner, messages[0].DatabaseID)
+	require.Nil(t, err)
+	require.Equal(t, []byte("hi there"), msg.Message)
 
 }

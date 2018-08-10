@@ -16,7 +16,7 @@ type testMessageStorage struct {
 	persistMessageToSend   func(to ed25519.PublicKey, msg db.Message) error
 	persistReceivedMessage func(partner ed25519.PublicKey, msg db.Message) error
 	updateStatus           func(partner ed25519.PublicKey, msgID int64, newStatus db.Status) error
-	messages               func(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error)
+	messages               func(partner ed25519.PublicKey, start int64, amount uint) ([]db.Message, error)
 	allChats               func() ([]ed25519.PublicKey, error)
 	addListener            func(fn func(e db.MessagePersistedEvent))
 	getMessage             func(partner ed25519.PublicKey, messageID int64) (*db.Message, error)
@@ -146,7 +146,7 @@ func (s *testMessageStorage) PersistReceivedMessage(partner ed25519.PublicKey, m
 	return s.persistReceivedMessage(partner, msg)
 }
 
-func (s *testMessageStorage) Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]db.Message, error) {
+func (s *testMessageStorage) Messages(partner ed25519.PublicKey, start int64, amount uint) ([]db.Message, error) {
 	return s.messages(partner, start, amount)
 }
 
