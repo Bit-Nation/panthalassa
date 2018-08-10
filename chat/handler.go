@@ -11,6 +11,7 @@ import (
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
+	"strconv"
 )
 
 // handles a set of protobuf messages
@@ -110,34 +111,28 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 
 	if e.Message.Status == db.StatusPersisted {
 		c.uiApi.Send("MESSAGE:PERSISTED", map[string]interface{}{
-			"message_id": e.DBMessageID,
-			"message": map[string]interface{}{
-				"content":    string(e.Message.Message),
-				"created_at": e.Message.CreatedAt,
-			},
-			"partner": hex.EncodeToString(e.Partner),
+			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
+			"content":    string(e.Message.Message),
+			"created_at": e.Message.CreatedAt,
+			"partner":    hex.EncodeToString(e.Partner),
 		})
 	}
 
 	if e.Message.Status == db.StatusDelivered {
 		c.uiApi.Send("MESSAGE:DELIVERED", map[string]interface{}{
-			"message_id": e.DBMessageID,
-			"message": map[string]interface{}{
-				"content":    string(e.Message.Message),
-				"created_at": e.Message.CreatedAt,
-			},
-			"partner": hex.EncodeToString(e.Partner),
+			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
+			"content":    string(e.Message.Message),
+			"created_at": e.Message.CreatedAt,
+			"partner":    hex.EncodeToString(e.Partner),
 		})
 	}
 
 	if e.Message.Received {
 		c.uiApi.Send("MESSAGE:RECEIVED", map[string]interface{}{
-			"message_id": e.DBMessageID,
-			"message": map[string]interface{}{
-				"content":    string(e.Message.Message),
-				"created_at": e.Message.CreatedAt,
-			},
-			"partner": hex.EncodeToString(e.Partner),
+			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
+			"content":    string(e.Message.Message),
+			"created_at": e.Message.CreatedAt,
+			"partner":    hex.EncodeToString(e.Partner),
 		})
 	}
 
