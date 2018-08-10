@@ -3,26 +3,23 @@
 - Messages
 
     - `MESSAGE:PERSISTED`
-        - `message_id`
+        - `db_id` (database id of message as string)
         - `partner` (hex encoded ed25519 public key)
-        - `message`
-            - `content` raw message content (will be "" if DApp message)
-            - `created_at` unix timestamp
+        - `content` raw message content (will be "" if DApp message)
+        - `created_at` unix timestamp
 
     - `MESSAGE:DELIVERED`
-        - `message_id`
+        - `db_id` (database id of message as string)
         - `partner` (hex encoded ed25519 public key)
-        - `message`
-            - `content` raw message content (will be "" if DApp message)
-            - `created_at` unix timestamp
+        - `content` raw message content (will be "" if DApp message)
+        - `created_at` unix timestamp
 
 
     - `MESSAGE:RECEIVED`
-        - `message_id`
+        - `db_id` (database id of message as string)
         - `partner` (hex encoded ed25519 public key)
-        - `message`
-            - `content` raw message content (will be "" if DApp message)
-            - `created_at` unix timestamp
+        - `content` raw message content (will be "" if DApp message)
+        - `created_at` unix timestamp
 
 - DApp
 
