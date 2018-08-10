@@ -41,10 +41,6 @@ func (b *Backend) AddRequestHandler(handler RequestHandler) {
 	b.addReqHandler <- handler
 }
 
-func (b *Backend) Start() error {
-	return b.transport.Start()
-}
-
 func (b *Backend) Close() error {
 	b.closer <- struct{}{}
 	close(b.addReqHandler)
