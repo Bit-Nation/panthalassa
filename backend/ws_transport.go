@@ -62,11 +62,11 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 				if wst.read == nil {
 					break
 				}
-
 				// react message
 				mt, msg, err := wst.conn.ReadMessage()
 				if err != nil {
 					wsTransLogger.Error(err)
+					time.Sleep(42 * time.Second)
 					continue
 				}
 				wsTransLogger.Debugf(
