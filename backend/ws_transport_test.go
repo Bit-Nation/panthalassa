@@ -86,6 +86,13 @@ func TestWSTransport_NextMessage(t *testing.T) {
 			panic(err)
 		}
 		conn.WriteMessage(gws.BinaryMessage, rawMsg)
+		// @TODO Research more on .CloseNormalClosure and .CloseMessage for expected way to close connection
+		// @TODO This should be done before calling conn.Close()
+		// @TODO Client should be handling different connection closure types, including .CloseNormalClosure
+		//closureMessage := gws.FormatCloseMessage(gws.CloseNormalClosure, "Closing Connection")
+		//if err := conn.WriteMessage(gws.CloseMessage, cm); err != nil {
+		//	panic(err)
+		//}
 		conn.Close()
 	})
 
