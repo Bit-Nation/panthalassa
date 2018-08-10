@@ -312,8 +312,8 @@ func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64
 			if key == nil {
 				break
 			}
-			msg := Message{}
-			if err := json.Unmarshal(rawMsg, &msg); err != nil {
+			msg, err := decRawMsg(rawMsg, *s.km)
+			if err != nil {
 				return err
 			}
 			messages[int64(binary.BigEndian.Uint64(key))] = msg

@@ -94,6 +94,7 @@ func Messages(partner string, startStr string, amount int) (string, error) {
 			"db_id":      strconv.FormatInt(msg.DatabaseID, 10),
 			"content":    string(msg.Message),
 			"created_at": msg.CreatedAt,
+			"received":   msg.Received,
 		})
 	}
 

@@ -114,7 +114,8 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"partner":    hex.EncodeToString(e.Partner),
+			"chat":       hex.EncodeToString(e.Partner),
+			"received":   e.Message.Received,
 		})
 	}
 
@@ -123,7 +124,8 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"partner":    hex.EncodeToString(e.Partner),
+			"chat":       hex.EncodeToString(e.Partner),
+			"received":   e.Message.Received,
 		})
 	}
 
@@ -132,7 +134,8 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"partner":    hex.EncodeToString(e.Partner),
+			"chat":       hex.EncodeToString(e.Partner),
+			"received":   e.Message.Received,
 		})
 	}
 
