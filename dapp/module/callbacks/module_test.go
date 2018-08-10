@@ -235,3 +235,31 @@ func TestFuncCallBackTwice(t *testing.T) {
 	m.CallFunction(1, `{key: "value"}`)
 
 }
+
+func TestModule_CallFunctionThatIsNotRegistered(t *testing.T) {
+
+	m := New(log.MustGetLogger(""))
+	vm := otto.New()
+	require.Nil(t, m.Register(vm))
+
+	err := m.CallFunction(1, "{}")
+	require.EqualError(t, err, "function with id: 1 does not exist")
+
+}
+
+func TestModule_Close(t *testing.T) {
+
+	m := New(log.MustGetLogger(""))
+	vm := otto.New()
+	require.Nil(t, m.Register(vm))
+
+	// register function
+	_, err := vm.Call("registerFunction", vm, func(call otto.FunctionCall) otto.Value {
+		m.Close()
+		return otto.Value{}
+	})
+	require.Nil(t, err)
+
+	require.EqualError(t, m.CallFunction(1, "{}"), "closed application")
+
+}

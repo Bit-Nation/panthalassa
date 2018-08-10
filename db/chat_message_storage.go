@@ -2,15 +2,18 @@ package db
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/Bit-Nation/panthalassa/crypto/aes"
+	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bolt "github.com/coreos/bbolt"
 	uuid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"
+	"sort"
 )
 
 var (
@@ -42,7 +45,7 @@ type ChatMessageStorage interface {
 	PersistReceivedMessage(partner ed25519.PublicKey, msg Message) error
 	UpdateStatus(partner ed25519.PublicKey, msgID int64, newStatus Status) error
 	AllChats() ([]ed25519.PublicKey, error)
-	Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]Message, error)
+	Messages(partner ed25519.PublicKey, start int64, amount uint) ([]Message, error)
 	AddListener(func(e MessagePersistedEvent))
 	GetMessage(partner ed25519.PublicKey, messageID int64) (*Message, error)
 	PersistDAppMessage(partner ed25519.PublicKey, msg DAppMessage) error
@@ -235,13 +238,13 @@ func (s *BoltChatMessageStorage) AllChats() ([]ed25519.PublicKey, error) {
 	return chats, err
 }
 
-func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64, amount uint) (map[int64]Message, error) {
+func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64, amount uint) ([]Message, error) {
 
 	if amount < 1 {
 		return nil, errors.New("invalid amount - must be at least one")
 	}
 
-	messages := map[int64]Message{}
+	messages := []Message{}
 
 	err := s.db.View(func(tx *bolt.Tx) error {
 
@@ -258,28 +261,46 @@ func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64
 		}
 
 		cursor := partnerBucket.Cursor()
-		var msgID int64
 		var rawMsg []byte
 
 		// jump to position
 		if start == 0 {
-			key, value := cursor.Last()
-			msgID = int64(binary.BigEndian.Uint64(key))
+			_, value := cursor.Last()
 			rawMsg = value
 		} else {
 			startBytes := make([]byte, 8)
 			binary.BigEndian.PutUint64(startBytes, uint64(start))
-			key, value := cursor.Seek(startBytes)
-			msgID = int64(binary.BigEndian.Uint64(key))
+			_, value := cursor.Seek(startBytes)
 			rawMsg = value
 		}
 
+		decRawMsg := func(rawEncMsg []byte, km km.KeyManager) (Message, error) {
+
+			// unmarshal cipher text
+			ct, err := aes.Unmarshal(rawEncMsg)
+			if err != nil {
+				return Message{}, err
+			}
+
+			// decrypt cipher text
+			plainMsg, err := km.AESDecrypt(ct)
+			if err != nil {
+				return Message{}, err
+			}
+
+			msg := Message{}
+			return msg, json.Unmarshal(plainMsg, &msg)
+
+		}
+
 		// unmarshal message
-		msg := Message{}
-		if err := json.Unmarshal(rawMsg, &msg); err != nil {
+		msg, err := decRawMsg(rawMsg, *s.km)
+		if err != nil {
 			return err
 		}
-		messages[msgID] = msg
+
+		// append message
+		messages = append(messages, msg)
 
 		currentAmount := amount - 1
 		for {
@@ -291,14 +312,18 @@ func (s *BoltChatMessageStorage) Messages(partner ed25519.PublicKey, start int64
 			if key == nil {
 				break
 			}
-			msg := Message{}
-			if err := json.Unmarshal(rawMsg, &msg); err != nil {
+			msg, err := decRawMsg(rawMsg, *s.km)
+			if err != nil {
 				return err
 			}
-			messages[int64(binary.BigEndian.Uint64(key))] = msg
+			messages = append(messages, msg)
 		}
 
 		return nil
+	})
+
+	sort.Slice(messages, func(i, j int) bool {
+		return messages[i].DatabaseID < messages[j].DatabaseID
 	})
 
 	return messages, err
@@ -313,15 +338,15 @@ func (s *BoltChatMessageStorage) GetMessage(partner ed25519.PublicKey, dbID int6
 	err := s.db.View(func(tx *bolt.Tx) error {
 
 		// private chats bucket
-		privateChats, err := tx.CreateBucketIfNotExists(privateChatBucketName)
-		if err != nil {
-			return err
+		privateChats := tx.Bucket(privateChatBucketName)
+		if privateChats == nil {
+			return nil
 		}
 
 		// bucket with chat of partner
-		partnerMessages, err := privateChats.CreateBucketIfNotExists(partner)
-		if err != nil {
-			return err
+		partnerMessages := privateChats.Bucket(partner)
+		if partnerMessages == nil {
+			return nil
 		}
 
 		// turn numeric message id into byte message id
@@ -367,9 +392,19 @@ func (s *BoltChatMessageStorage) PersistMessageToSend(partner ed25519.PublicKey,
 	if err != nil {
 		return err
 	}
+	myIdKeyStr, err := s.km.IdentityPublicKey()
+	if err != nil {
+		return err
+	}
+	myIdKey, err := hex.DecodeString(myIdKeyStr)
+	if len(myIdKey) != 32 {
+		return fmt.Errorf("my id key is invalid (%d bytes long)", len(myIdKey))
+	}
 	msg.ID = id.String()
 	msg.Received = false
 	msg.Status = StatusPersisted
+	msg.Sender = myIdKey
+	msg.CreatedAt = time.Now().UnixNano()
 	return s.persistMessage(partner, msg)
 }
 

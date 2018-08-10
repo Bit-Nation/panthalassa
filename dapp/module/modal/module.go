@@ -145,16 +145,24 @@ func (m *Module) Register(vm *otto.Otto) error {
 		// get layout
 		layout := call.Argument(1).String()
 
+		sysLog.Debugf("going to render: %s with UI id %s", layout, uiID)
+
 		// execute show modal action in
 		// context of request limitation
 		go func() {
 			// request to show modal
 			if err := m.device.RenderModal(uiID, layout, m.dAppIDKey); err != nil {
-				cb.Call(cb, vm.MakeCustomError("Error", "failed to render modal"))
+				_, err = cb.Call(cb, vm.MakeCustomError("Error", "failed to render modal"))
+				if err != nil {
+					m.logger.Error(err.Error())
+				}
 				return
 			}
 
-			cb.Call(cb)
+			if _, err := cb.Call(cb); err != nil {
+				m.logger.Error(err.Error())
+			}
+
 		}()
 
 		return otto.Value{}

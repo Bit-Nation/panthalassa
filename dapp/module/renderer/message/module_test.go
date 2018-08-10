@@ -61,3 +61,19 @@ func TestModule_RenderMessageSuccess(t *testing.T) {
 	require.Equal(t, "{}", layout)
 
 }
+
+func TestModule_Close(t *testing.T) {
+
+	vm := otto.New()
+	m := New(log.MustGetLogger(""))
+	require.Nil(t, m.Register(vm))
+
+	vm.Call("setMessageRenderer", vm, func(call otto.FunctionCall) otto.Value {
+		m.Close()
+		return otto.Value{}
+	})
+
+	_, err := m.RenderMessage("{}")
+	require.EqualError(t, err, "closed the application")
+
+}

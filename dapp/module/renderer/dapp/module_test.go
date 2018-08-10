@@ -69,3 +69,21 @@ func TestModule_OpenDAppSuccess(t *testing.T) {
 	require.Nil(t, err)
 
 }
+
+func TestModule_Close(t *testing.T) {
+
+	// setup
+	vm := otto.New()
+	m := New(nil)
+	require.Nil(t, m.Register(vm))
+
+	// set fake open handler
+	_, err := vm.Call("setOpenHandler", vm, func(call otto.FunctionCall) otto.Value {
+		m.Close()
+		return otto.Value{}
+	})
+	require.Nil(t, err)
+
+	require.EqualError(t, m.OpenDApp("{}"), "closed the application")
+
+}

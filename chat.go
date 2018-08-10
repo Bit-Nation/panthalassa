@@ -4,10 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-
-	"github.com/Bit-Nation/panthalassa/crypto/aes"
-	bpb "github.com/Bit-Nation/protobuffers"
-	proto "github.com/gogo/protobuf/proto"
+	"strconv"
 )
 
 func SendMessage(partner, message string) error {
@@ -58,7 +55,13 @@ func AllChats() (string, error) {
 	return string(chatList), nil
 }
 
-func Messages(partner string, start int64, amount int) (string, error) {
+func Messages(partner string, startStr string, amount int) (string, error) {
+
+	// unmarshal start
+	start, err := strconv.ParseInt(startStr, 10, 64)
+	if err != nil {
+		return "", err
+	}
 
 	// make sure panthalassa has been started
 	if panthalassaInstance == nil {
@@ -86,28 +89,12 @@ func Messages(partner string, start int64, amount int) (string, error) {
 	plainMessages := []map[string]interface{}{}
 
 	// decrypt message
-	for key, dbMessage := range databaseMessages {
-		// unmarshal aes cipher text
-		ct, err := aes.Unmarshal(dbMessage.Message)
-		if err != nil {
-			return "", err
-		}
-
-		// decrypt aes
-		plainMessage, err := panthalassaInstance.km.AESDecrypt(ct)
-		if err != nil {
-			return "", err
-		}
-		msg := bpb.PlainChatMessage{}
-		if err := proto.Unmarshal(plainMessage, &msg); err != nil {
-			return "", err
-		}
+	for _, msg := range databaseMessages {
 		plainMessages = append(plainMessages, map[string]interface{}{
-			"message_id": key,
-			"message": map[string]interface{}{
-				"content":    string(msg.Message),
-				"created_at": msg.CreatedAt,
-			},
+			"db_id":      strconv.FormatInt(msg.DatabaseID, 10),
+			"content":    string(msg.Message),
+			"created_at": msg.CreatedAt,
+			"received":   msg.Received,
 		})
 	}
 
