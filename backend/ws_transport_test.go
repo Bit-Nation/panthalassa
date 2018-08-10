@@ -20,7 +20,7 @@ func TestWSTransport_Send(t *testing.T) {
 	defer server.Close()
 	upgrader := gws.Upgrader{}
 	reader := make(chan []byte, 1)
-	http.HandleFunc("/ws", func(writer http.ResponseWriter, request *http.Request) {
+	router.HandleFunc("/ws", func(writer http.ResponseWriter, request *http.Request) {
 		// connection upgrade
 		conn, err := upgrader.Upgrade(writer, request, nil)
 		if err != nil {
