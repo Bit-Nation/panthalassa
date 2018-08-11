@@ -4,14 +4,18 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"sync"
+	"time"
+
+	"strconv"
 
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	"strconv"
+	uuid "github.com/satori/go.uuid"
 )
 
 // handles a set of protobuf messages
@@ -96,9 +100,15 @@ func (c *Chat) oneTimePreKeysHandler(req *bpb.BackendMessage_Request) (*bpb.Back
 }
 
 func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
-
+	// Generate a unique id for the job
+	id, err := uuid.NewV4()
+	if err != nil {
+		logger.Error(err)
+		id = fmt.Sprint(time.Now().UnixNano())
+	}
 	// add to queue
-	err := c.queue.AddJob(queue.Job{
+	err = c.queue.AddJob(queue.Job{
+		ID:   id,
 		Type: "MESSAGE:SUBMIT",
 		Data: map[string]interface{}{
 			"partner":       e.Partner,
