@@ -105,7 +105,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		logger.Error(err)
-		id = fmt.Sprint(time.Now().UnixNano())
+		idString = fmt.Sprint(time.Now().UnixNano())
 	} else {
 		idString = id.String()
 	}
