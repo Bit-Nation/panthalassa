@@ -69,7 +69,13 @@ func (q *Queue) AddJob(j Job) error {
 	if err != nil {
 		return err
 	}
-	return q.storage.PersistJob(j)
+	// persist job
+	if err := q.storage.PersistJob(j); err != nil {
+		return err
+	}
+	// add job to stack so that queue will pick it up
+	q.jobStack <- j
+	return nil
 }
 
 func (q *Queue) fetchProcessor(processor string) (Processor, error) {
@@ -127,6 +133,11 @@ func New(s Storage, jobStackSize uint, concurrency uint) *Queue {
 			}
 		}(q)
 	}
+
+	// load past job's and add them to job stack
+	go func() {
+		s.Map(q.jobStack)
+	}()
 
 	return q
 }
