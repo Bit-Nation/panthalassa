@@ -193,8 +193,13 @@ func SendResponse(id string, data string, responseError string, timeout int) err
 		return errors.New("you have to start panthalassa")
 	}
 
+	dataBytes, decodingError := base64.StdEncoding.DecodeString(data)
+	if decodingError != nil {
+		return decodingError
+	}
+
 	resp := &apiPB.Response{}
-	if err := proto.Unmarshal([]byte(data), resp); err != nil {
+	if err := proto.Unmarshal(dataBytes, resp); err != nil {
 		return err
 	}
 
