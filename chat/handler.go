@@ -99,7 +99,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 
 	// add to queue
 	err := c.queue.AddJob(queue.Job{
-		Type: "MESSAGE:SEND",
+		Type: "MESSAGE:SUBMIT",
 		Data: map[string]interface{}{
 			"partner":       hex.EncodeToString(e.Partner),
 			"db_message_id": e.DBMessageID,
