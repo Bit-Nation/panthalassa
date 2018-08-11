@@ -92,9 +92,14 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// chat
 	chatInstance, err := chat.NewChat(chat.Config{
-		MessageDB: messageStorage,
-		KM:        km,
-		Backend:   backend,
+		MessageDB:            messageStorage,
+		Backend:              backend,
+		SharedSecretDB:       db.NewBoltSharedSecretStorage(dbInstance, km),
+		KM:                   km,
+		DRKeyStorage:         db.NewBoltDRKeyStorage(dbInstance, km),	
+		SignedPreKeyStorage:  db.NewBoltSignedPreKeyStorage(dbInstance, km),
+		OneTimePreKeyStorage: db.NewBoltOneTimePreKeyStorage(dbInstance, km),
+		UserStorage:          db.NewBoltUserStorage(),
 		UiApi:     uiApi,
 		Queue:     q,
 	})

@@ -12,9 +12,25 @@ import (
 	dr "github.com/tiabc/doubleratchet"
 )
 
-type DRKeyStorage struct {
+type DRKeyStorage interface {
+	Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool)
+	Put(k dr.Key, msgNum uint, mk dr.Key)
+	DeleteMk(k dr.Key, msgNum uint)
+	DeletePk(k dr.Key)
+	Count(k dr.Key) uint
+	All() map[dr.Key]map[uint]dr.Key
+}
+
+type BoltDRKeyStorage struct {
 	db *bolt.DB
 	km *km.KeyManager
+}
+
+func NewBoltDRKeyStorage(db *bolt.DB, km *km.KeyManager) *BoltDRKeyStorage {
+	return &BoltDRKeyStorage{
+		db: db,
+		km: km,
+	}
 }
 
 var logger = log.Logger("database")
@@ -33,7 +49,7 @@ func bytesToUint(uint []byte) uint64 {
 	return binary.LittleEndian.Uint64(uint)
 }
 
-func (s *DRKeyStorage) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) {
+func (s *BoltDRKeyStorage) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) {
 
 	exist := false
 	key := dr.Key{}
@@ -80,7 +96,7 @@ func (s *DRKeyStorage) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) {
 
 }
 
-func (s *DRKeyStorage) Put(k dr.Key, msgNum uint, mk dr.Key) {
+func (s *BoltDRKeyStorage) Put(k dr.Key, msgNum uint, mk dr.Key) {
 
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		// get double ratchet key store
@@ -112,7 +128,7 @@ func (s *DRKeyStorage) Put(k dr.Key, msgNum uint, mk dr.Key) {
 
 }
 
-func (s *DRKeyStorage) DeleteMk(k dr.Key, msgNum uint) {
+func (s *BoltDRKeyStorage) DeleteMk(k dr.Key, msgNum uint) {
 
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		drKeyStore := tx.Bucket(doubleRatchetKeyStoreBucket)
@@ -133,7 +149,7 @@ func (s *DRKeyStorage) DeleteMk(k dr.Key, msgNum uint) {
 
 }
 
-func (s *DRKeyStorage) DeletePk(k dr.Key) {
+func (s *BoltDRKeyStorage) DeletePk(k dr.Key) {
 
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		drKeyStore := tx.Bucket(doubleRatchetKeyStoreBucket)
@@ -150,7 +166,7 @@ func (s *DRKeyStorage) DeletePk(k dr.Key) {
 
 }
 
-func (s *DRKeyStorage) Count(k dr.Key) uint {
+func (s *BoltDRKeyStorage) Count(k dr.Key) uint {
 
 	count := 0
 
@@ -177,7 +193,7 @@ func (s *DRKeyStorage) Count(k dr.Key) uint {
 
 }
 
-func (s *DRKeyStorage) All() map[dr.Key]map[uint]dr.Key {
+func (s *BoltDRKeyStorage) All() map[dr.Key]map[uint]dr.Key {
 
 	keys := map[dr.Key]map[uint]dr.Key{}
 
