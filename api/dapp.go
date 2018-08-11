@@ -83,6 +83,8 @@ func (a *DAppApi) SendEthereumTransaction(value, to, data string) (string, error
 		return "", err
 	}
 
+	// Since closer is not passed further, we need to close it here to prevent timeout.
+	resp.Closer <- nil
 	return string(raw), nil
 
 }
