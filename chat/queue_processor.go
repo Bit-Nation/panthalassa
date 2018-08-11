@@ -47,7 +47,7 @@ func (p *SubmitMessagesProcessor) jobToData(j queue.Job) (ed25519.PublicKey, int
 	}
 
 	// check partner
-	partner, oki := j.Data["partner"].([]byte)
+	partner, oki := j.Data["partner"].(ed25519.PublicKey)
 	if !oki {
 		return nil, 0, errors.New("partner is not of type []byte")
 	}
