@@ -86,6 +86,16 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		return errors.New("got invalid double ratchet public key - must have a length of 32")
 	}
 
+	// decode our id key
+	ourRawIDPubKey, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return err
+	}
+	ourIDPubKey, err := hex.DecodeString(ourRawIDPubKey)
+	if err != nil {
+		return err
+	}
+
 	drMessage := dr.Message{
 		Header: dr.MessageHeader{
 			DH: func() dr.Key {
@@ -127,8 +137,13 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 		signedPreKey.PrivateKey = *signedPreKeyPriv
 
+		idInitParams, err := sharedSecretInitID(msg.Sender, ourIDPubKey, *msg)
+		if err != nil {
+			return err
+		}
+
 		// fetch shared secret based on chat init params
-		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg)
+		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg.Sender, idInitParams)
 		if err != nil {
 			return err
 		}
@@ -208,24 +223,8 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return errors.New("invalid used shared secret id")
 		}
 
-		ourRawIDPubKey, err := c.km.IdentityPublicKey()
-		if err != nil {
-			return err
-		}
-
-		ourIDPubKey, err := hex.DecodeString(ourRawIDPubKey)
-		if err != nil {
-			return err
-		}
-
 		// generate shared secret id
 		ssID, err := sharedSecretID(sender, ourIDPubKey, plainMsg.SharedSecretBaseID)
-		if err != nil {
-			return err
-		}
-
-		// generate shared secret id based on initialisation params
-		idInitParams, err := sharedSecretInitID(msg.Sender, ourIDPubKey, *msg)
 		if err != nil {
 			return err
 		}
@@ -299,7 +298,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	// if the decryption didn't fail we want to mark
 	// the shared secret as accepted
 	if !sharedSec.Accepted {
-		return c.sharedSecStorage.Accept(sharedSec)
+		return c.sharedSecStorage.Accept(msg.Sender, sharedSec)
 	}
 
 	return nil

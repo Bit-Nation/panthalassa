@@ -3,7 +3,6 @@ package chat
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"time"
 
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"

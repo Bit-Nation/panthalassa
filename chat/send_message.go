@@ -72,7 +72,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		if !validSignature {
 			return prekey.PreKey{}, handleSendError(errors.New("received invalid signature for pre key bundle"))
 		}
-		return signedPreKey, nil
+		return *signedPreKey, nil
 	}
 
 	// @todo we should validate the plain message
@@ -132,13 +132,13 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		return handleSendError(err)
 	}
 
-	hasSignedPreKey, err := c.userStorage.HasSignedPreKey(receiver)
+	hasSignedPreKey, err := c.userStorage.GetSignedPreKey(receiver)
 	if err != nil {
 		return handleSendError(err)
 	}
 
 	// fetch signed pre key of chat partner if we don't have it locally
-	if !hasSignedPreKey {
+	if hasSignedPreKey == nil {
 		err = c.refreshSignedPreKey(receiver)
 		if err != nil {
 			return handleSendError(err)
@@ -152,7 +152,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	}
 
 	// check if signed pre key expired
-	expired := signedPreKey.OlderThan(SignedPreKeyValidTimeFrame)
+	expired := signedPreKey.OlderThan(db.SignedPreKeyValidTimeFrame)
 	if expired {
 		err = c.refreshSignedPreKey(receiver)
 		if err != nil {

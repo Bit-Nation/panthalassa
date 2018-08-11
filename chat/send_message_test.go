@@ -272,13 +272,10 @@ func TestChat_SendMessage(t *testing.T) {
 	}
 
 	userStorage := testUserStorage{
-		hasSignedPreKey: func(idKey ed25519.PublicKey) (bool, error) {
-			return true, nil
-		},
-		getSignedPreKey: func(idKey ed25519.PublicKey) (preKey.PreKey, error) {
+		getSignedPreKey: func(public ed25519.PublicKey) (*preKey.PreKey, error) {
 			// at this point we would return
 			// the signed pre key of our chat partner
-			return signedPreKeyBob, nil
+			return &signedPreKeyBob, nil
 		},
 	}
 
@@ -430,13 +427,10 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 	}
 
 	userStorage := testUserStorage{
-		hasSignedPreKey: func(idKey ed25519.PublicKey) (bool, error) {
-			return true, nil
-		},
-		getSignedPreKey: func(idKey ed25519.PublicKey) (preKey.PreKey, error) {
+		getSignedPreKey: func(partner ed25519.PublicKey) (*preKey.PreKey, error) {
 			// at this point we would return
 			// the signed pre key of our chat partner
-			return signedPreKeyBob, nil
+			return &signedPreKeyBob, nil
 		},
 	}
 

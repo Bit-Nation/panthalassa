@@ -27,8 +27,8 @@ type testSharedSecretStorage struct {
 	hasAny               func(key ed25519.PublicKey) (bool, error)
 	getYoungest          func(key ed25519.PublicKey) (*db.SharedSecret, error)
 	put                  func(key ed25519.PublicKey, sharedSecret db.SharedSecret) error
-	secretForChatInitMsg func(msg *bpb.ChatMessage) (*db.SharedSecret, error)
-	accept               func(sharedSec *db.SharedSecret) error
+	secretForChatInitMsg func(partner ed25519.PublicKey, id []byte) (*db.SharedSecret, error)
+	accept               func(partner ed25519.PublicKey, sharedSec *db.SharedSecret) error
 	get                  func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error)
 }
 
@@ -47,8 +47,7 @@ type testSignedPreKeyStore struct {
 }
 
 type testUserStorage struct {
-	getSignedPreKey func(idKey ed25519.PublicKey) (preKey.PreKey, error)
-	hasSignedPreKey func(idKey ed25519.PublicKey) (bool, error)
+	getSignedPreKey func(idKey ed25519.PublicKey) (*preKey.PreKey, error)
 	putSignedPreKey func(idKey ed25519.PublicKey, key preKey.PreKey) error
 }
 
@@ -122,12 +121,12 @@ func (s *testSharedSecretStorage) Put(key ed25519.PublicKey, sharedSecret db.Sha
 	return s.put(key, sharedSecret)
 }
 
-func (s *testSharedSecretStorage) SecretForChatInitMsg(msg *bpb.ChatMessage) (*db.SharedSecret, error) {
-	return s.secretForChatInitMsg(msg)
+func (s *testSharedSecretStorage) SecretForChatInitMsg(partner ed25519.PublicKey, id []byte) (*db.SharedSecret, error) {
+	return s.secretForChatInitMsg(partner, id)
 }
 
-func (s *testSharedSecretStorage) Accept(sharedSec *db.SharedSecret) error {
-	return s.accept(sharedSec)
+func (s *testSharedSecretStorage) Accept(partner ed25519.PublicKey, sharedSec *db.SharedSecret) error {
+	return s.accept(partner, sharedSec)
 }
 
 func (s *testSharedSecretStorage) Get(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error) {
@@ -178,12 +177,8 @@ func (b testBackend) AddRequestHandler(handler backend.RequestHandler) {
 	b.addRequestHandler(handler)
 }
 
-func (s *testUserStorage) GetSignedPreKey(idKey ed25519.PublicKey) (preKey.PreKey, error) {
+func (s *testUserStorage) GetSignedPreKey(idKey ed25519.PublicKey) (*preKey.PreKey, error) {
 	return s.getSignedPreKey(idKey)
-}
-
-func (s *testUserStorage) HasSignedPreKey(idKey ed25519.PublicKey) (bool, error) {
-	return s.hasSignedPreKey(idKey)
 }
 
 func (s *testUserStorage) PutSignedPreKey(idKey ed25519.PublicKey, key preKey.PreKey) error {

@@ -49,7 +49,7 @@ func (c *Chat) refreshSignedPreKey(idPubKey ed25519.PublicKey) error {
 	}
 
 	// check if signed pre key didn't expire
-	expired := signedPreKey.OlderThan(SignedPreKeyValidTimeFrame)
+	expired := signedPreKey.OlderThan(db.SignedPreKeyValidTimeFrame)
 	if expired {
 		return errors.New("signed pre key expired")
 	}
@@ -94,7 +94,7 @@ func sharedSecretInitID(sender, receiver ed25519.PublicKey, msg bpb.ChatMessage)
 	if _, err := b.Write(msg.OneTimePreKey); err != nil {
 		return nil, err
 	}
-	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
+	return mh.Sum(b.Bytes(), mh.SHA2_256, -1)
 }
 
 // hash message
