@@ -103,7 +103,8 @@ func TestWSTransport_NextMessage(t *testing.T) {
 
 	trans := NewWSTransport("ws://127.0.0.1:3857/ws", "")
 
-	msg := trans.NextMessage()
+	msg, err := trans.NextMessage()
+	require.Nil(t, err)
 	require.Equal(t, "request-id", msg.RequestID)
 
 }

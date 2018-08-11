@@ -131,8 +131,8 @@ func (t *WSTransport) Send(msg *bpb.BackendMessage) error {
 
 }
 
-func (t *WSTransport) NextMessage() *bpb.BackendMessage {
-	return <-t.read
+func (t *WSTransport) NextMessage() (*bpb.BackendMessage, error) {
+	return <-t.read, nil
 }
 
 func (t *WSTransport) Close() error {

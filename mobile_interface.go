@@ -56,7 +56,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// create backend
 	trans := backend.WSTransport{}
-	defer trans.Start()
+
 	backend, err := backend.NewBackend(&trans, km)
 	if err != nil {
 		return err
