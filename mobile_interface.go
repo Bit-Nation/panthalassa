@@ -37,6 +37,8 @@ type StartConfig struct {
 	SignedProfile       string `json:"signed_profile"`
 	EthWsEndpoint       string `json:"eth_ws_endpoint"`
 	EnableDebugging     bool   `json:"enable_debugging"`
+	PrivChatEndpoint    string `json:"private_chat_endpoint"`
+	PrivChatBearerToken string `json:"private_chat_bearer_token"`
 }
 
 // create a new panthalassa instance
@@ -55,9 +57,9 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	deviceApi := api.New(client)
 
 	// create backend
-	trans := backend.WSTransport{}
+	trans := backend.NewWSTransport(config.PrivChatEndpoint, config.PrivChatBearerToken)
 
-	backend, err := backend.NewBackend(&trans, km)
+	backend, err := backend.NewBackend(trans, km)
 	if err != nil {
 		return err
 	}
