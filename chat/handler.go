@@ -101,17 +101,17 @@ func (c *Chat) oneTimePreKeysHandler(req *bpb.BackendMessage_Request) (*bpb.Back
 
 func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 	// Generate a unique id string for the job
-	var idString string
+	var idStr string
 	id, err := uuid.NewV4()
 	if err != nil {
 		logger.Error(err)
-		idString = fmt.Sprint(time.Now().UnixNano())
+		idStr = fmt.Sprint(time.Now().UnixNano())
 	} else {
-		idString = id.String()
+		idStr = id.String()
 	}
 	// add to queue
 	err = c.queue.AddJob(queue.Job{
-		ID:   idString,
+		ID:   idStr,
 		Type: "MESSAGE:SUBMIT",
 		Data: map[string]interface{}{
 			"partner":       e.Partner,

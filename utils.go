@@ -1,11 +1,11 @@
 package panthalassa
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"strings"
-	"encoding/base64"
-	
+
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
