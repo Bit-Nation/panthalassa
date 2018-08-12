@@ -9,7 +9,6 @@ import (
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bpb "github.com/Bit-Nation/protobuffers"
 	log "github.com/ipfs/go-log"
-	"github.com/imroc/req"
 )
 
 var logger = log.Logger("backend")
