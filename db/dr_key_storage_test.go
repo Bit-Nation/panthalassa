@@ -18,10 +18,7 @@ func TestStore_Put(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := DRKeyStorage{
-		db: db,
-		km: km,
-	}
+	s := NewBoltDRKeyStorage(db,km)
 
 	crypto := dr.DefaultCrypto{}
 	keyPair, err := crypto.GenerateDH()
@@ -60,10 +57,7 @@ func TestStore_Get(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := DRKeyStorage{
-		db: db,
-		km: km,
-	}
+	s := NewBoltDRKeyStorage(db,km)
 
 	crypto := dr.DefaultCrypto{}
 	keyPair, err := crypto.GenerateDH()
@@ -116,10 +110,7 @@ func TestStore_DeleteMk(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := DRKeyStorage{
-		db: db,
-		km: km,
-	}
+	s := NewBoltDRKeyStorage(db,km)
 
 	crypto := dr.DefaultCrypto{}
 	keyPair, err := crypto.GenerateDH()
@@ -181,10 +172,7 @@ func TestStore_DeletePk(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := DRKeyStorage{
-		db: db,
-		km: km,
-	}
+	s := NewBoltDRKeyStorage(db,km)
 
 	crypto := dr.DefaultCrypto{}
 	keyPair, err := crypto.GenerateDH()
@@ -240,10 +228,7 @@ func TestStore_Count(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := DRKeyStorage{
-		db: db,
-		km: km,
-	}
+	s := NewBoltDRKeyStorage(db,km)
 
 	crypto := dr.DefaultCrypto{}
 	keyPair, err := crypto.GenerateDH()
@@ -279,10 +264,7 @@ func TestStore_AllSuccess(t *testing.T) {
 	km := createKeyManager()
 	db := createDB()
 
-	s := DRKeyStorage{
-		db: db,
-		km: km,
-	}
+	s := NewBoltDRKeyStorage(db,km)
 
 	crypto := dr.DefaultCrypto{}
 	keyPairOne, err := crypto.GenerateDH()
