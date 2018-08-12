@@ -1,8 +1,10 @@
 package chat
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	db "github.com/Bit-Nation/panthalassa/db"
 	queue "github.com/Bit-Nation/panthalassa/queue"
@@ -39,25 +41,43 @@ func (p *SubmitMessagesProcessor) ValidJob(j queue.Job) error {
 // get data from job
 func (p *SubmitMessagesProcessor) jobToData(j queue.Job) (ed25519.PublicKey, int64, error) {
 	// validate message id
-	messageIdNumber, oki := j.Data["db_message_id"].(json.Number)
+	var messageId int64
+	var messageIdErr error
+	messageIdInterface, oki := j.Data["db_message_id"]
 	if !oki {
-		return nil, 0, errors.New("message id is not of type json.Number")
+		return nil, 0, errors.New("db_message_id is missing")
 	}
-
-	messageId, messageIdErr := messageIdNumber.Int64()
-
-	if messageIdErr != nil {
-		return nil, 0, messageIdErr
+	switch msgId := messageIdInterface.(type) {
+	case json.Number:
+		messageId, messageIdErr = msgId.Int64()
+		if messageIdErr != nil {
+			return nil, 0, messageIdErr
+		}
+	case int64:
+		messageId = msgId
+	default:
+		return nil, 0, errors.New("Expected : json.Number/int64, Got : " + fmt.Sprint(msgId))
 	}
-
 	if messageId == 0 {
 		return nil, 0, errors.New("message id is 0")
 	}
-
 	// check partner
-	partner, oki := j.Data["partner"].(ed25519.PublicKey)
+	var partner []byte
+	var partnerErr error
+	partnerInterface, oki := j.Data["partner"]
 	if !oki {
-		return nil, 0, errors.New("partner is not of type []byte")
+		return nil, 0, errors.New("partner is missing")
+	}
+	switch potentialPartner := partnerInterface.(type) {
+	case string:
+		partner, partnerErr = base64.StdEncoding.DecodeString(potentialPartner)
+		if partnerErr != nil {
+			return nil, 0, partnerErr
+		}
+	case ed25519.PublicKey:
+		partner = potentialPartner
+	default:
+		return nil, 0, errors.New("Expected : base64 string/ed25519.PublicKey, Got : " + fmt.Sprint(potentialPartner))
 	}
 	if len(partner) != 32 {
 		return nil, 0, errors.New("invalid partner id length")
