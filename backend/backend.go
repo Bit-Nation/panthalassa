@@ -211,7 +211,7 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 				b.authenticated <- authCheck
 				// wait for authentication
 				if !<-authCheck {
-					time.Sleep(time.Second * 0.5)
+					time.Sleep(time.Second * 1)
 					b.outReqQueue <- req
 					close(authCheck)
 					continue
