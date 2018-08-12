@@ -187,6 +187,8 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 					resp: resp,
 				}
 
+				// Message handled
+				continue
 			}
 
 			logger.Warning("dropping message: %s", msg)
