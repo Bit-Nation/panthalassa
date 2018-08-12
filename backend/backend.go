@@ -157,6 +157,15 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 			if msg.Response != nil {
 
 				resp := msg.Response
+
+				// in the case this was a auth request we need to apply some special logic
+				// this will only be executed when this message was a auth request
+				if resp.Auth != nil {
+					logger.Debug("[panthalassa] Recieved auth successful response")
+					b.authenticate <- true
+					continue
+				}
+
 				reqID := msg.RequestID
 
 				// err will be != nil in the case of no response channel
@@ -171,12 +180,6 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 						err: errors.New(msg.Error),
 					}
 					continue
-				}
-
-				// in the case this was a auth request we need to apply some special logic
-				// this will only be executed when this message was a auth request
-				if resp.Auth != nil {
-					b.authenticate <- true
 				}
 
 				// send received response to response channel
