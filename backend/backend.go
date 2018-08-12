@@ -9,6 +9,7 @@ import (
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bpb "github.com/Bit-Nation/protobuffers"
 	log "github.com/ipfs/go-log"
+	"github.com/imroc/req"
 )
 
 var logger = log.Logger("backend")
@@ -94,6 +95,7 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 
 	}()
 
+	// handle received protobuf messages
 	go func() {
 
 		for {
@@ -192,19 +194,25 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 	go func() {
 		for {
 
-			authCheck := make(chan bool)
-			b.authenticated <- authCheck
-
-			// wait for authentication
-			if !<-authCheck {
-				time.Sleep(time.Second * 1)
-				continue
-			}
-
 			select {
 			case <-b.closer:
 				return
 			case req := <-b.outReqQueue:
+				authCheck := make(chan bool)
+				b.authenticated <- authCheck
+
+				// in the case the client is not authenticated
+				// we add the request to the end of the queue
+				// this is could cause performance problem IF
+				// the backend doesn't send a auth request as
+				// soon as the client connect. However, in
+				// our case the backend does send the auth request
+				// pretty fast so we are fine.
+				if !<-authCheck && req.Req.Auth == nil {
+					b.outReqQueue <- req
+					continue
+				}
+
 				// add response channel
 				b.stack.Add(req.ReqID, req.RespChan)
 				// send request
