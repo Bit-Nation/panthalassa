@@ -173,13 +173,19 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 
 					// upload signed pre key
 					// @todo this need to be changed
+					
+					// when we have a singed pre key we just want to continue
+					if len(b.signedPreKeyStorage.All()) > 0 {
+						continue
+					}
+					
 					c25519 := x3dh.NewCurve25519(rand.Reader)
 					signedPreKeyPair, err := c25519.GenerateKeyPair()
 					if err != nil {
 						logger.Error(err)
 						continue
 					}
-
+					
 					signedPreKey := prekey.PreKey{}
 					signedPreKey.PrivateKey = signedPreKeyPair.PrivateKey
 					signedPreKey.PublicKey = signedPreKeyPair.PublicKey
