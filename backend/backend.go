@@ -8,12 +8,12 @@ import (
 	"time"
 
 	prekey "github.com/Bit-Nation/panthalassa/chat/prekey"
+	db "github.com/Bit-Nation/panthalassa/db"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	proto "github.com/gogo/protobuf/proto"
 	log "github.com/ipfs/go-log"
-	"github.com/Bit-Nation/panthalassa/db"
 )
 
 var logger = log.Logger("backend")
@@ -31,14 +31,14 @@ type ServerConfig struct {
 type Backend struct {
 	transport Transport
 	// all outgoing requests
-	outReqQueue   chan *request
-	stack         requestStack
-	km            *km.KeyManager
-	closer        chan struct{}
-	addReqHandler chan RequestHandler
-	reqHandlers   chan chan []RequestHandler
-	authenticated chan chan bool
-	authenticate  chan bool
+	outReqQueue         chan *request
+	stack               requestStack
+	km                  *km.KeyManager
+	closer              chan struct{}
+	addReqHandler       chan RequestHandler
+	reqHandlers         chan chan []RequestHandler
+	authenticated       chan chan bool
+	authenticate        chan bool
 	signedPreKeyStorage db.SignedPreKeyStorage
 }
 
@@ -56,7 +56,7 @@ func (b *Backend) Close() error {
 	return b.transport.Close()
 }
 
-func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
+func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.SignedPreKeyStorage) (*Backend, error) {
 
 	b := &Backend{
 		transport:   trans,
@@ -65,12 +65,13 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 			stack: map[string]chan *response{},
 			lock:  sync.Mutex{},
 		},
-		km:            km,
-		closer:        make(chan struct{}, 1),
-		addReqHandler: make(chan RequestHandler),
-		reqHandlers:   make(chan chan []RequestHandler),
-		authenticated: make(chan chan bool),
-		authenticate:  make(chan bool),
+		km:                  km,
+		closer:              make(chan struct{}, 1),
+		addReqHandler:       make(chan RequestHandler),
+		reqHandlers:         make(chan chan []RequestHandler),
+		authenticated:       make(chan chan bool),
+		authenticate:        make(chan bool),
+		signedPreKeyStorage: signedPreKeyStorage,
 	}
 
 	// backend state
@@ -209,7 +210,7 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 						logger.Error(err)
 						continue
 					}
-					
+
 					if err := b.signedPreKeyStorage.Put(signedPreKeyPair); err != nil {
 						logger.Error(err)
 						continue

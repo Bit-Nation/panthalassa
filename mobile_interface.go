@@ -56,14 +56,6 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// device api
 	deviceApi := api.New(client)
 
-	// create backend
-	trans := backend.NewWSTransport(config.PrivChatEndpoint, config.PrivChatBearerToken)
-
-	backend, err := backend.NewBackend(trans, km)
-	if err != nil {
-		return err
-	}
-
 	// create p2p network
 	p2pNetwork, err := p2p.New()
 	if err != nil {
@@ -76,6 +68,17 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		return err
 	}
 	dbInstance, err := db.Open(dbPath, 0644, &bolt.Options{Timeout: time.Second})
+	if err != nil {
+		return err
+	}
+
+	// create signed pre key storage
+	signedPreKeyStorage := db.NewBoltSignedPreKeyStorage(dbInstance, km)
+
+	// create backend
+	trans := backend.NewWSTransport(config.PrivChatEndpoint, config.PrivChatBearerToken)
+
+	backend, err := backend.NewBackend(trans, km, signedPreKeyStorage)
 	if err != nil {
 		return err
 	}
@@ -96,12 +99,12 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		Backend:              backend,
 		SharedSecretDB:       db.NewBoltSharedSecretStorage(dbInstance, km),
 		KM:                   km,
-		DRKeyStorage:         db.NewBoltDRKeyStorage(dbInstance, km),	
+		DRKeyStorage:         db.NewBoltDRKeyStorage(dbInstance, km),
 		SignedPreKeyStorage:  db.NewBoltSignedPreKeyStorage(dbInstance, km),
 		OneTimePreKeyStorage: db.NewBoltOneTimePreKeyStorage(dbInstance, km),
 		UserStorage:          db.NewBoltUserStorage(),
-		UiApi:     uiApi,
-		Queue:     q,
+		UiApi:                uiApi,
+		Queue:                q,
 	})
 	if err != nil {
 		return err
