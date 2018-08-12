@@ -1,13 +1,17 @@
 package backend
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	prekey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bpb "github.com/Bit-Nation/protobuffers"
+	x3dh "github.com/Bit-Nation/x3dh"
+	proto "github.com/gogo/protobuf/proto"
 	log "github.com/ipfs/go-log"
 )
 
@@ -163,6 +167,47 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 				if resp.Auth != nil {
 					logger.Debug("[panthalassa] Recieved auth successful response")
 					b.authenticate <- true
+
+					// upload signed pre key
+					// @todo this need to be changed
+					c25519 := x3dh.NewCurve25519(rand.Reader)
+					signedPreKeyPair, err := c25519.GenerateKeyPair()
+					if err != nil {
+						logger.Error(err)
+						continue
+					}
+
+					signedPreKey := prekey.PreKey{}
+					signedPreKey.PrivateKey = signedPreKeyPair.PrivateKey
+					signedPreKey.PublicKey = signedPreKeyPair.PublicKey
+					if err := signedPreKey.Sign(*b.km); err != nil {
+						logger.Error(err)
+						continue
+					}
+					protoSignedPreKey, err := signedPreKey.ToProtobuf()
+					if err != nil {
+						logger.Error(err)
+						continue
+					}
+					if err := signedPreKey.Sign(*b.km); err != nil {
+						logger.Error(err)
+						continue
+					}
+					signedPreKeyBytes, err := proto.Marshal(&protoSignedPreKey)
+					if err != nil {
+						logger.Error(err)
+						continue
+					}
+
+					_, err = b.request(bpb.BackendMessage_Request{
+						SignedPreKey: signedPreKeyBytes,
+					}, time.Second*10)
+
+					if err != nil {
+						logger.Error(err)
+						continue
+					}
+
 					continue
 				}
 
