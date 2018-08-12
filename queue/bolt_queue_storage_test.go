@@ -1,9 +1,10 @@
 package queue
 
 import (
+	"encoding/json"
+	"errors"
+
 	"github.com/coreos/bbolt"
-	"github.com/kataras/iris/core/errors"
-	"github.com/segmentio/objconv/json"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

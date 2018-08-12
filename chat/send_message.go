@@ -2,6 +2,7 @@ package chat
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -12,7 +13,6 @@ import (
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	proto "github.com/golang/protobuf/proto"
-	"github.com/segmentio/objconv/json"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -212,7 +212,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	msgToSend := bpb.ChatMessage{
 		MessageID: []byte(dbMessage.ID),
 		Receiver:  receiver,
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: drMessage.Header.DH[:],
 			N:               drMessage.Header.N,
 			Pn:              drMessage.Header.PN,

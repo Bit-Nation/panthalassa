@@ -130,7 +130,7 @@ func TestHashChatMessage(t *testing.T) {
 		EphemeralKeySignature:    []byte("ephemeral key signature"),
 		SenderChatIDKey:          []byte("sender chat id key"),
 		SenderChatIDKeySignature: []byte("sender chat id key signature"),
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: []byte("double ratchet pk"),
 			N:               uint32(3),
 			Pn:              uint32(4544),

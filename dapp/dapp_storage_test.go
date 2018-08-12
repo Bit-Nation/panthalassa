@@ -2,15 +2,15 @@ package dapp
 
 import (
 	"crypto/rand"
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"fmt"
 	uiApi "github.com/Bit-Nation/panthalassa/uiapi"
 	bolt "github.com/coreos/bbolt"
-	"github.com/segmentio/objconv/json"
 	require "github.com/stretchr/testify/require"
 	ed25519 "golang.org/x/crypto/ed25519"
 )

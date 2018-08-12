@@ -53,7 +53,7 @@ func TestDoubleRatchetPKTooShort(t *testing.T) {
 	// the double ratchet key must be 32 bytes long
 	err := c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender:           make([]byte, 32),
-		Message:          &bpb.DoubleRatchedMsg{},
+		Message:          &bpb.DoubleRatchetMsg{},
 		UsedSharedSecret: make([]byte, 32),
 	})
 
@@ -77,7 +77,7 @@ func TestChatInitEphemeralKeySignatureValidation(t *testing.T) {
 
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender: sender,
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: make([]byte, 32),
 		},
 		SignedPreKey: make([]byte, 32),
@@ -112,7 +112,7 @@ func TestChatInitChatIDKeySignatureValidation(t *testing.T) {
 
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender: sender,
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: make([]byte, 32),
 		},
 		SignedPreKey: make([]byte, 32),
@@ -174,7 +174,7 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 	require.Nil(t, err)
 
 	msg := &bpb.ChatMessage{
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: drMessage.Header.DH[:],
 			N:               drMessage.Header.N,
 			Pn:              drMessage.Header.PN,
@@ -274,7 +274,7 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 	drMessage := aliceSession.RatchetEncrypt(rawPlainMsg, nil)
 
 	msg := &bpb.ChatMessage{
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: drMessage.Header.DH[:],
 			N:               drMessage.Header.N,
 			Pn:              drMessage.Header.PN,
@@ -368,7 +368,7 @@ func TestChatHandleInvalidShortSharedSecretID(t *testing.T) {
 
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender: pub,
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: make([]byte, 32),
 		},
 	})
@@ -399,7 +399,7 @@ func TestChatHandleNoSharedSecret(t *testing.T) {
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender:           pub,
 		UsedSharedSecret: usedSharedSecret,
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: make([]byte, 32),
 		},
 	})
@@ -469,7 +469,7 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 	expectedSharedSecretID, err := sharedSecretID(senderPub, bobIDPub, sharedSecretIDRef)
 
 	msg := &bpb.ChatMessage{
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: drMessage.Header.DH[:],
 			N:               drMessage.Header.N,
 			Pn:              drMessage.Header.PN,

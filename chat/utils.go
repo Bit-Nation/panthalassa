@@ -3,13 +3,13 @@ package chat
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 
 	db "github.com/Bit-Nation/panthalassa/db"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	mh "github.com/multiformats/go-multihash"
-	"github.com/segmentio/objconv/json"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
