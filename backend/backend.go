@@ -119,6 +119,7 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 
 			// handle requests
 			if msg.Request != nil {
+				requestHandled := false
 				for _, handler := range <-reqHandlersChan {
 					// handler
 					h := handler
@@ -140,11 +141,17 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 						Response:  resp,
 						RequestID: msg.RequestID,
 					})
+					requestHandled = true
 					if err != nil {
 						logger.Error(err)
 						continue
 					}
 
+				}
+
+				// If request was successfully handled we don't need to handle that message further
+				if requestHandled {
+					continue
 				}
 			}
 
