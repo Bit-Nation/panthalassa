@@ -13,6 +13,7 @@ import (
 	x3dh "github.com/Bit-Nation/x3dh"
 	proto "github.com/gogo/protobuf/proto"
 	log "github.com/ipfs/go-log"
+	"github.com/Bit-Nation/panthalassa/db"
 )
 
 var logger = log.Logger("backend")
@@ -38,6 +39,7 @@ type Backend struct {
 	reqHandlers   chan chan []RequestHandler
 	authenticated chan chan bool
 	authenticate  chan bool
+	signedPreKeyStorage db.SignedPreKeyStorage
 }
 
 // Add request handler that will be executed
@@ -204,6 +206,11 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 					}, time.Second*10)
 
 					if err != nil {
+						logger.Error(err)
+						continue
+					}
+					
+					if err := b.signedPreKeyStorage.Put(signedPreKeyPair); err != nil {
 						logger.Error(err)
 						continue
 					}
