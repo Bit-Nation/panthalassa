@@ -112,13 +112,12 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 				continue
 			}
 
-			// ask the state for the request handlers
-			reqHandlersChan := make(chan []RequestHandler)
-			b.reqHandlers <- reqHandlersChan
-
 			// handle requests
 			if msg.Request != nil {
 				requestHandled := false
+				// ask the state for the request handlers
+				reqHandlersChan := make(chan []RequestHandler)
+				b.reqHandlers <- reqHandlersChan
 				for _, handler := range <-reqHandlersChan {
 					// handler
 					h := handler
