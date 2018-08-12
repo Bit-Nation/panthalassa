@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"encoding/json"
 	"errors"
 
 	db "github.com/Bit-Nation/panthalassa/db"
@@ -38,10 +39,17 @@ func (p *SubmitMessagesProcessor) ValidJob(j queue.Job) error {
 // get data from job
 func (p *SubmitMessagesProcessor) jobToData(j queue.Job) (ed25519.PublicKey, int64, error) {
 	// validate message id
-	messageId, oki := j.Data["db_message_id"].(int64)
+	messageIdNumber, oki := j.Data["db_message_id"].(json.Number)
 	if !oki {
-		return nil, 0, errors.New("message id is not of type int64")
+		return nil, 0, errors.New("message id is not of type json.Number")
 	}
+
+	messageId, messageIdErr := messageIdNumber.Int64()
+
+	if messageIdErr != nil {
+		return nil, 0, messageIdErr
+	}
+
 	if messageId == 0 {
 		return nil, 0, errors.New("message id is 0")
 	}

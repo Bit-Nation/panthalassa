@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"bytes"
 	"encoding/json"
 
 	bolt "github.com/coreos/bbolt"
@@ -60,7 +61,9 @@ func (s *BoltQueueStorage) Map(queue chan Job) {
 			// map over job bucket
 			return jobBucket.ForEach(func(_, job []byte) error {
 				j := Job{}
-				if err := json.Unmarshal(job, &j); err != nil {
+				d := json.NewDecoder(bytes.NewReader(job))
+				d.UseNumber()
+				if err := d.Decode(&j); err != nil {
 					logger.Error(err)
 					return nil
 				}
