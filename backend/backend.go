@@ -201,20 +201,20 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 	// send outgoing requests to transport
 	go func() {
 		for {
-
-			authCheck := make(chan bool)
-			b.authenticated <- authCheck
-
-			// wait for authentication
-			if !<-authCheck {
-				time.Sleep(time.Second * 1)
-				continue
-			}
-
 			select {
 			case <-b.closer:
 				return
 			case req := <-b.outReqQueue:
+				authCheck := make(chan bool)
+				b.authenticated <- authCheck
+				// wait for authentication
+				if !<-authCheck {
+					time.Sleep(time.Second * 0.5)
+					b.outReqQueue <- req
+					close(authCheck)
+					continue
+				}
+
 				// add response channel
 				b.stack.Add(req.ReqID, req.RespChan)
 				// send request
