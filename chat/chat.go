@@ -24,6 +24,7 @@ type Backend interface {
 	SubmitMessages(messages []*bpb.ChatMessage) error
 	FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error)
 	AddRequestHandler(handler backend.RequestHandler)
+	Close() error
 }
 
 type Chat struct {
@@ -59,6 +60,10 @@ type Config struct {
 	UserStorage          db.UserStorage
 	UiApi                *uiapi.Api
 	Queue                *queue.Queue
+}
+
+func (c *Chat) Close() error {
+	return c.backend.Close()
 }
 
 func NewChat(conf Config) (*Chat, error) {

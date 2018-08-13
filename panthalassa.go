@@ -35,6 +35,7 @@ func (p *Panthalassa) Stop() error {
 	var err error
 	err = p.db.Close()
 	err = p.p2p.Close()
+	err = p.chat.Close()
 	return err
 }
 
