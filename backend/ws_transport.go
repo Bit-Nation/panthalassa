@@ -95,9 +95,8 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 				mt, msg, err := t.conn.wsConn.ReadMessage()
 				if err != nil {
 					wsTransLogger.Error(err)
-					// @todo Change to smaller timeout
-					time.Sleep(42 * time.Second)
-					closer <- struct{}{}
+					time.Sleep(5 * time.Second)
+					closed <- struct{}{}
 					break
 				}
 				wsTransLogger.Debugf(
@@ -125,32 +124,30 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 		go func() {
 
 			for {
-				// @todo Possibly need to listen for closer, to stop read from write channel?
-				select {
-				case msg := <-t.write:
 
-					// exit when connection got closed
-					isClosedRespChan := make(chan bool)
-					isClosed <- isClosedRespChan
-					if <-isClosedRespChan {
-						logger.Debug("stop writing to websocket")
-						break
-					}
-
-					wsTransLogger.Debugf(
-						"going to write backend message with id: %s to ws",
-						msg.RequestID,
-					)
-					rawMsg, err := proto.Marshal(msg)
-					if err != nil {
-						wsTransLogger.Error(err)
-						continue
-					}
-					if err := t.conn.wsConn.WriteMessage(gws.BinaryMessage, rawMsg); err != nil {
-						wsTransLogger.Error(err)
-					}
-
+				// exit when connection got closed
+				isClosedRespChan := make(chan bool)
+				isClosed <- isClosedRespChan
+				if <-isClosedRespChan {
+					logger.Debug("stop writing to websocket")
+					break
 				}
+
+				msg := <-t.write
+
+				wsTransLogger.Debugf(
+					"going to write backend message with id: %s to ws",
+					msg.RequestID,
+				)
+				rawMsg, err := proto.Marshal(msg)
+				if err != nil {
+					wsTransLogger.Error(err)
+					continue
+				}
+				if err := t.conn.wsConn.WriteMessage(gws.BinaryMessage, rawMsg); err != nil {
+					wsTransLogger.Error(err)
+				}
+
 			}
 
 		}()
@@ -196,7 +193,6 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 func (t *WSTransport) Send(msg *bpb.BackendMessage) error {
 	t.write <- msg
 	return nil
-
 }
 
 func (t *WSTransport) NextMessage() (*bpb.BackendMessage, error) {
@@ -204,9 +200,9 @@ func (t *WSTransport) NextMessage() (*bpb.BackendMessage, error) {
 }
 
 func (t *WSTransport) Close() error {
+	t.closer <- struct{}{}
 	if t.conn == nil {
 		return nil
 	}
-	t.closer <- struct{}{}
 	return t.conn.Close()
 }

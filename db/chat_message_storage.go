@@ -389,14 +389,14 @@ func (s *BoltChatMessageStorage) AddListener(fn func(e MessagePersistedEvent)) {
 
 func (s *BoltChatMessageStorage) PersistMessageToSend(partner ed25519.PublicKey, msg Message) error {
 
-	// I don't know if that id should be random uuid, but 
+	// I don't know if that id should be random uuid, but
 	// it was required, so I added it there.
 
 	id, err := uuid.NewV4()
 	if err != nil {
 		return err
 	}
-	
+
 	myIdKeyStr, err := s.km.IdentityPublicKey()
 	if err != nil {
 		return err

@@ -27,7 +27,7 @@ type BoltUserStorage struct {
 }
 
 func NewBoltUserStorage(db *bolt.DB) *BoltUserStorage {
-	return &BoltUserStorage{ db: db }
+	return &BoltUserStorage{db: db}
 }
 
 func (s *BoltUserStorage) GetSignedPreKey(idKey ed25519.PublicKey) (*preKey.PreKey, error) {
