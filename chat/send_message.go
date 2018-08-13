@@ -110,6 +110,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 
 		// construct shared secret
 		ss := db.SharedSecret{
+			ID:                    ssBaseID,
 			X3dhSS:                initializedProtocol.SharedSecret,
 			Accepted:              false,
 			CreatedAt:             time.Now(),
