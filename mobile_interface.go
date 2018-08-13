@@ -102,7 +102,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		DRKeyStorage:         db.NewBoltDRKeyStorage(dbInstance, km),
 		SignedPreKeyStorage:  signedPreKeyStorage,
 		OneTimePreKeyStorage: db.NewBoltOneTimePreKeyStorage(dbInstance, km),
-		UserStorage:          db.NewBoltUserStorage(),
+		UserStorage:          db.NewBoltUserStorage(dbInstance),
 		UiApi:                uiApi,
 		Queue:                q,
 	})
