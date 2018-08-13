@@ -151,7 +151,7 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 						continue
 					}
 
-					if (resp.Auth != nil) {
+					if resp.Auth != nil {
 						b.setAuthenticationID <- msg.RequestID
 					}
 					// send response
@@ -174,12 +174,11 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 			} else {
 				// If message is not about request, then it's a response
 
-
 				resp := msg.Response
 
 				authID := make(chan string)
 				b.authenticationID <- authID
-				currentAuthID := <- authID
+				currentAuthID := <-authID
 				// in the case this was a auth request we need to apply some special logic
 				// this will only be executed when this message was a auth request
 				if msg.RequestID == currentAuthID {
@@ -188,20 +187,20 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 
 					// upload signed pre key
 					// @todo this need to be changed
-					
+
 					go func() {
 						// when we have a singed pre key we just want to continue
 						if len(b.signedPreKeyStorage.All()) > 0 {
 							return
 						}
-						
+
 						c25519 := x3dh.NewCurve25519(rand.Reader)
 						signedPreKeyPair, err := c25519.GenerateKeyPair()
 						if err != nil {
 							logger.Error(err)
 							return
 						}
-						
+
 						signedPreKey := prekey.PreKey{}
 						signedPreKey.PrivateKey = signedPreKeyPair.PrivateKey
 						signedPreKey.PublicKey = signedPreKeyPair.PublicKey

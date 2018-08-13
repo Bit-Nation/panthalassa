@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -15,19 +14,45 @@ var wsTransLogger = log.Logger("ws transport")
 
 type WSTransport struct {
 	closer chan struct{}
-	conn   *gws.Conn
+	conn   *conn
 	write  chan *bpb.BackendMessage
 	read   chan *bpb.BackendMessage
 }
 
-func NewWSTransport(endpoint, bearerToken string) *WSTransport {
+// connection is kind of a extension of the gws.Conn
+// it has additional state + some utils we need
+type conn struct {
+	closer chan struct{}
+	wsConn *gws.Conn
+}
 
-	// construct ws transport
-	wst := &WSTransport{
+func (c *conn) Close() error {
+	c.closer <- struct{}{}
+	return nil
+}
+
+func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string) *conn {
+
+	c := &conn{
 		closer: make(chan struct{}, 2),
-		write:  make(chan *bpb.BackendMessage, 100),
-		read:   make(chan *bpb.BackendMessage, 100),
 	}
+
+	// ask this for the closed state
+	isClosed := make(chan chan bool)
+
+	// connection state routine
+	go func() {
+		var closed bool
+		for {
+			select {
+			// query for closed
+			case isClosedResp := <-isClosed:
+				isClosedResp <- closed
+			case <-c.closer:
+				closed = true
+			}
+		}
+	}()
 
 	go func() {
 
@@ -35,6 +60,7 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 		d := gws.Dialer{}
 
 		// try to connect till success
+		var wsConn *gws.Conn
 		for {
 			conn, _, err := d.Dial(endpoint, http.Header{
 				"Bearer": []string{bearerToken},
@@ -44,12 +70,10 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 				time.Sleep(time.Second)
 				continue
 			}
-			wst.conn = conn
-			break
+			wsConn = conn
 		}
 
-		wst.conn.SetCloseHandler(func(code int, text string) error {
-			panic("closed")
+		wsConn.SetCloseHandler(func(code int, text string) error {
 			wsTransLogger.Warning("closed websocket, code: %d - message: %s", code, text)
 			return nil
 		})
@@ -58,16 +82,21 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 		go func() {
 
 			for {
-				// exit when channel got closed
-				if wst.read == nil {
+				// exit when connection got closed
+				isClosedRespChan := make(chan bool)
+				isClosed <- isClosedRespChan
+				if <-isClosedRespChan {
+					logger.Debug("stop reading from websocket")
 					break
 				}
+
 				// react message
-				mt, msg, err := wst.conn.ReadMessage()
+				mt, msg, err := t.conn.wsConn.ReadMessage()
 				if err != nil {
 					wsTransLogger.Error(err)
 					time.Sleep(42 * time.Second)
-					continue
+					closed <- struct{}{}
+					break
 				}
 				wsTransLogger.Debugf(
 					`got message of type: %d - content: %s`,
@@ -84,7 +113,7 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 				}
 
 				// send to read channel so that it can be fetched from the NextMessage function
-				wst.read <- m
+				t.read <- m
 
 			}
 
@@ -95,13 +124,17 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 
 			for {
 				// exit when channel got closed
-				if wst.write == nil {
-					break
-				}
-
 				select {
-				case msg := <-wst.write:
-					fmt.Println("write")
+				case msg := <-t.write:
+
+					// exit when connection got closed
+					isClosedRespChan := make(chan bool)
+					isClosed <- isClosedRespChan
+					if <-isClosedRespChan {
+						logger.Debug("stop writing to websocket")
+						break
+					}
+
 					wsTransLogger.Debugf(
 						"going to write backend message with id: %s to ws",
 						msg.RequestID,
@@ -111,14 +144,47 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 						wsTransLogger.Error(err)
 						continue
 					}
-					if err := wst.conn.WriteMessage(gws.BinaryMessage, rawMsg); err != nil {
+					if err := t.conn.wsConn.WriteMessage(gws.BinaryMessage, rawMsg); err != nil {
 						wsTransLogger.Error(err)
 					}
+
 				}
 			}
 
 		}()
 
+	}()
+
+	return c
+
+}
+
+func NewWSTransport(endpoint, bearerToken string) *WSTransport {
+
+	// construct ws transport
+	wst := &WSTransport{
+		closer: make(chan struct{}),
+		write:  make(chan *bpb.BackendMessage, 100),
+		read:   make(chan *bpb.BackendMessage, 100),
+	}
+
+	// routine that keeps track of the connection
+	// close and re connect
+	connClosed := make(chan struct{}, 5)
+	go func() {
+		for {
+			select {
+			case <-wst.closer:
+				break
+			case <-connClosed:
+				wst.conn = wst.newConn(connClosed, endpoint, bearerToken)
+			}
+		}
+	}()
+
+	// create initial connection
+	go func() {
+		wst.conn = wst.newConn(connClosed, endpoint, bearerToken)
 	}()
 
 	return wst
@@ -136,7 +202,9 @@ func (t *WSTransport) NextMessage() (*bpb.BackendMessage, error) {
 }
 
 func (t *WSTransport) Close() error {
-	close(t.write)
-	close(t.read)
+	if t.conn == nil {
+		return nil
+	}
+	t.closer <- struct{}{}
 	return t.conn.Close()
 }
