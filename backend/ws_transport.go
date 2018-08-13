@@ -71,6 +71,7 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 				continue
 			}
 			wsConn = conn
+			break
 		}
 
 		wsConn.SetCloseHandler(func(code int, text string) error {
@@ -94,8 +95,9 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 				mt, msg, err := t.conn.wsConn.ReadMessage()
 				if err != nil {
 					wsTransLogger.Error(err)
+					// @todo Change to smaller timeout
 					time.Sleep(42 * time.Second)
-					closed <- struct{}{}
+					closer <- struct{}{}
 					break
 				}
 				wsTransLogger.Debugf(
@@ -123,7 +125,7 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 		go func() {
 
 			for {
-				// exit when channel got closed
+				// @todo Possibly need to listen for closer, to stop read from write channel?
 				select {
 				case msg := <-t.write:
 
