@@ -51,13 +51,16 @@ func (b *Backend) SubmitMessages(messages []*bpb.ChatMessage) error {
 
 // fetch signed pre key of person
 func (b *Backend) FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error) {
-	// request signed pre key of user from backend
-	resp, err := b.request(bpb.BackendMessage_Request{SignedPreKey: userIdPubKey}, time.Second*4)
+	// request pre key bundle
+	resp, err := b.request(bpb.BackendMessage_Request{
+		PreKeyBundle: userIdPubKey,
+	}, time.Second*4)
 	if err != nil {
 		return preKey.PreKey{}, err
 	}
+
 	// unmarshal signed pre key
-	pk, err := preKey.FromProtoBuf(*resp.SignedPreKey)
+	pk, err := preKey.FromProtoBuf(*resp.PreKeyBundle.SignedPreKey)
 	if err != nil {
 		return preKey.PreKey{}, err
 	}
