@@ -39,6 +39,8 @@ type Backend struct {
 	reqHandlers         chan chan []RequestHandler
 	authenticated       chan chan bool
 	authenticate        chan bool
+	authenticationID    chan chan string
+	setAuthenticationID chan string
 	signedPreKeyStorage db.SignedPreKeyStorage
 }
 
@@ -71,6 +73,8 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 		reqHandlers:         make(chan chan []RequestHandler),
 		authenticated:       make(chan chan bool),
 		authenticate:        make(chan bool),
+		authenticationID:    make(chan chan string),
+		setAuthenticationID: make(chan string),
 		signedPreKeyStorage: signedPreKeyStorage,
 	}
 
@@ -79,6 +83,7 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 
 		reqHandlers := []RequestHandler{}
 		authenticated := false
+		authenticationID := ""
 
 		for {
 
@@ -96,6 +101,10 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 				authenticated = a
 			case respChan := <-b.authenticated:
 				respChan <- authenticated
+			case id := <-b.setAuthenticationID:
+				authenticationID = id
+			case respChan := <-b.authenticationID:
+				respChan <- authenticationID
 			}
 		}
 
@@ -141,6 +150,10 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 					if resp == nil {
 						continue
 					}
+
+					if (resp.Auth != nil) {
+						b.setAuthenticationID <- msg.RequestID
+					}
 					// send response
 					err = b.transport.Send(&bpb.BackendMessage{
 						Response:  resp,
@@ -158,16 +171,18 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 				if requestHandled {
 					continue
 				}
-			}
+			} else {
+				// If message is not about request, then it's a response
 
-			// handle responses
-			if msg.Response != nil {
 
 				resp := msg.Response
 
+				authID := make(chan string)
+				b.authenticationID <- authID
+				currentAuthID := <- authID
 				// in the case this was a auth request we need to apply some special logic
 				// this will only be executed when this message was a auth request
-				if resp.Auth != nil {
+				if msg.RequestID == currentAuthID {
 					logger.Debug("[panthalassa] Recieved auth successful response")
 					b.authenticate <- true
 
