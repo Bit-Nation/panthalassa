@@ -189,53 +189,55 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 					// upload signed pre key
 					// @todo this need to be changed
 					
-					// when we have a singed pre key we just want to continue
-					if len(b.signedPreKeyStorage.All()) > 0 {
-						continue
-					}
-					
-					c25519 := x3dh.NewCurve25519(rand.Reader)
-					signedPreKeyPair, err := c25519.GenerateKeyPair()
-					if err != nil {
-						logger.Error(err)
-						continue
-					}
-					
-					signedPreKey := prekey.PreKey{}
-					signedPreKey.PrivateKey = signedPreKeyPair.PrivateKey
-					signedPreKey.PublicKey = signedPreKeyPair.PublicKey
-					if err := signedPreKey.Sign(*b.km); err != nil {
-						logger.Error(err)
-						continue
-					}
-					protoSignedPreKey, err := signedPreKey.ToProtobuf()
-					if err != nil {
-						logger.Error(err)
-						continue
-					}
-					if err := signedPreKey.Sign(*b.km); err != nil {
-						logger.Error(err)
-						continue
-					}
-					signedPreKeyBytes, err := proto.Marshal(&protoSignedPreKey)
-					if err != nil {
-						logger.Error(err)
-						continue
-					}
+					go func() {
+						// when we have a singed pre key we just want to continue
+						if len(b.signedPreKeyStorage.All()) > 0 {
+							return
+						}
+						
+						c25519 := x3dh.NewCurve25519(rand.Reader)
+						signedPreKeyPair, err := c25519.GenerateKeyPair()
+						if err != nil {
+							logger.Error(err)
+							return
+						}
+						
+						signedPreKey := prekey.PreKey{}
+						signedPreKey.PrivateKey = signedPreKeyPair.PrivateKey
+						signedPreKey.PublicKey = signedPreKeyPair.PublicKey
+						if err := signedPreKey.Sign(*b.km); err != nil {
+							logger.Error(err)
+							return
+						}
+						protoSignedPreKey, err := signedPreKey.ToProtobuf()
+						if err != nil {
+							logger.Error(err)
+							return
+						}
+						if err := signedPreKey.Sign(*b.km); err != nil {
+							logger.Error(err)
+							return
+						}
+						signedPreKeyBytes, err := proto.Marshal(&protoSignedPreKey)
+						if err != nil {
+							logger.Error(err)
+							return
+						}
 
-					_, err = b.request(bpb.BackendMessage_Request{
-						SignedPreKey: signedPreKeyBytes,
-					}, time.Second*10)
+						_, err = b.request(bpb.BackendMessage_Request{
+							SignedPreKey: signedPreKeyBytes,
+						}, time.Second*10)
 
-					if err != nil {
-						logger.Error(err)
-						continue
-					}
+						if err != nil {
+							logger.Error(err)
+							return
+						}
 
-					if err := b.signedPreKeyStorage.Put(signedPreKeyPair); err != nil {
-						logger.Error(err)
-						continue
-					}
+						if err := b.signedPreKeyStorage.Put(signedPreKeyPair); err != nil {
+							logger.Error(err)
+							return
+						}
+					}()
 
 					continue
 				}
