@@ -74,7 +74,8 @@ func (c *Chat) decryptMessage(msg dr.Message, sharedSecret x3dh.SharedSecret, si
 func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 	// @todo HERE would message authentication happen if we decide to implement it
-
+	logger.Debugf("handle received message: %s", msg)
+	
 	// make sure sender is a valid ed25519 public key
 	sender := msg.Sender
 	if len(sender) != 32 {
@@ -109,8 +110,12 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		Ciphertext: msg.Message.CipherText,
 	}
 
+	logger.Debugf("double ratchet message %s", drMessage)
+	
 	// handle chat init message
 	if isChatInitMessage(msg) {
+		
+		logger.Debugf("message is a chat installation message")
 
 		// make sure ephemeralKey is really from sender
 		if !ed25519.Verify(sender, msg.EphemeralKey, msg.EphemeralKeySignature) {
@@ -130,6 +135,8 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		var signedPreKey x3dh.KeyPair
 		copy(signedPreKey.PublicKey[:], msg.SignedPreKey)
 
+		logger.Debugf("used signed pre key: %x", msg.SignedPreKey)
+		
 		// get private signed pre key
 		signedPreKeyPriv, err := c.signedPreKeyStorage.Get(signedPreKey.PublicKey)
 		if err != nil {
@@ -141,15 +148,20 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		if err != nil {
 			return err
 		}
+		
+		logger.Debugf("the id based on init params is: %x", idInitParams)
 
 		// fetch shared secret based on chat init params
 		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg.Sender, idInitParams)
 		if err != nil {
 			return err
 		}
-
+		
 		// decrypt the message
 		if sharedSecret != nil {
+			
+			logger.Debug("found shared secret for chat init params - decrypting")
+			
 			decryptedMsg, err := c.decryptMessage(drMessage, sharedSecret.X3dhSS, &signedPreKey)
 			if err != nil {
 				return err
@@ -162,7 +174,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			}
 			return c.messageDB.PersistReceivedMessage(msg.Sender, dbMessage)
 		}
-
+		
 		// fetch used one time pre key
 		oneTimePreKeyPriv, err := c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
 		if err != nil {
@@ -207,6 +219,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// decrypt message
+		logger.Debug("try to decrypt message with newly created shared secret")
 		protoMessage, err := drSession.RatchetDecrypt(drMessage, nil)
 		if err != nil {
 			return err
