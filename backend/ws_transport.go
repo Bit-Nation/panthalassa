@@ -97,6 +97,7 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 					wsTransLogger.Error(err)
 					time.Sleep(5 * time.Second)
 					closed <- struct{}{}
+					c.closer <- struct{}{}
 					break
 				}
 				wsTransLogger.Debugf(

@@ -242,6 +242,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			CreatedAt:    time.Unix(plainMsg.SharedSecretCreationDate, 0),
 			ID:           ssID,
 			IDInitParams: idInitParams,
+			BaseID:       plainMsg.SharedSecretBaseID,
 		})
 		if err != nil {
 			return err

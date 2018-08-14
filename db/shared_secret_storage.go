@@ -23,9 +23,12 @@ type SharedSecret struct {
 	EphemeralKeySignature []byte            `json:"ephemeral_key_signature"`
 	UsedSignedPreKey      x3dh.PublicKey    `json:"used_signed_pre_key"`
 	UsedOneTimePreKey     *x3dh.PublicKey   `json:"used_one_time_pre_key"`
-	BaseID                []byte            `json:"base_id"`
-	ID                    []byte            `json:"id"`
-	IDInitParams          []byte            `json:"id_init_params"`
+	// the base id chosen by the initiator of the chat
+	BaseID []byte `json:"base_id"`
+	// id used for indexing (calculated based on a few parameters)
+	ID []byte `json:"id"`
+	// the id based on the chat init params
+	IDInitParams []byte `json:"id_init_params"`
 }
 
 // the persistedSharedSecret is almost the same as SharedSecret except for
@@ -164,6 +167,11 @@ func (b *BoltSharedSecretStorage) GetYoungest(partner ed25519.PublicKey) (*Share
 }
 
 func (b *BoltSharedSecretStorage) Put(chatPartner ed25519.PublicKey, ss SharedSecret) error {
+
+	if len(ss.BaseID) != 32 {
+		return errors.New("can't persisted shared secret with a base id len != 32")
+	}
+
 	return b.db.Update(func(tx *bolt.Tx) error {
 
 		// shared secret bucket

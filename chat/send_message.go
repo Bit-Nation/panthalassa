@@ -132,6 +132,9 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	if err != nil {
 		return handleSendError(err)
 	}
+	if ss == nil {
+		return errors.New("failed to fetch youngest secret")
+	}
 
 	hasSignedPreKey, err := c.userStorage.GetSignedPreKey(receiver)
 	if err != nil {
