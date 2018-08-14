@@ -197,7 +197,7 @@ func (b *BoltSharedSecretStorage) Put(chatPartner ed25519.PublicKey, ss SharedSe
 			return err
 		}
 
-		return sharedSecPartnerBucket.Put(ss.ID, rawPersSharedSec)
+		return sharedSecPartnerBucket.Put(ss.BaseID, rawPersSharedSec)
 
 	})
 }
