@@ -5,9 +5,9 @@ import (
 	"time"
 
 	bpb "github.com/Bit-Nation/protobuffers"
-	proto "github.com/gogo/protobuf/proto"
-	gws "github.com/gorilla/websocket"
-	log "github.com/ipfs/go-log"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	gws "gx/ipfs/QmZH5VXfAJouGMyCCHTRPGCT3e5MG9Lu78Ln3YAYW1XTts/websocket"
+	log "gx/ipfs/QmcVVHfdyv15GVPk7NrxdWjh2hLVccXnoD8j2tyQShiXJb/go-log"
 )
 
 var wsTransLogger = log.Logger("ws transport")
@@ -95,9 +95,10 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 				mt, msg, err := c.wsConn.ReadMessage()
 				if err != nil {
 					wsTransLogger.Error(err)
+					// Close the connect before sleep to be sure that everything related is closed
+					c.closer <- struct{}{}
 					time.Sleep(5 * time.Second)
 					closed <- struct{}{}
-					c.closer <- struct{}{}
 					break
 				}
 				wsTransLogger.Debugf(
@@ -134,7 +135,13 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 					break
 				}
 
-				msg := <-t.write
+				var msg (*bpb.BackendMessage)
+				select {
+					case msgToSend := <-t.write:
+						msg = msgToSend
+					case <- c.closer:
+						return
+				}
 
 				wsTransLogger.Debugf(
 					"going to write backend message with id: %s to ws",
@@ -174,7 +181,7 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 		for {
 			select {
 			case <-wst.closer:
-				break
+				return
 			case <-connClosed:
 				wst.conn = wst.newConn(connClosed, endpoint, bearerToken)
 			}

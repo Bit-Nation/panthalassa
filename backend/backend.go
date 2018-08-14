@@ -88,7 +88,7 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 		for {
 			select {
 			case <- b.closer:
-				break
+				return
 			case rh := <-b.addReqHandler:
 				reqHandlers = append(reqHandlers, rh)
 			case respChan := <-b.reqHandlers:
