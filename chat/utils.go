@@ -163,6 +163,7 @@ func hashChatMessage(msg bpb.ChatMessage) (mh.Multihash, error) {
 func protoPlainMsgToMessage(msg *bpb.PlainChatMessage) (db.Message, error) {
 
 	m := db.Message{
+		ID: msg.MessageID,
 		Message:   msg.Message,
 		CreatedAt: msg.CreatedAt,
 	}
