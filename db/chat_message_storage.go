@@ -431,7 +431,9 @@ func (s *BoltChatMessageStorage) PersistDAppMessage(partner ed25519.PublicKey, m
 	m.ID = id.String()
 	m.Received = false
 	m.Status = StatusPersisted
+	m.DApp = &msg
 
+	
 	return s.persistMessage(partner, m)
 
 }
