@@ -60,7 +60,6 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 		d := gws.Dialer{}
 
 		// try to connect till success
-		var wsConn *gws.Conn
 		for {
 			conn, _, err := d.Dial(endpoint, http.Header{
 				"Bearer": []string{bearerToken},
@@ -70,11 +69,12 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 				time.Sleep(time.Second)
 				continue
 			}
-			wsConn = conn
+
+			c.wsConn = conn
 			break
 		}
 
-		wsConn.SetCloseHandler(func(code int, text string) error {
+		c.wsConn.SetCloseHandler(func(code int, text string) error {
 			wsTransLogger.Warning("closed websocket, code: %d - message: %s", code, text)
 			return nil
 		})
@@ -92,12 +92,11 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 				}
 
 				// react message
-				mt, msg, err := t.conn.wsConn.ReadMessage()
+				mt, msg, err := c.wsConn.ReadMessage()
 				if err != nil {
 					wsTransLogger.Error(err)
 					time.Sleep(5 * time.Second)
 					closed <- struct{}{}
-					c.closer <- struct {}{}
 					break
 				}
 				wsTransLogger.Debugf(
@@ -145,7 +144,7 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 					wsTransLogger.Error(err)
 					continue
 				}
-				if err := t.conn.wsConn.WriteMessage(gws.BinaryMessage, rawMsg); err != nil {
+				if err := c.wsConn.WriteMessage(gws.BinaryMessage, rawMsg); err != nil {
 					wsTransLogger.Error(err)
 				}
 
@@ -156,7 +155,6 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 	}()
 
 	return c
-
 }
 
 func NewWSTransport(endpoint, bearerToken string) *WSTransport {
