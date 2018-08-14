@@ -5,9 +5,9 @@ import (
 	"time"
 
 	bpb "github.com/Bit-Nation/protobuffers"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	gws "gx/ipfs/QmZH5VXfAJouGMyCCHTRPGCT3e5MG9Lu78Ln3YAYW1XTts/websocket"
-	log "gx/ipfs/QmcVVHfdyv15GVPk7NrxdWjh2hLVccXnoD8j2tyQShiXJb/go-log"
+	proto "github.com/gogo/protobuf/proto"
+	gws "github.com/gorilla/websocket"
+	log "github.com/ipfs/go-log"
 )
 
 var wsTransLogger = log.Logger("ws transport")
