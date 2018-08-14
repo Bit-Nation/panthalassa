@@ -414,8 +414,10 @@ func (s *BoltChatMessageStorage) PersistReceivedMessage(partner ed25519.PublicKe
 	return s.persistMessage(partner, msg)
 }
 
+// must be implemented later
 func (s *BoltChatMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID int64, newStatus Status) error {
-	return errors.New("currently not implemented")
+	// @todo implement this
+	return nil
 }
 
 func (s *BoltChatMessageStorage) PersistDAppMessage(partner ed25519.PublicKey, msg DAppMessage) error {
