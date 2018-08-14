@@ -86,13 +86,9 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 		authenticationID := ""
 
 		for {
-
-			// exist if channels have been closed
-			if b.addReqHandler == nil || b.reqHandlers == nil || b.authenticated == nil || b.authenticate == nil {
-				return
-			}
-
 			select {
+			case <- b.closer:
+				break
 			case rh := <-b.addReqHandler:
 				reqHandlers = append(reqHandlers, rh)
 			case respChan := <-b.reqHandlers:
