@@ -169,7 +169,8 @@ func (b *BoltSharedSecretStorage) GetYoungest(partner ed25519.PublicKey) (*Share
 func (b *BoltSharedSecretStorage) Put(chatPartner ed25519.PublicKey, ss SharedSecret) error {
 
 	logger.Debugf("going to persist shared secret - for: %x, init params id: ", chatPartner, ss.IDInitParams)
-
+	logger.Debug(ss)
+	
 	if len(ss.BaseID) != 32 {
 		return errors.New("can't persisted shared secret with a base id len != 32")
 	}
