@@ -141,6 +141,11 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return errors.New("aborted chat initialization - invalid signed pre key")
 		}
 
+		// make sure used shared secret is valid
+		if len(msg.UsedSharedSecret) != 32 {
+			return errors.New("aborted chat initialization - used shared secret is != 32 bytes")
+		}
+
 		var signedPreKey x3dh.KeyPair
 		copy(signedPreKey.PublicKey[:], msg.SignedPreKey)
 
@@ -152,16 +157,12 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 		signedPreKey.PrivateKey = *signedPreKeyPriv
-
-		idInitParams, err := sharedSecretInitID(msg.Sender, ourIDPubKey, *msg)
-		if err != nil {
-			return err
+		if signedPreKeyPriv == nil {
+			return errors.New("chat init - failed to fetch signed pre key")
 		}
 
-		logger.Debugf("the id based on init params is: %x", idInitParams)
-
 		// fetch shared secret based on chat init params
-		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg.Sender, idInitParams)
+		sharedSecret, err := c.sharedSecStorage.Get(msg.Sender, msg.UsedSharedSecret)
 		if err != nil {
 			return err
 		}
@@ -260,11 +261,11 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		err = c.sharedSecStorage.Put(sender, db.SharedSecret{
 			X3dhSS: sharedX3dhSec,
 			// safe as accepted since the sender initialized the chat
-			Accepted:     true,
-			CreatedAt:    time.Unix(plainMsg.SharedSecretCreationDate, 0),
-			ID:           ssID,
-			IDInitParams: idInitParams,
-			BaseID:       plainMsg.SharedSecretBaseID,
+			Accepted:  true,
+			CreatedAt: time.Unix(plainMsg.SharedSecretCreationDate, 0),
+			ID:        ssID,
+			// IDInitParams: idInitParams,
+			BaseID: plainMsg.SharedSecretBaseID,
 		})
 		if err != nil {
 			return err

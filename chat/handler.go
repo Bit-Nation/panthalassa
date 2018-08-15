@@ -100,26 +100,30 @@ func (c *Chat) oneTimePreKeysHandler(req *bpb.BackendMessage_Request) (*bpb.Back
 }
 
 func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
-	// Generate a unique id string for the job
-	var idStr string
-	id, err := uuid.NewV4()
-	if err != nil {
-		logger.Error(err)
-		idStr = fmt.Sprint(time.Now().UnixNano())
-	} else {
-		idStr = id.String()
-	}
-	// add to queue
-	err = c.queue.AddJob(queue.Job{
-		ID:   idStr,
-		Type: "MESSAGE:SUBMIT",
-		Data: map[string]interface{}{
-			"partner":       e.Partner,
-			"db_message_id": e.DBMessageID,
-		},
-	})
-	if err != nil {
-		logger.Error(err)
+
+	// when the handled message was not received we would like to send it
+	if !e.Message.Received {
+		// Generate a unique id string for the job
+		var idStr string
+		id, err := uuid.NewV4()
+		if err != nil {
+			logger.Error(err)
+			idStr = fmt.Sprint(time.Now().UnixNano())
+		} else {
+			idStr = id.String()
+		}
+		// add to queue
+		err = c.queue.AddJob(queue.Job{
+			ID:   idStr,
+			Type: "MESSAGE:SUBMIT",
+			Data: map[string]interface{}{
+				"partner":       e.Partner,
+				"db_message_id": e.DBMessageID,
+			},
+		})
+		if err != nil {
+			logger.Error(err)
+		}
 	}
 
 	if e.Message.Status == db.StatusPersisted {
