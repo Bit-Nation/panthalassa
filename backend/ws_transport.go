@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"time"
 
+	"encoding/base64"
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	bpb "github.com/Bit-Nation/protobuffers"
-	proto "github.com/gogo/protobuf/proto"
-	gws "github.com/gorilla/websocket"
-	log "github.com/ipfs/go-log"
+	log "gx/ipfs/QmTG23dvpBCBjqQwyDxV8CQT6jmS4PSftNr1VqHhE3MLy7/go-log"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	gws "gx/ipfs/QmZH5VXfAJouGMyCCHTRPGCT3e5MG9Lu78Ln3YAYW1XTts/websocket"
 )
 
 var wsTransLogger = log.Logger("ws transport")
@@ -17,6 +19,7 @@ type WSTransport struct {
 	conn   *conn
 	write  chan *bpb.BackendMessage
 	read   chan *bpb.BackendMessage
+	km     *keyManager.KeyManager
 }
 
 // connection is kind of a extension of the gws.Conn
@@ -59,10 +62,16 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 		// dial to endpoint
 		d := gws.Dialer{}
 
+		signedToken, err := t.km.IdentitySign([]byte(bearerToken))
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
 		// try to connect till success
 		for {
 			conn, _, err := d.Dial(endpoint, http.Header{
-				"Bearer": []string{bearerToken},
+				"Bearer": []string{base64.StdEncoding.EncodeToString(signedToken)},
 			})
 			if err != nil {
 				wsTransLogger.Error(err)
@@ -137,10 +146,10 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 
 				var msg (*bpb.BackendMessage)
 				select {
-					case msgToSend := <-t.write:
-						msg = msgToSend
-					case <- c.closer:
-						return
+				case msgToSend := <-t.write:
+					msg = msgToSend
+				case <-c.closer:
+					return
 				}
 
 				wsTransLogger.Debugf(
@@ -165,13 +174,14 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 	return c
 }
 
-func NewWSTransport(endpoint, bearerToken string) *WSTransport {
+func NewWSTransport(endpoint, bearerToken string, km *keyManager.KeyManager) *WSTransport {
 
 	// construct ws transport
 	wst := &WSTransport{
 		closer: make(chan struct{}),
 		write:  make(chan *bpb.BackendMessage, 100),
 		read:   make(chan *bpb.BackendMessage, 100),
+		km:     km,
 	}
 
 	// routine that keeps track of the connection
@@ -204,20 +214,6 @@ func (t *WSTransport) Send(msg *bpb.BackendMessage) error {
 
 func (t *WSTransport) NextMessage() (*bpb.BackendMessage, error) {
 	return <-t.read, nil
-}
-
-func (t *WSTransport) RegisterConnectionCloseListener(listener chan struct{}) {
-	go func() {
-		for {
-			select {
-				case <-t.conn.closer:
-					listener <- struct{}{}
-				case <- t.closer:
-					return
-			}
-		}
-	}()
-	return
 }
 
 func (t *WSTransport) Close() error {

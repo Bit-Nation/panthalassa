@@ -37,10 +37,6 @@ type Backend struct {
 	closer              chan struct{}
 	addReqHandler       chan RequestHandler
 	reqHandlers         chan chan []RequestHandler
-	authenticated       chan chan bool
-	authenticate        chan bool
-	authenticationID    chan chan string
-	setAuthenticationID chan string
 	signedPreKeyStorage db.SignedPreKeyStorage
 }
 
@@ -57,8 +53,6 @@ func (b *Backend) Close() error {
 	}
 	close(b.addReqHandler)
 	close(b.reqHandlers)
-	close(b.authenticate)
-	close(b.authenticated)
 	return nil
 }
 
@@ -75,10 +69,6 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 		closer:              make(chan struct{}, 1),
 		addReqHandler:       make(chan RequestHandler),
 		reqHandlers:         make(chan chan []RequestHandler),
-		authenticated:       make(chan chan bool),
-		authenticate:        make(chan bool),
-		authenticationID:    make(chan chan string),
-		setAuthenticationID: make(chan string),
 		signedPreKeyStorage: signedPreKeyStorage,
 	}
 
@@ -86,29 +76,15 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 	go func() {
 
 		reqHandlers := []RequestHandler{}
-		authenticated := false
-		authenticationID := ""
-		connCloseChan := make(chan struct{})
-		b.transport.RegisterConnectionCloseListener(connCloseChan)
 
 		for {
 			select {
-			case <- connCloseChan:
-				b.authenticate <- false
-			case <- b.closer:
+			case <-b.closer:
 				return
 			case rh := <-b.addReqHandler:
 				reqHandlers = append(reqHandlers, rh)
 			case respChan := <-b.reqHandlers:
 				respChan <- reqHandlers
-			case a := <-b.authenticate:
-				authenticated = a
-			case respChan := <-b.authenticated:
-				respChan <- authenticated
-			case id := <-b.setAuthenticationID:
-				authenticationID = id
-			case respChan := <-b.authenticationID:
-				respChan <- authenticationID
 			}
 		}
 
@@ -155,9 +131,6 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 						continue
 					}
 
-					if resp.Auth != nil {
-						b.setAuthenticationID <- msg.RequestID
-					}
 					// send response
 					err = b.transport.Send(&bpb.BackendMessage{
 						Response:  resp,
@@ -176,74 +149,58 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 					continue
 				}
 			} else {
-				// If message is not about request, then it's a response
 
 				resp := msg.Response
 
-				authID := make(chan string)
-				b.authenticationID <- authID
-				currentAuthID := <-authID
-				// in the case this was a auth request we need to apply some special logic
-				// this will only be executed when this message was a auth request
-				if msg.RequestID == currentAuthID {
-					logger.Debug("[panthalassa] Recieved auth successful response")
-					b.authenticate <- true
+				go func() {
+					// when we have a singed pre key we just want to continue
+					if len(b.signedPreKeyStorage.All()) > 0 {
+						return
+					}
 
-					// upload signed pre key
-					// @todo this need to be changed
+					c25519 := x3dh.NewCurve25519(rand.Reader)
+					signedPreKeyPair, err := c25519.GenerateKeyPair()
+					if err != nil {
+						logger.Error(err)
+						return
+					}
 
-					go func() {
-						// when we have a singed pre key we just want to continue
-						if len(b.signedPreKeyStorage.All()) > 0 {
-							return
-						}
+					signedPreKey := prekey.PreKey{}
+					signedPreKey.PrivateKey = signedPreKeyPair.PrivateKey
+					signedPreKey.PublicKey = signedPreKeyPair.PublicKey
+					if err := signedPreKey.Sign(*b.km); err != nil {
+						logger.Error(err)
+						return
+					}
+					protoSignedPreKey, err := signedPreKey.ToProtobuf()
+					if err != nil {
+						logger.Error(err)
+						return
+					}
+					if err := signedPreKey.Sign(*b.km); err != nil {
+						logger.Error(err)
+						return
+					}
+					signedPreKeyBytes, err := proto.Marshal(&protoSignedPreKey)
+					if err != nil {
+						logger.Error(err)
+						return
+					}
 
-						c25519 := x3dh.NewCurve25519(rand.Reader)
-						signedPreKeyPair, err := c25519.GenerateKeyPair()
-						if err != nil {
-							logger.Error(err)
-							return
-						}
+					_, err = b.request(bpb.BackendMessage_Request{
+						SignedPreKey: signedPreKeyBytes,
+					}, time.Second*10)
 
-						signedPreKey := prekey.PreKey{}
-						signedPreKey.PrivateKey = signedPreKeyPair.PrivateKey
-						signedPreKey.PublicKey = signedPreKeyPair.PublicKey
-						if err := signedPreKey.Sign(*b.km); err != nil {
-							logger.Error(err)
-							return
-						}
-						protoSignedPreKey, err := signedPreKey.ToProtobuf()
-						if err != nil {
-							logger.Error(err)
-							return
-						}
-						if err := signedPreKey.Sign(*b.km); err != nil {
-							logger.Error(err)
-							return
-						}
-						signedPreKeyBytes, err := proto.Marshal(&protoSignedPreKey)
-						if err != nil {
-							logger.Error(err)
-							return
-						}
+					if err != nil {
+						logger.Error(err)
+						return
+					}
 
-						_, err = b.request(bpb.BackendMessage_Request{
-							SignedPreKey: signedPreKeyBytes,
-						}, time.Second*10)
-
-						if err != nil {
-							logger.Error(err)
-							return
-						}
-
-						if err := b.signedPreKeyStorage.Put(signedPreKeyPair); err != nil {
-							logger.Error(err)
-							return
-						}
-					}()
-
-					continue
-				}
+					if err := b.signedPreKeyStorage.Put(signedPreKeyPair); err != nil {
+						logger.Error(err)
+						return
+					}
+				}()
 
 				reqID := msg.RequestID
 
@@ -276,9 +233,6 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 
 	}()
 
-	// auth request handler
-	b.AddRequestHandler(b.auth)
-
 	// send outgoing requests to transport
 	go func() {
 		for {
@@ -287,7 +241,7 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 				return
 			case req := <-b.outReqQueue:
 				authCheck := make(chan bool)
-				b.authenticated <- authCheck
+
 				// wait for authentication
 				if !<-authCheck {
 					time.Sleep(time.Second * 1)
