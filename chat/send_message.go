@@ -75,6 +75,16 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		return *signedPreKey, nil
 	}
 
+	// fetch sender public key
+	senderIdPubStr, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return handleSendError(err)
+	}
+	sender, err := hex.DecodeString(senderIdPubStr)
+	if err != nil {
+		return handleSendError(err)
+	}
+
 	// @todo we should validate the plain message
 
 	// check if there is a shared secret for the receiver
@@ -108,9 +118,14 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 			return err
 		}
 
+		ssID, err := sharedSecretID(sender, receiver, ssBaseID)
+		if err != nil {
+			return err
+		}
+
 		// construct shared secret
 		ss := db.SharedSecret{
-			ID:                    ssBaseID,
+			ID:                    ssID,
 			X3dhSS:                initializedProtocol.SharedSecret,
 			Accepted:              false,
 			CreatedAt:             time.Now(),
@@ -198,16 +213,6 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 
 	// encrypt message
 	drMessage := drSession.RatchetEncrypt(rawPlainMessage, nil)
-	if err != nil {
-		return handleSendError(err)
-	}
-
-	// fetch sender public key
-	senderIdPubStr, err := c.km.IdentityPublicKey()
-	if err != nil {
-		return handleSendError(err)
-	}
-	sender, err := hex.DecodeString(senderIdPubStr)
 	if err != nil {
 		return handleSendError(err)
 	}
