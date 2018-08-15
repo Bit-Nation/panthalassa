@@ -50,11 +50,11 @@ func (b *Backend) AddRequestHandler(handler RequestHandler) {
 }
 
 func (b *Backend) Close() error {
+	b.closer <- struct{}{}
 	err := b.transport.Close()
 	if err != nil {
 		return err
 	}
-	b.closer <- struct{}{}
 	close(b.addReqHandler)
 	close(b.reqHandlers)
 	close(b.authenticate)
