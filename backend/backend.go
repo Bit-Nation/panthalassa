@@ -12,7 +12,6 @@ import (
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	proto "github.com/gogo/protobuf/proto"
 	log "github.com/ipfs/go-log"
 )
 
@@ -111,23 +110,18 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 			logger.Error(err)
 			return
 		}
-		protoSignedPreKey, err := signedPreKey.ToProtobuf()
-		if err != nil {
-			logger.Error(err)
-			return
-		}
 		if err := signedPreKey.Sign(*b.km); err != nil {
 			logger.Error(err)
 			return
 		}
-		signedPreKeyBytes, err := proto.Marshal(&protoSignedPreKey)
+		protoSignedPreKey, err := signedPreKey.ToProtobuf()
 		if err != nil {
 			logger.Error(err)
 			return
 		}
 
 		_, err = b.request(bpb.BackendMessage_Request{
-			SignedPreKey: signedPreKeyBytes,
+			NewSignedPreKey: &protoSignedPreKey,
 		}, time.Second*10)
 
 		if err != nil {
