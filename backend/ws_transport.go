@@ -154,6 +154,10 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 				}
 				if err := c.wsConn.WriteMessage(gws.BinaryMessage, rawMsg); err != nil {
 					wsTransLogger.Error(err)
+					c.closer <- struct{}{}
+					time.Sleep(5 * time.Second)
+					closed <- struct{}{}
+					break
 				}
 
 			}
