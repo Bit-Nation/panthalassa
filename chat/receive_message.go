@@ -75,7 +75,16 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 	// @todo HERE would message authentication happen if we decide to implement it
 	logger.Debugf("handle received message: %s", msg)
-	
+
+	// make sure we don't handle our own messages
+	ourIDKey, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return err
+	}
+	if ourIDKey == hex.EncodeToString(msg.Sender) {
+		return errors.New("in can't handle messages I created my self - this is non sense")
+	}
+
 	// make sure sender is a valid ed25519 public key
 	sender := msg.Sender
 	if len(sender) != 32 {
@@ -111,10 +120,10 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	}
 
 	logger.Debugf("double ratchet message %s", drMessage)
-	
+
 	// handle chat init message
 	if isChatInitMessage(msg) {
-		
+
 		logger.Debugf("message is a chat installation message")
 
 		// make sure ephemeralKey is really from sender
@@ -136,7 +145,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		copy(signedPreKey.PublicKey[:], msg.SignedPreKey)
 
 		logger.Debugf("used signed pre key: %x", msg.SignedPreKey)
-		
+
 		// get private signed pre key
 		signedPreKeyPriv, err := c.signedPreKeyStorage.Get(signedPreKey.PublicKey)
 		if err != nil {
@@ -148,7 +157,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		if err != nil {
 			return err
 		}
-		
+
 		logger.Debugf("the id based on init params is: %x", idInitParams)
 
 		// fetch shared secret based on chat init params
@@ -156,12 +165,12 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		if err != nil {
 			return err
 		}
-		
+
 		// decrypt the message
 		if sharedSecret != nil {
-			
+
 			logger.Debug("found shared secret for chat init params - decrypting")
-			
+
 			decryptedMsg, err := c.decryptMessage(drMessage, sharedSecret.X3dhSS, &signedPreKey)
 			if err != nil {
 				return err
@@ -174,7 +183,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			}
 			return c.messageDB.PersistReceivedMessage(msg.Sender, dbMessage)
 		}
-		
+
 		// fetch used one time pre key
 		oneTimePreKeyPriv, err := c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
 		if err != nil {
