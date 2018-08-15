@@ -240,16 +240,6 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 			case <-b.closer:
 				return
 			case req := <-b.outReqQueue:
-				authCheck := make(chan bool)
-
-				// wait for authentication
-				if !<-authCheck {
-					time.Sleep(time.Second * 1)
-					b.outReqQueue <- req
-					close(authCheck)
-					continue
-				}
-
 				// add response channel
 				b.stack.Add(req.ReqID, req.RespChan)
 				// send request
