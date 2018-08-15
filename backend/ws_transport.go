@@ -14,7 +14,7 @@ var wsTransLogger = log.Logger("ws transport")
 type WSTransport struct {
 	write chan *bpb.BackendMessage
 	read  chan *bpb.BackendMessage
-	conn  *rws.RecConn
+	Conn  *rws.RecConn
 }
 
 func NewWSTransport(endpoint, bearerToken string) *WSTransport {
@@ -29,7 +29,7 @@ func NewWSTransport(endpoint, bearerToken string) *WSTransport {
 	c.Dial(endpoint, http.Header{
 		"Bearer": []string{bearerToken},
 	})
-	wst.conn = c
+	wst.Conn = c
 
 	// writer
 	go func() {
@@ -83,6 +83,23 @@ func (t *WSTransport) Send(msg *bpb.BackendMessage) error {
 
 func (t *WSTransport) NextMessage() (*bpb.BackendMessage, error) {
 	return <-t.read, nil
+}
+
+func (t *WSTransport) RegisterConnectionCloseListener(listener chan struct{}) {
+	go func() {
+		lastInformedAbout := true
+		for {
+			if !t.Conn.IsConnected() {
+				if lastInformedAbout == false {
+					continue
+				}
+				lastInformedAbout = false
+				listener <- struct{}{}
+				continue
+			}
+		}
+	}()
+	return
 }
 
 func (t *WSTransport) Close() error {

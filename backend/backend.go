@@ -51,11 +51,15 @@ func (b *Backend) AddRequestHandler(handler RequestHandler) {
 
 func (b *Backend) Close() error {
 	b.closer <- struct{}{}
+	err := b.transport.Close()
+	if err != nil {
+		return err
+	}
 	close(b.addReqHandler)
 	close(b.reqHandlers)
 	close(b.authenticate)
 	close(b.authenticated)
-	return b.transport.Close()
+	return nil
 }
 
 func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.SignedPreKeyStorage) (*Backend, error) {
@@ -84,9 +88,13 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 		reqHandlers := []RequestHandler{}
 		authenticated := false
 		authenticationID := ""
+		connCloseChan := make(chan struct{})
+		b.transport.RegisterConnectionCloseListener(connCloseChan)
 
 		for {
 			select {
+			case <- connCloseChan:
+				b.authenticate <- false
 			case <- b.closer:
 				return
 			case rh := <-b.addReqHandler:

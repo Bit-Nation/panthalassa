@@ -3,6 +3,7 @@ package queue
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	log "github.com/ipfs/go-log"
 )
@@ -123,11 +124,15 @@ func New(s Storage, jobStackSize uint, concurrency uint) *Queue {
 					p, err := q.fetchProcessor(j.Type)
 					if err != nil {
 						logger.Error(err)
+						time.Sleep(time.Second * 5)
+						q.jobStack <- j
 						continue
 					}
 					// process error
 					if err := p.Process(j); err != nil {
 						logger.Error(err)
+						time.Sleep(time.Second * 5)
+						q.jobStack <- j
 					}
 				}
 			}
