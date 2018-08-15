@@ -10,6 +10,7 @@ import (
 	log "gx/ipfs/QmTG23dvpBCBjqQwyDxV8CQT6jmS4PSftNr1VqHhE3MLy7/go-log"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	gws "gx/ipfs/QmZH5VXfAJouGMyCCHTRPGCT3e5MG9Lu78Ln3YAYW1XTts/websocket"
+	"encoding/hex"
 )
 
 var wsTransLogger = log.Logger("ws transport")
@@ -67,11 +68,23 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 			logger.Error(err)
 			return
 		}
-
+		
+		identityKey, err := t.km.IdentityPublicKey()
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+		idKeyBytes, err := hex.DecodeString(identityKey)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+		
 		// try to connect till success
 		for {
 			conn, _, err := d.Dial(endpoint, http.Header{
 				"Bearer": []string{base64.StdEncoding.EncodeToString(signedToken)},
+				"Identity": []string{base64.StdEncoding.EncodeToString(idKeyBytes)},
 			})
 			if err != nil {
 				wsTransLogger.Error(err)
