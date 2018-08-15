@@ -74,17 +74,12 @@ func (t *WSTransport) newConn(closed chan struct{}, endpoint, bearerToken string
 			logger.Error(err)
 			return
 		}
-		idKeyBytes, err := hex.DecodeString(identityKey)
-		if err != nil {
-			logger.Error(err)
-			return
-		}
 		
 		// try to connect till success
 		for {
 			conn, _, err := d.Dial(endpoint, http.Header{
 				"Bearer": []string{base64.StdEncoding.EncodeToString(signedToken)},
-				"Identity": []string{base64.StdEncoding.EncodeToString(idKeyBytes)},
+				"Identity": []string{identityKey},
 			})
 			if err != nil {
 				wsTransLogger.Error(err)
