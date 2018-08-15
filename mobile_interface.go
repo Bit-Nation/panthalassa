@@ -76,7 +76,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	signedPreKeyStorage := db.NewBoltSignedPreKeyStorage(dbInstance, km)
 
 	// create backend
-	trans := backend.NewWSTransport(config.PrivChatEndpoint, config.PrivChatBearerToken)
+	trans := backend.NewWSTransport(config.PrivChatEndpoint, config.PrivChatBearerToken, km)
 
 	backend, err := backend.NewBackend(trans, km, signedPreKeyStorage)
 	if err != nil {
