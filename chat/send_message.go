@@ -277,7 +277,8 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	}
 
 	// attach shared secret id to message
-	msgToSend.UsedSharedSecret, err = sharedSecretID(sender, receiver, ss.BaseID)
+	// @todo change this back to -> msgToSend.UsedSharedSecret, err = sharedSecretID(sender, receiver, ss.BaseID)
+	msgToSend.UsedSharedSecret = ss.BaseID
 
 	// send message to the backend
 	err = c.backend.SubmitMessages([]*bpb.ChatMessage{&msgToSend})

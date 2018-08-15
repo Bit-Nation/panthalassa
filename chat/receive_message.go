@@ -297,7 +297,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 	// exit when shared secret is not found - sender doesn't follow protocol
 	if sharedSec == nil {
-		return errors.New("no shared secret found but is not a chat message - sender doesn't follow protocol")
+		return errors.New("no shared secret found but is not a chat init message - sender doesn't follow protocol")
 	}
 
 	// decrypt message with fetched x3dh shared secret
