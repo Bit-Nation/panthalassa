@@ -210,6 +210,20 @@ func (t *WSTransport) NextMessage() (*bpb.BackendMessage, error) {
 	return <-t.read, nil
 }
 
+func (t *WSTransport) RegisterConnectionCloseListener(listener chan struct{}) {
+	go func() {
+		for {
+			select {
+				case <-t.conn.closer:
+					listener <- struct{}{}
+				case <- t.closer:
+					return
+			}
+		}
+	}()
+	return
+}
+
 func (t *WSTransport) Close() error {
 	t.closer <- struct{}{}
 	if t.conn == nil {

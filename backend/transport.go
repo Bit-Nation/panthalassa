@@ -9,4 +9,6 @@ type Transport interface {
 	NextMessage() (*bpb.BackendMessage, error)
 	// close the transport
 	Close() error
+	// channel that 
+	RegisterConnectionCloseListener(listener chan struct{})
 }
