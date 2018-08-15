@@ -3,6 +3,7 @@ package queue
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	log "github.com/ipfs/go-log"
 )
