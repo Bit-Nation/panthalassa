@@ -3,6 +3,7 @@ package chat
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -126,6 +127,16 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 		}
 	}
 
+	dapp := ""
+	if e.Message.DApp != nil {
+		dappBytes, err := json.Marshal(e.Message.DApp)
+		if err != nil {
+			logger.Error(err)
+		} else {
+			dapp = string(dappBytes)
+		}
+	}
+
 	if e.Message.Status == db.StatusPersisted {
 		c.uiApi.Send("MESSAGE:PERSISTED", map[string]interface{}{
 			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
@@ -133,6 +144,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"created_at": e.Message.CreatedAt,
 			"chat":       hex.EncodeToString(e.Partner),
 			"received":   e.Message.Received,
+			"dapp":       dapp,
 		})
 	}
 
@@ -143,6 +155,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"created_at": e.Message.CreatedAt,
 			"chat":       hex.EncodeToString(e.Partner),
 			"received":   e.Message.Received,
+			"dapp":       dapp,
 		})
 	}
 
@@ -153,6 +166,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"created_at": e.Message.CreatedAt,
 			"chat":       hex.EncodeToString(e.Partner),
 			"received":   e.Message.Received,
+			"dapp":       dapp,
 		})
 	}
 

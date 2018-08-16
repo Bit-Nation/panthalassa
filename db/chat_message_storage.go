@@ -432,7 +432,7 @@ func (s *BoltChatMessageStorage) PersistDAppMessage(partner ed25519.PublicKey, m
 	m.Received = false
 	m.Status = StatusPersisted
 	m.DApp = &msg
-
+	m.CreatedAt = time.Now().UnixNano()
 	
 	return s.persistMessage(partner, m)
 
