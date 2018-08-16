@@ -90,11 +90,21 @@ func Messages(partner string, startStr string, amount int) (string, error) {
 
 	// decrypt message
 	for _, msg := range databaseMessages {
+		dapp := ""
+		if msg.DApp != nil {
+			dappBytes, err := json.Marshal(msg.DApp)
+			if err != nil {
+				logger.Error(err)
+			} else {
+				dapp = string(dappBytes)
+			}
+		}
 		plainMessages = append(plainMessages, map[string]interface{}{
 			"db_id":      strconv.FormatInt(msg.DatabaseID, 10),
 			"content":    string(msg.Message),
 			"created_at": msg.CreatedAt,
 			"received":   msg.Received,
+			"dapp":       dapp,
 		})
 	}
 
