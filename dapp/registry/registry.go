@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -70,7 +71,7 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage, msgDB db.ChatMessageStorage, db *bolt.DB) *Registry {
+func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage, msgDB db.ChatMessageStorage, db *bolt.DB) (*Registry, error) {
 
 	r := &Registry{
 		host:               h,
@@ -85,6 +86,25 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 		fetchDAppChan:      make(chan fetchDAppChanStr),
 		addDevStreamChan:   make(chan addDevStreamChanStr),
 		fetchDevStreamChan: make(chan fetchDAppStreamStr),
+	}
+
+	// load all default DApps
+	rawDApps, err := ioutil.ReadFile("./dapps.json")
+	if err != nil {
+		return nil, err
+	}
+	dApps := []dapp.RawData{}
+	if err := json.Unmarshal(rawDApps, dAppDB); err != nil {
+		return nil, err
+	}
+	for _, dAppData := range dApps {
+		dApp, err := dapp.ParseJsonToData(dAppData)
+		if err != nil {
+			return nil, err
+		}
+		if err := dAppDB.SaveDApp(dApp); err != nil {
+			return nil, err
+		}
 	}
 
 	// add worker to remove DApps
@@ -124,7 +144,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 		}
 	}()
 
-	return r
+	return r, nil
 
 }
 

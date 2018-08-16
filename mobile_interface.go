@@ -113,15 +113,21 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// dApp storage
 	dAppStorage := dapp.NewDAppStorage(dbInstance, uiApi)
 
+	// dApp registry
+	dAppRegistry, err := dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
+		EthWSEndpoint: config.EthWsEndpoint,
+	}, deviceApi, km, dAppStorage, messageStorage, dbInstance)
+	if err != nil {
+		return err
+	}
+
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
-		km:       km,
-		upStream: client,
-		api:      deviceApi,
-		p2p:      p2pNetwork,
-		dAppReg: dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
-			EthWSEndpoint: config.EthWsEndpoint,
-		}, deviceApi, km, dAppStorage, messageStorage, dbInstance),
+		km:          km,
+		upStream:    client,
+		api:         deviceApi,
+		p2p:         p2pNetwork,
+		dAppReg:     dAppRegistry,
 		chat:        chatInstance,
 		db:          dbInstance,
 		dAppStorage: dAppStorage,
