@@ -89,14 +89,15 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 	}
 
 	// load all default DApps
-	rawDApps, err := ioutil.ReadFile("./dapps.json")
-	if err != nil {
-		return nil, err
-	}
+	// rawDApps, err := ioutil.ReadFile("./dapps.json")
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// dApps := []dapp.RawData{}
+	// if err := json.Unmarshal(rawDApps, dAppDB); err != nil {
+	// 	return nil, err
+	// }
 	dApps := []dapp.RawData{}
-	if err := json.Unmarshal(rawDApps, dAppDB); err != nil {
-		return nil, err
-	}
 	for _, dAppData := range dApps {
 		dApp, err := dapp.ParseJsonToData(dAppData)
 		if err != nil {
