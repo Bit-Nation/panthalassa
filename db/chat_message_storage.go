@@ -97,7 +97,7 @@ var ValidMessage = func(m Message) error {
 	if m.DApp != nil {
 
 		// validate DApp public key
-		if len(m.DApp.DAppPublicKey) != 0 {
+		if len(m.DApp.DAppPublicKey) != 32 {
 			return fmt.Errorf("invalid dapp public key of length %d", len(m.DApp.DAppPublicKey))
 		}
 
