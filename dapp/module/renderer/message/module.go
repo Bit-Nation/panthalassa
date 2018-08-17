@@ -103,8 +103,8 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 			}
 
 			// set the layout in the response
-			if layout.IsString() {
-				r.layout = layout.String()
+			if layout.IsObject() {
+				r.layout, r.error = layout.ToString()
 			}
 
 			cbChan <- r
