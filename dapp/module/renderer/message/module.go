@@ -98,7 +98,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 			r := resp{}
 
 			// if there is an error, set it in the response
-			if !err.IsUndefined() {
+			if !err.IsUndefined() && !err.IsNull() {
 				r.error = errors.New(err.String())
 			}
 

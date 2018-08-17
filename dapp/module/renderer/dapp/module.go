@@ -89,7 +89,7 @@ func (m *Module) OpenDApp(payload string) error {
 			err := call.Argument(0)
 
 			// if there is an error, set it in the response
-			if !err.IsUndefined() {
+			if !err.IsUndefined() && !err.IsNull() {
 				cbDone <- errors.New(err.String())
 				return otto.Value{}
 			}
