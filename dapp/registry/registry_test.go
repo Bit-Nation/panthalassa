@@ -54,9 +54,13 @@ func TestRegistry_StartDApp(t *testing.T) {
 			dAppData, err := dapp.ParseJsonToData(rawDApp)
 			return &dAppData, err
 		},
+		saveDApp: func(dApp dapp.Data) error {
+			return nil
+		},
 	}
 
-	reg := NewDAppRegistry(nil, Config{}, nil, km, &dAppStorage, nil, nil)
+	reg, err := NewDAppRegistry(nil, Config{}, nil, km, &dAppStorage, nil, nil)
+	require.Nil(t, err)
 	require.Nil(t, reg.StartDApp(signingKey, time.Second*2))
 
 }
