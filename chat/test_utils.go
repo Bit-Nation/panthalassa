@@ -173,8 +173,12 @@ func (b *testBackend) FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.
 	return b.fetchSignedPreKey(userIdPubKey)
 }
 
-func (b testBackend) AddRequestHandler(handler backend.RequestHandler) {
+func (b *testBackend) AddRequestHandler(handler backend.RequestHandler) {
 	b.addRequestHandler(handler)
+}
+
+func (b *testBackend) Close() error {
+	return nil
 }
 
 func (s *testUserStorage) GetSignedPreKey(idKey ed25519.PublicKey) (*preKey.PreKey, error) {

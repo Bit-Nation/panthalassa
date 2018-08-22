@@ -32,9 +32,36 @@ func TestByteSliceTox3dhPub(t *testing.T) {
 
 }
 
+func TestDoNotHandleOwnMessages(t *testing.T) {
+
+	km := createKeyManager()
+
+	c := Chat{
+		km: km,
+	}
+
+	myIDKey, err := km.IdentityPublicKey()
+	require.Nil(t, err)
+	myIDRawKey, err := hex.DecodeString(myIDKey)
+	require.Nil(t, err)
+
+	// the sender must be a valid ed25519 public key
+	err = c.handleReceivedMessage(&bpb.ChatMessage{
+		Sender:           myIDRawKey,
+		UsedSharedSecret: make([]byte, 32),
+	})
+
+	require.EqualError(t, err, "in can't handle messages I created my self - this is non sense")
+
+}
+
 func TestSenderTooShort(t *testing.T) {
 
-	c := Chat{}
+	km := createKeyManager()
+
+	c := Chat{
+		km: km,
+	}
 
 	// the sender must be a valid ed25519 public key
 	err := c.handleReceivedMessage(&bpb.ChatMessage{
@@ -48,7 +75,11 @@ func TestSenderTooShort(t *testing.T) {
 
 func TestDoubleRatchetPKTooShort(t *testing.T) {
 
-	c := Chat{}
+	km := createKeyManager()
+
+	c := Chat{
+		km: km,
+	}
 
 	// the double ratchet key must be 32 bytes long
 	err := c.handleReceivedMessage(&bpb.ChatMessage{
@@ -205,6 +236,11 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 					X3dhSS: sharedSecret,
 				}, nil
 			},
+			get: func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error) {
+				return &db.SharedSecret{
+					X3dhSS: sharedSecret,
+				}, nil
+			},
 		},
 		messageDB: &testMessageStorage{
 			persistReceivedMessage: func(partner ed25519.PublicKey, msg db.Message) error {
@@ -299,6 +335,7 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 	bobIDPub, err := hex.DecodeString(bobIDPubRaw)
 	require.Nil(t, err)
 
+	sharedSecChan := make(chan *db.SharedSecret, 1)
 	c := Chat{
 		km: km,
 		signedPreKeyStorage: &testSignedPreKeyStore{
@@ -322,17 +359,16 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 				require.Nil(t, err)
 				require.Equal(t, hex.EncodeToString(sharedSecretID), hex.EncodeToString(sharedSecret.ID))
 
-				// shared secret id init params
-				sharedSecretIDInitParams, err := sharedSecretInitID(msg.Sender, bobIDPub, *msg)
-				require.Nil(t, err)
-				require.Equal(t, hex.EncodeToString(sharedSecretIDInitParams), hex.EncodeToString(sharedSecret.IDInitParams))
-
 				require.Equal(t, hex.EncodeToString(sharedSec[:]), hex.EncodeToString(sharedSecret.X3dhSS[:]))
 				require.Equal(t, x3dh.PublicKey{}, sharedSecret.EphemeralKey)
 				require.Equal(t, []byte(nil), sharedSecret.EphemeralKeySignature)
 				require.Nil(t, sharedSecret.UsedOneTimePreKey)
 				require.Nil(t, sharedSecret.DestroyAt)
+				sharedSecChan <- &sharedSecret
 				return nil
+			},
+			get: func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error) {
+				return nil, nil
 			},
 		},
 		messageDB: &testMessageStorage{
