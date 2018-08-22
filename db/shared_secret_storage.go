@@ -232,7 +232,7 @@ func (b *BoltSharedSecretStorage) SecretForChatInitMsg(chatPartner ed25519.Publi
 
 			// check if the secrets are equal
 			if bytes.Equal(persSS.SharedSecret.IDInitParams, chatInitID) {
-				fetchedSS, err := b.Get(chatPartner, persSS.ID)
+				fetchedSS, err := b.Get(chatPartner, persSS.BaseID)
 				if err != nil {
 					return err
 				}
