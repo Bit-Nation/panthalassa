@@ -90,7 +90,7 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 
 	// load all default DApps
 	dApps := []dapp.RawData{}
-	if err := json.Unmarshal([]byte(rawDApps), dAppDB); err != nil {
+	if err := json.Unmarshal([]byte(rawDApps), &dApps); err != nil {
 		return nil, err
 	}
 	for _, dAppData := range dApps {
