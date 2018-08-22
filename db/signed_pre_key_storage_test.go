@@ -35,7 +35,7 @@ func TestBoltSignedPreKeyStorage(t *testing.T) {
 	// fetch all private keys
 	keyPairs := signedPreKeyStorage.All()
 
-	require.Equal(t, hex.EncodeToString(pairOne.PrivateKey[:]), hex.EncodeToString(keyPairs[0].PrivateKey[:]))
-	require.Equal(t, hex.EncodeToString(pairTwo.PrivateKey[:]), hex.EncodeToString(keyPairs[1].PrivateKey[:]))
+	require.True(t, hex.EncodeToString(pairOne.PrivateKey[:]) == hex.EncodeToString(keyPairs[0].PrivateKey[:]) || hex.EncodeToString(pairOne.PrivateKey[:]) == hex.EncodeToString(keyPairs[1].PrivateKey[:]))
+	require.True(t, hex.EncodeToString(pairTwo.PrivateKey[:]) == hex.EncodeToString(keyPairs[0].PrivateKey[:]) || hex.EncodeToString(pairTwo.PrivateKey[:]) == hex.EncodeToString(keyPairs[1].PrivateKey[:]))
 
 }
