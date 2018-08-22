@@ -2,6 +2,7 @@ package db
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"testing"
 
 	x3dh "github.com/Bit-Nation/x3dh"
@@ -33,6 +34,8 @@ func TestBoltSignedPreKeyStorage(t *testing.T) {
 
 	// fetch all private keys
 	keyPairs := signedPreKeyStorage.All()
-	require.Equal(t, []*x3dh.KeyPair{&pairOne, &pairTwo}, keyPairs)
+
+	require.Equal(t, hex.EncodeToString(pairOne.PrivateKey[:]), hex.EncodeToString(keyPairs[0].PrivateKey[:]))
+	require.Equal(t, hex.EncodeToString(pairTwo.PrivateKey[:]), hex.EncodeToString(keyPairs[1].PrivateKey[:]))
 
 }
