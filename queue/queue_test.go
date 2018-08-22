@@ -9,19 +9,33 @@ import (
 
 func TestRegisterProcessorError(t *testing.T) {
 
-	s := testStorage{}
+	s := testStorage{
+		mapFunc: func(queue chan Job) {},
+	}
 
 	queue := New(&s, 10, 3)
 
 	// register the first time should be valid
 	err := queue.RegisterProcessor(&testProcessor{
 		processorType: "MY_PROCESSOR",
+		validJob: func(j Job) error {
+			return nil
+		},
+		process: func(j Job) error {
+			return nil
+		},
 	})
 	require.Nil(t, err)
 
 	// register second time should be invalid
 	err = queue.RegisterProcessor(&testProcessor{
 		processorType: "MY_PROCESSOR",
+		validJob: func(j Job) error {
+			return nil
+		},
+		process: func(j Job) error {
+			return nil
+		},
 	})
 	require.EqualError(t, err, "processor MY_PROCESSOR has already been registered")
 
@@ -29,9 +43,11 @@ func TestRegisterProcessorError(t *testing.T) {
 
 func TestFetchProcessor(t *testing.T) {
 
-	s := testStorage{}
+	s := &testStorage{
+		mapFunc: func(queue chan Job) {},
+	}
 
-	queue := New(&s, 10, 3)
+	queue := New(s, 10, 3)
 
 	_, err := queue.fetchProcessor("I_DO_NOT_EXIST")
 	require.EqualError(t, err, "processor: I_DO_NOT_EXIST does not exist")
@@ -39,6 +55,12 @@ func TestFetchProcessor(t *testing.T) {
 	// register the first time should be valid
 	err = queue.RegisterProcessor(&testProcessor{
 		processorType: "MY_PROCESSOR",
+		validJob: func(j Job) error {
+			return nil
+		},
+		process: func(j Job) error {
+			return nil
+		},
 	})
 	require.Nil(t, err)
 
@@ -51,7 +73,9 @@ func TestFetchProcessor(t *testing.T) {
 
 func TestQueue_AddJobError(t *testing.T) {
 
-	s := testStorage{}
+	s := testStorage{
+		mapFunc: func(queue chan Job) {},
+	}
 
 	queue := New(&s, 10, 3)
 
@@ -68,7 +92,9 @@ func TestQueue_AddJobError(t *testing.T) {
 
 func TestQueue_AddInvalidJob(t *testing.T) {
 
-	s := testStorage{}
+	s := testStorage{
+		mapFunc: func(queue chan Job) {},
+	}
 
 	queue := New(&s, 10, 3)
 
@@ -77,6 +103,9 @@ func TestQueue_AddInvalidJob(t *testing.T) {
 		processorType: "MY_JOB",
 		validJob: func(j Job) error {
 			return errors.New("got invalid job")
+		},
+		process: func(j Job) error {
+			return nil
 		},
 	})
 	require.Nil(t, err)
@@ -102,6 +131,7 @@ func TestQueue_AddJob(t *testing.T) {
 			calledPersistJob = true
 			return nil
 		},
+		mapFunc: func(queue chan Job) {},
 	}
 
 	queue := New(&s, 10, 3)
@@ -110,6 +140,9 @@ func TestQueue_AddJob(t *testing.T) {
 	err := queue.RegisterProcessor(&testProcessor{
 		processorType: "MY_JOB",
 		validJob: func(j Job) error {
+			return nil
+		},
+		process: func(j Job) error {
 			return nil
 		},
 	})
@@ -130,7 +163,9 @@ func TestQueue_AddJob(t *testing.T) {
 //
 func TestQueue_ProcessJob(t *testing.T) {
 
-	queue := New(&testStorage{}, 10, 3)
+	queue := New(&testStorage{
+		mapFunc: func(queue chan Job) {},
+	}, 10, 3)
 
 	// channel
 	wait := make(chan struct{}, 1)

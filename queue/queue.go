@@ -114,7 +114,7 @@ func New(s Storage, jobStackSize uint, concurrency uint) *Queue {
 		concurrency--
 		go func(q *Queue) {
 			for {
-				// exit if job stack go closed
+				// exit if job stack got closed
 				if q.jobStack == nil {
 					return
 				}
@@ -128,6 +128,7 @@ func New(s Storage, jobStackSize uint, concurrency uint) *Queue {
 						q.jobStack <- j
 						continue
 					}
+
 					// process error
 					if err := p.Process(j); err != nil {
 						logger.Error(err)
