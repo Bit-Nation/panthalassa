@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
+	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	bpb "github.com/Bit-Nation/protobuffers"
 	proto "github.com/gogo/protobuf/proto"
 	mux "github.com/gorilla/mux"
@@ -13,6 +16,13 @@ import (
 )
 
 func TestWSTransport_Send(t *testing.T) {
+
+	// key manager setup
+	mne, err := mnemonic.New()
+	require.Nil(t, err)
+	ks, err := keyStore.NewFromMnemonic(mne)
+	require.Nil(t, err)
+	km := keyManager.CreateFromKeyStore(ks)
 
 	// setup test websocket server
 	router := mux.Router{}
@@ -44,10 +54,10 @@ func TestWSTransport_Send(t *testing.T) {
 	}()
 
 	// setup new transport
-	trans := NewWSTransport("ws://127.0.0.1:3857/ws", "")
+	trans := NewWSTransport("ws://127.0.0.1:3857/ws", "", km)
 
 	// send test message to transport
-	err := trans.Send(&bpb.BackendMessage{
+	err = trans.Send(&bpb.BackendMessage{
 		RequestID: "request-id",
 	})
 	require.Nil(t, err)
@@ -66,6 +76,13 @@ func TestWSTransport_Send(t *testing.T) {
 }
 
 func TestWSTransport_NextMessage(t *testing.T) {
+
+	// key manager setup
+	mne, err := mnemonic.New()
+	require.Nil(t, err)
+	ks, err := keyStore.NewFromMnemonic(mne)
+	require.Nil(t, err)
+	km := keyManager.CreateFromKeyStore(ks)
 
 	// setup test websocket server
 	router := mux.Router{}
@@ -101,7 +118,7 @@ func TestWSTransport_NextMessage(t *testing.T) {
 		server.ListenAndServe()
 	}()
 
-	trans := NewWSTransport("ws://127.0.0.1:3857/ws", "")
+	trans := NewWSTransport("ws://127.0.0.1:3857/ws", "", km)
 
 	msg, err := trans.NextMessage()
 	require.Nil(t, err)
