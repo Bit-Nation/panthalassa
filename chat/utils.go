@@ -3,13 +3,13 @@ package chat
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 
 	db "github.com/Bit-Nation/panthalassa/db"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
 	mh "github.com/multiformats/go-multihash"
-	"github.com/segmentio/objconv/json"
 	dr "github.com/tiabc/doubleratchet"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
@@ -49,7 +49,7 @@ func (c *Chat) refreshSignedPreKey(idPubKey ed25519.PublicKey) error {
 	}
 
 	// check if signed pre key didn't expire
-	expired := signedPreKey.OlderThan(SignedPreKeyValidTimeFrame)
+	expired := signedPreKey.OlderThan(db.SignedPreKeyValidTimeFrame)
 	if expired {
 		return errors.New("signed pre key expired")
 	}
@@ -94,7 +94,7 @@ func sharedSecretInitID(sender, receiver ed25519.PublicKey, msg bpb.ChatMessage)
 	if _, err := b.Write(msg.OneTimePreKey); err != nil {
 		return nil, err
 	}
-	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
+	return mh.Sum(b.Bytes(), mh.SHA2_256, -1)
 }
 
 // hash message
@@ -163,6 +163,7 @@ func hashChatMessage(msg bpb.ChatMessage) (mh.Multihash, error) {
 func protoPlainMsgToMessage(msg *bpb.PlainChatMessage) (db.Message, error) {
 
 	m := db.Message{
+		ID:        msg.MessageID,
 		Message:   msg.Message,
 		CreatedAt: msg.CreatedAt,
 	}

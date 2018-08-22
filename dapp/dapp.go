@@ -94,7 +94,7 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 	// register message renderer
 	mr := msgRenderer.New(l)
 	vmModules = append(vmModules, mr)
-	if err := dr.Register(vm); err != nil {
+	if err := mr.Register(vm); err != nil {
 		return nil, err
 	}
 

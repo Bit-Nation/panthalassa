@@ -32,10 +32,11 @@ func PreKeyBundleFromProto(pubKey ed25519.PublicKey, protoPreKeyBundle *bpb.Back
 	// one time pre key
 	if protoPreKeyBundle.OneTimePreKey != nil {
 		oneTimePreKey, err := preKey.FromProtoBuf(*protoPreKeyBundle.OneTimePreKey)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			pkb.oneTimePreKey = &oneTimePreKey
+		} else {
+			logger.Error("failed to unmarshal OneTimePreKey, error: ", err)
 		}
-		pkb.oneTimePreKey = &oneTimePreKey
 	}
 
 	return pkb, nil

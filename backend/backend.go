@@ -1,13 +1,17 @@
 package backend
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	prekey "github.com/Bit-Nation/panthalassa/chat/prekey"
+	db "github.com/Bit-Nation/panthalassa/db"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	bpb "github.com/Bit-Nation/protobuffers"
+	x3dh "github.com/Bit-Nation/x3dh"
 	log "github.com/ipfs/go-log"
 )
 
@@ -26,14 +30,13 @@ type ServerConfig struct {
 type Backend struct {
 	transport Transport
 	// all outgoing requests
-	outReqQueue   chan *request
-	stack         requestStack
-	km            *km.KeyManager
-	closer        chan struct{}
-	addReqHandler chan RequestHandler
-	reqHandlers   chan chan []RequestHandler
-	authenticated chan chan bool
-	authenticate  chan bool
+	outReqQueue         chan *request
+	stack               requestStack
+	km                  *km.KeyManager
+	closer              chan struct{}
+	addReqHandler       chan RequestHandler
+	reqHandlers         chan chan []RequestHandler
+	signedPreKeyStorage db.SignedPreKeyStorage
 }
 
 // Add request handler that will be executed
@@ -41,20 +44,18 @@ func (b *Backend) AddRequestHandler(handler RequestHandler) {
 	b.addReqHandler <- handler
 }
 
-func (b *Backend) Start() error {
-	return b.transport.Start()
-}
-
 func (b *Backend) Close() error {
 	b.closer <- struct{}{}
+	err := b.transport.Close()
+	if err != nil {
+		return err
+	}
 	close(b.addReqHandler)
 	close(b.reqHandlers)
-	close(b.authenticate)
-	close(b.authenticated)
-	return b.transport.Close()
+	return nil
 }
 
-func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
+func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.SignedPreKeyStorage) (*Backend, error) {
 
 	b := &Backend{
 		transport:   trans,
@@ -63,41 +64,78 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 			stack: map[string]chan *response{},
 			lock:  sync.Mutex{},
 		},
-		km:            km,
-		closer:        make(chan struct{}, 1),
-		addReqHandler: make(chan RequestHandler),
-		reqHandlers:   make(chan chan []RequestHandler),
-		authenticated: make(chan chan bool),
-		authenticate:  make(chan bool),
+		km:                  km,
+		closer:              make(chan struct{}, 1),
+		addReqHandler:       make(chan RequestHandler),
+		reqHandlers:         make(chan chan []RequestHandler),
+		signedPreKeyStorage: signedPreKeyStorage,
 	}
 
 	// backend state
 	go func() {
 
 		reqHandlers := []RequestHandler{}
-		authenticated := false
 
 		for {
-
-			// exist if channels have been closed
-			if b.addReqHandler == nil || b.reqHandlers == nil || b.authenticated == nil || b.authenticate == nil {
-				return
-			}
-
 			select {
+			case <-b.closer:
+				return
 			case rh := <-b.addReqHandler:
 				reqHandlers = append(reqHandlers, rh)
 			case respChan := <-b.reqHandlers:
 				respChan <- reqHandlers
-			case a := <-b.authenticate:
-				authenticated = a
-			case respChan := <-b.authenticated:
-				respChan <- authenticated
 			}
 		}
 
 	}()
 
+	// Uploading of signedPeyKey
+	go func() {
+		// when we have a singed pre key we just want to continue
+		if len(b.signedPreKeyStorage.All()) > 0 {
+			return
+		}
+
+		c25519 := x3dh.NewCurve25519(rand.Reader)
+		signedPreKeyPair, err := c25519.GenerateKeyPair()
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		signedPreKey := prekey.PreKey{}
+		signedPreKey.PrivateKey = signedPreKeyPair.PrivateKey
+		signedPreKey.PublicKey = signedPreKeyPair.PublicKey
+		if err := signedPreKey.Sign(*b.km); err != nil {
+			logger.Error(err)
+			return
+		}
+		if err := signedPreKey.Sign(*b.km); err != nil {
+			logger.Error(err)
+			return
+		}
+		protoSignedPreKey, err := signedPreKey.ToProtobuf()
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		_, err = b.request(bpb.BackendMessage_Request{
+			NewSignedPreKey: &protoSignedPreKey,
+		}, time.Second*10)
+
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		if err := b.signedPreKeyStorage.Put(signedPreKeyPair); err != nil {
+			logger.Error(err)
+			return
+		}
+	}()
+
+	// handle received protobuf messages
 	go func() {
 
 		for {
@@ -115,12 +153,12 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 				continue
 			}
 
-			// ask the state for the request handlers
-			reqHandlersChan := make(chan []RequestHandler)
-			b.reqHandlers <- reqHandlersChan
-
 			// handle requests
 			if msg.Request != nil {
+				requestHandled := false
+				// ask the state for the request handlers
+				reqHandlersChan := make(chan []RequestHandler)
+				b.reqHandlers <- reqHandlersChan
 				for _, handler := range <-reqHandlersChan {
 					// handler
 					h := handler
@@ -137,23 +175,28 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 					if resp == nil {
 						continue
 					}
+
 					// send response
 					err = b.transport.Send(&bpb.BackendMessage{
 						Response:  resp,
 						RequestID: msg.RequestID,
 					})
+					requestHandled = true
 					if err != nil {
 						logger.Error(err)
 						continue
 					}
 
 				}
-			}
 
-			// handle responses
-			if msg.Response != nil {
+				// If request was successfully handled we don't need to handle that message further
+				if requestHandled {
+					continue
+				}
+			} else {
 
 				resp := msg.Response
+
 				reqID := msg.RequestID
 
 				// err will be != nil in the case of no response channel
@@ -170,17 +213,13 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 					continue
 				}
 
-				// in the case this was a auth request we need to apply some special logic
-				// this will only be executed when this message was a auth request
-				if resp.Auth != nil {
-					b.authenticate <- true
-				}
-
 				// send received response to response channel
 				respChan <- &response{
 					resp: resp,
 				}
 
+				// Message handled
+				continue
 			}
 
 			logger.Warning("dropping message: %s", msg)
@@ -189,22 +228,9 @@ func NewBackend(trans Transport, km *km.KeyManager) (*Backend, error) {
 
 	}()
 
-	// auth request handler
-	b.AddRequestHandler(b.auth)
-
 	// send outgoing requests to transport
 	go func() {
 		for {
-
-			authCheck := make(chan bool)
-			b.authenticated <- authCheck
-
-			// wait for authentication
-			if !<-authCheck {
-				time.Sleep(time.Second * 1)
-				continue
-			}
-
 			select {
 			case <-b.closer:
 				return

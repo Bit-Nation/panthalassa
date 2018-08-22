@@ -3,7 +3,6 @@ package chat
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"time"
 
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
@@ -18,10 +17,6 @@ import (
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-const (
-	SignedPreKeyValidTimeFrame = time.Hour * 24 * 60
-)
-
 var logger = log.Logger("chat")
 
 type Backend interface {
@@ -29,6 +24,7 @@ type Backend interface {
 	SubmitMessages(messages []*bpb.ChatMessage) error
 	FetchSignedPreKey(userIdPubKey ed25519.PublicKey) (preKey.PreKey, error)
 	AddRequestHandler(handler backend.RequestHandler)
+	Close() error
 }
 
 type Chat struct {
@@ -64,6 +60,10 @@ type Config struct {
 	UserStorage          db.UserStorage
 	UiApi                *uiapi.Api
 	Queue                *queue.Queue
+}
+
+func (c *Chat) Close() error {
+	return c.backend.Close()
 }
 
 func NewChat(conf Config) (*Chat, error) {

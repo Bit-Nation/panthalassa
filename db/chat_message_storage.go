@@ -97,7 +97,7 @@ var ValidMessage = func(m Message) error {
 	if m.DApp != nil {
 
 		// validate DApp public key
-		if len(m.DApp.DAppPublicKey) != 0 {
+		if len(m.DApp.DAppPublicKey) != 32 {
 			return fmt.Errorf("invalid dapp public key of length %d", len(m.DApp.DAppPublicKey))
 		}
 
@@ -414,8 +414,10 @@ func (s *BoltChatMessageStorage) PersistReceivedMessage(partner ed25519.PublicKe
 	return s.persistMessage(partner, msg)
 }
 
+// must be implemented later
 func (s *BoltChatMessageStorage) UpdateStatus(partner ed25519.PublicKey, msgID int64, newStatus Status) error {
-	return errors.New("currently not implemented")
+	// @todo implement this
+	return nil
 }
 
 func (s *BoltChatMessageStorage) PersistDAppMessage(partner ed25519.PublicKey, msg DAppMessage) error {
@@ -429,6 +431,8 @@ func (s *BoltChatMessageStorage) PersistDAppMessage(partner ed25519.PublicKey, m
 	m.ID = id.String()
 	m.Received = false
 	m.Status = StatusPersisted
+	m.DApp = &msg
+	m.CreatedAt = time.Now().UnixNano()
 
 	return s.persistMessage(partner, m)
 

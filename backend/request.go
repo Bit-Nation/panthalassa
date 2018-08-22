@@ -35,11 +35,15 @@ func (s *requestStack) Add(reqID string, responseChan chan *response) {
 
 // remove request id from stack
 func (s *requestStack) Remove(reqID string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	delete(s.stack, reqID)
 }
 
 // cut response chanel from stack
 func (s *requestStack) Cut(reqID string) chan *response {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	responseChan := s.stack[reqID]
 	delete(s.stack, reqID)
 	return responseChan

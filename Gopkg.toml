@@ -135,3 +135,7 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/Bit-Nation/protobuffers"
+  version = "1.1.0"

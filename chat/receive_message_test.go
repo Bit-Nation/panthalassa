@@ -32,9 +32,36 @@ func TestByteSliceTox3dhPub(t *testing.T) {
 
 }
 
+func TestDoNotHandleOwnMessages(t *testing.T) {
+
+	km := createKeyManager()
+
+	c := Chat{
+		km: km,
+	}
+
+	myIDKey, err := km.IdentityPublicKey()
+	require.Nil(t, err)
+	myIDRawKey, err := hex.DecodeString(myIDKey)
+	require.Nil(t, err)
+
+	// the sender must be a valid ed25519 public key
+	err = c.handleReceivedMessage(&bpb.ChatMessage{
+		Sender:           myIDRawKey,
+		UsedSharedSecret: make([]byte, 32),
+	})
+
+	require.EqualError(t, err, "in can't handle messages I created my self - this is non sense")
+
+}
+
 func TestSenderTooShort(t *testing.T) {
 
-	c := Chat{}
+	km := createKeyManager()
+
+	c := Chat{
+		km: km,
+	}
 
 	// the sender must be a valid ed25519 public key
 	err := c.handleReceivedMessage(&bpb.ChatMessage{
@@ -48,12 +75,16 @@ func TestSenderTooShort(t *testing.T) {
 
 func TestDoubleRatchetPKTooShort(t *testing.T) {
 
-	c := Chat{}
+	km := createKeyManager()
+
+	c := Chat{
+		km: km,
+	}
 
 	// the double ratchet key must be 32 bytes long
 	err := c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender:           make([]byte, 32),
-		Message:          &bpb.DoubleRatchedMsg{},
+		Message:          &bpb.DoubleRatchetMsg{},
 		UsedSharedSecret: make([]byte, 32),
 	})
 
@@ -72,11 +103,12 @@ func TestChatInitEphemeralKeySignatureValidation(t *testing.T) {
 				return &x3dh.PrivateKey{}, nil
 			},
 		},
+		km: createKeyManager(),
 	}
 
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender: sender,
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: make([]byte, 32),
 		},
 		SignedPreKey: make([]byte, 32),
@@ -102,6 +134,7 @@ func TestChatInitChatIDKeySignatureValidation(t *testing.T) {
 				return &x3dh.PrivateKey{}, nil
 			},
 		},
+		km: createKeyManager(),
 	}
 
 	// mock ephemeralKey
@@ -110,7 +143,7 @@ func TestChatInitChatIDKeySignatureValidation(t *testing.T) {
 
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender: sender,
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: make([]byte, 32),
 		},
 		SignedPreKey: make([]byte, 32),
@@ -162,8 +195,17 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 	// double ratchet message for bob
 	drMessage := aliceSession.RatchetEncrypt(rawPlainMsg, nil)
 
+	// bob key manager
+	bobKm := createKeyManager()
+
+	// bob id pub key
+	bobIDPubKeyStr, err := bobKm.IdentityPublicKey()
+	require.Nil(t, err)
+	bobIDPubKey, err := hex.DecodeString(bobIDPubKeyStr)
+	require.Nil(t, err)
+
 	msg := &bpb.ChatMessage{
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: drMessage.Header.DH[:],
 			N:               drMessage.Header.N,
 			Pn:              drMessage.Header.PN,
@@ -186,8 +228,15 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 			},
 		},
 		sharedSecStorage: &testSharedSecretStorage{
-			secretForChatInitMsg: func(givenMsg *bpb.ChatMessage) (*db.SharedSecret, error) {
-				require.Equal(t, msg, givenMsg)
+			secretForChatInitMsg: func(partner ed25519.PublicKey, id []byte) (*db.SharedSecret, error) {
+				secInitID, err := sharedSecretInitID(msg.Sender, bobIDPubKey, *msg)
+				require.Nil(t, err)
+				require.Equal(t, hex.EncodeToString(secInitID), hex.EncodeToString(id))
+				return &db.SharedSecret{
+					X3dhSS: sharedSecret,
+				}, nil
+			},
+			get: func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error) {
 				return &db.SharedSecret{
 					X3dhSS: sharedSecret,
 				}, nil
@@ -200,6 +249,7 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 				return nil
 			},
 		},
+		km: bobKm,
 	}
 
 	err = c.handleReceivedMessage(msg)
@@ -260,7 +310,7 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 	drMessage := aliceSession.RatchetEncrypt(rawPlainMsg, nil)
 
 	msg := &bpb.ChatMessage{
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: drMessage.Header.DH[:],
 			N:               drMessage.Header.N,
 			Pn:              drMessage.Header.PN,
@@ -285,6 +335,7 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 	bobIDPub, err := hex.DecodeString(bobIDPubRaw)
 	require.Nil(t, err)
 
+	sharedSecChan := make(chan *db.SharedSecret, 1)
 	c := Chat{
 		km: km,
 		signedPreKeyStorage: &testSignedPreKeyStore{
@@ -296,8 +347,7 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 			},
 		},
 		sharedSecStorage: &testSharedSecretStorage{
-			secretForChatInitMsg: func(givenMsg *bpb.ChatMessage) (*db.SharedSecret, error) {
-				require.Equal(t, msg, givenMsg)
+			secretForChatInitMsg: func(partner ed25519.PublicKey, id []byte) (*db.SharedSecret, error) {
 				return nil, nil
 			},
 			put: func(key ed25519.PublicKey, sharedSecret db.SharedSecret) error {
@@ -309,17 +359,16 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 				require.Nil(t, err)
 				require.Equal(t, hex.EncodeToString(sharedSecretID), hex.EncodeToString(sharedSecret.ID))
 
-				// shared secret id init params
-				sharedSecretIDInitParams, err := sharedSecretInitID(msg.Sender, bobIDPub, *msg)
-				require.Nil(t, err)
-				require.Equal(t, hex.EncodeToString(sharedSecretIDInitParams), hex.EncodeToString(sharedSecret.IDInitParams))
-
 				require.Equal(t, hex.EncodeToString(sharedSec[:]), hex.EncodeToString(sharedSecret.X3dhSS[:]))
 				require.Equal(t, x3dh.PublicKey{}, sharedSecret.EphemeralKey)
 				require.Equal(t, []byte(nil), sharedSecret.EphemeralKeySignature)
 				require.Nil(t, sharedSecret.UsedOneTimePreKey)
 				require.Nil(t, sharedSecret.DestroyAt)
+				sharedSecChan <- &sharedSecret
 				return nil
+			},
+			get: func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error) {
+				return nil, nil
 			},
 		},
 		messageDB: &testMessageStorage{
@@ -346,14 +395,16 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 
 func TestChatHandleInvalidShortSharedSecretID(t *testing.T) {
 
-	c := Chat{}
+	c := Chat{
+		km: createKeyManager(),
+	}
 
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
 
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender: pub,
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: make([]byte, 32),
 		},
 	})
@@ -378,12 +429,13 @@ func TestChatHandleNoSharedSecret(t *testing.T) {
 				return nil, nil
 			},
 		},
+		km: createKeyManager(),
 	}
 
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
 		Sender:           pub,
 		UsedSharedSecret: usedSharedSecret,
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: make([]byte, 32),
 		},
 	})
@@ -453,7 +505,7 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 	expectedSharedSecretID, err := sharedSecretID(senderPub, bobIDPub, sharedSecretIDRef)
 
 	msg := &bpb.ChatMessage{
-		Message: &bpb.DoubleRatchedMsg{
+		Message: &bpb.DoubleRatchetMsg{
 			DoubleRatchetPK: drMessage.Header.DH[:],
 			N:               drMessage.Header.N,
 			Pn:              drMessage.Header.PN,
@@ -490,8 +542,8 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 					X3dhSS: aliceInitializedProto.SharedSecret,
 				}, nil
 			},
-			accept: func(sharedSec *db.SharedSecret) error {
-				require.Equal(t, aliceInitializedProto.SharedSecret, sharedSec.X3dhSS)
+			accept: func(partner ed25519.PublicKey, ss *db.SharedSecret) error {
+				require.Equal(t, aliceInitializedProto.SharedSecret, ss.X3dhSS)
 				return nil
 			},
 		},

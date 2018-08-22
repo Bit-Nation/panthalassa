@@ -2,6 +2,7 @@ package backend
 
 import (
 	bpb "github.com/Bit-Nation/protobuffers"
+	x3dh "github.com/Bit-Nation/x3dh"
 )
 
 type testTransport struct {
@@ -25,4 +26,27 @@ func (t *testTransport) Close() error {
 
 func (t *testTransport) Start() error {
 	return nil
+}
+
+type testSignedPreKeyStore struct {
+	getActive func() (*x3dh.KeyPair, error)
+	put       func(signedPreKey x3dh.KeyPair) error
+	get       func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error)
+	all       func() []*x3dh.KeyPair
+}
+
+func (s *testSignedPreKeyStore) GetActive() (*x3dh.KeyPair, error) {
+	return s.getActive()
+}
+
+func (s *testSignedPreKeyStore) Put(signedPreKey x3dh.KeyPair) error {
+	return s.put(signedPreKey)
+}
+
+func (s *testSignedPreKeyStore) Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
+	return s.get(publicKey)
+}
+
+func (s *testSignedPreKeyStore) All() []*x3dh.KeyPair {
+	return s.all()
 }

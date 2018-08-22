@@ -47,7 +47,8 @@ func TestBackend_FetchSignedPreKey(t *testing.T) {
 	transport := testTransport{}
 	reqIDChan := make(chan string, 1)
 	transport.send = func(msg *bpb.BackendMessage) error {
-		require.Equal(t, identityKey, hex.EncodeToString(msg.Request.SignedPreKey))
+		id := hex.EncodeToString(msg.Request.PreKeyBundle)
+		require.Equal(t, identityKey, id)
 		reqIDChan <- msg.RequestID
 		// send response with signed protobuf back
 		return nil
@@ -56,13 +57,18 @@ func TestBackend_FetchSignedPreKey(t *testing.T) {
 		return &bpb.BackendMessage{
 			RequestID: <-reqIDChan,
 			Response: &bpb.BackendMessage_Response{
-				SignedPreKey: &signedPreProto,
+				PreKeyBundle: &bpb.BackendMessage_PreKeyBundle{
+					SignedPreKey: &signedPreProto,
+				},
 			},
 		}, nil
 	}
 
-	b, err := NewBackend(&transport, nil)
-	b.authenticate <- true
+	b, err := NewBackend(&transport, km, &testSignedPreKeyStore{
+		all: func() []*x3dh.KeyPair {
+			return []*x3dh.KeyPair{&x3dh.KeyPair{}}
+		},
+	})
 	require.Nil(t, err)
 
 	// fetched signed pre key
@@ -117,13 +123,18 @@ func TestBackend_FetchSignedPreKeyInvalidSignature(t *testing.T) {
 		return &bpb.BackendMessage{
 			RequestID: <-reqIDChan,
 			Response: &bpb.BackendMessage_Response{
-				SignedPreKey: &signedPreProto,
+				PreKeyBundle: &bpb.BackendMessage_PreKeyBundle{
+					SignedPreKey: &signedPreProto,
+				},
 			},
 		}, nil
 	}
 
-	b, err := NewBackend(&transport, nil)
-	b.authenticate <- true
+	b, err := NewBackend(&transport, km, &testSignedPreKeyStore{
+		all: func() []*x3dh.KeyPair {
+			return []*x3dh.KeyPair{&x3dh.KeyPair{}}
+		},
+	})
 	require.Nil(t, err)
 
 	// the chat partner of which we would like to receive the signed pre key
@@ -196,8 +207,11 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 		}, nil
 	}
 
-	b, err := NewBackend(&transport, nil)
-	b.authenticate <- true
+	b, err := NewBackend(&transport, km, &testSignedPreKeyStore{
+		all: func() []*x3dh.KeyPair {
+			return []*x3dh.KeyPair{&x3dh.KeyPair{}}
+		},
+	})
 	require.Nil(t, err)
 
 	fetchedSignedPreKey, err := b.FetchPreKeyBundle(rawIdentityKey)
@@ -226,8 +240,11 @@ func TestBackend_SubmitMessage(t *testing.T) {
 		}, nil
 	}
 
-	b, err := NewBackend(&transport, nil)
-	b.authenticate <- true
+	b, err := NewBackend(&transport, nil, &testSignedPreKeyStore{
+		all: func() []*x3dh.KeyPair {
+			return []*x3dh.KeyPair{&x3dh.KeyPair{}}
+		},
+	})
 	require.Nil(t, err)
 
 	err = b.SubmitMessages([]*bpb.ChatMessage{

@@ -74,6 +74,16 @@ func (c *Chat) decryptMessage(msg dr.Message, sharedSecret x3dh.SharedSecret, si
 func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 	// @todo HERE would message authentication happen if we decide to implement it
+	logger.Debugf("handle received message: %s", msg)
+
+	// make sure we don't handle our own messages
+	ourIDKey, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return err
+	}
+	if ourIDKey == hex.EncodeToString(msg.Sender) {
+		return errors.New("in can't handle messages I created my self - this is non sense")
+	}
 
 	// make sure sender is a valid ed25519 public key
 	sender := msg.Sender
@@ -84,6 +94,16 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	// make sure that the message double ratchet public is legit
 	if len(msg.Message.DoubleRatchetPK) != 32 {
 		return errors.New("got invalid double ratchet public key - must have a length of 32")
+	}
+
+	// decode our id key
+	ourRawIDPubKey, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return err
+	}
+	ourIDPubKey, err := hex.DecodeString(ourRawIDPubKey)
+	if err != nil {
+		return err
 	}
 
 	drMessage := dr.Message{
@@ -99,8 +119,12 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		Ciphertext: msg.Message.CipherText,
 	}
 
+	logger.Debugf("double ratchet message %s", drMessage)
+
 	// handle chat init message
 	if isChatInitMessage(msg) {
+
+		logger.Debugf("message is a chat installation message")
 
 		// make sure ephemeralKey is really from sender
 		if !ed25519.Verify(sender, msg.EphemeralKey, msg.EphemeralKeySignature) {
@@ -117,8 +141,15 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return errors.New("aborted chat initialization - invalid signed pre key")
 		}
 
+		// make sure used shared secret is valid
+		if len(msg.UsedSharedSecret) != 32 {
+			return errors.New("aborted chat initialization - used shared secret is != 32 bytes")
+		}
+
 		var signedPreKey x3dh.KeyPair
 		copy(signedPreKey.PublicKey[:], msg.SignedPreKey)
+
+		logger.Debugf("used signed pre key: %x", msg.SignedPreKey)
 
 		// get private signed pre key
 		signedPreKeyPriv, err := c.signedPreKeyStorage.Get(signedPreKey.PublicKey)
@@ -126,15 +157,21 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 		signedPreKey.PrivateKey = *signedPreKeyPriv
+		if signedPreKeyPriv == nil {
+			return errors.New("chat init - failed to fetch signed pre key")
+		}
 
 		// fetch shared secret based on chat init params
-		sharedSecret, err := c.sharedSecStorage.SecretForChatInitMsg(msg)
+		sharedSecret, err := c.sharedSecStorage.Get(msg.Sender, msg.UsedSharedSecret)
 		if err != nil {
 			return err
 		}
 
 		// decrypt the message
 		if sharedSecret != nil {
+
+			logger.Debug("found shared secret for chat init params - decrypting")
+
 			decryptedMsg, err := c.decryptMessage(drMessage, sharedSecret.X3dhSS, &signedPreKey)
 			if err != nil {
 				return err
@@ -192,6 +229,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// decrypt message
+		logger.Debug("try to decrypt message with newly created shared secret")
 		protoMessage, err := drSession.RatchetDecrypt(drMessage, nil)
 		if err != nil {
 			return err
@@ -208,24 +246,8 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return errors.New("invalid used shared secret id")
 		}
 
-		ourRawIDPubKey, err := c.km.IdentityPublicKey()
-		if err != nil {
-			return err
-		}
-
-		ourIDPubKey, err := hex.DecodeString(ourRawIDPubKey)
-		if err != nil {
-			return err
-		}
-
 		// generate shared secret id
 		ssID, err := sharedSecretID(sender, ourIDPubKey, plainMsg.SharedSecretBaseID)
-		if err != nil {
-			return err
-		}
-
-		// generate shared secret id based on initialisation params
-		idInitParams, err := sharedSecretInitID(msg.Sender, ourIDPubKey, *msg)
 		if err != nil {
 			return err
 		}
@@ -239,10 +261,11 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		err = c.sharedSecStorage.Put(sender, db.SharedSecret{
 			X3dhSS: sharedX3dhSec,
 			// safe as accepted since the sender initialized the chat
-			Accepted:     true,
-			CreatedAt:    time.Unix(plainMsg.SharedSecretCreationDate, 0),
-			ID:           ssID,
-			IDInitParams: idInitParams,
+			Accepted:  true,
+			CreatedAt: time.Unix(plainMsg.SharedSecretCreationDate, 0),
+			ID:        ssID,
+			// IDInitParams: idInitParams,
+			BaseID: plainMsg.SharedSecretBaseID,
 		})
 		if err != nil {
 			return err
@@ -275,7 +298,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 	// exit when shared secret is not found - sender doesn't follow protocol
 	if sharedSec == nil {
-		return errors.New("no shared secret found but is not a chat message - sender doesn't follow protocol")
+		return errors.New("no shared secret found but is not a chat init message - sender doesn't follow protocol")
 	}
 
 	// decrypt message with fetched x3dh shared secret
@@ -299,7 +322,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	// if the decryption didn't fail we want to mark
 	// the shared secret as accepted
 	if !sharedSec.Accepted {
-		return c.sharedSecStorage.Accept(sharedSec)
+		return c.sharedSecStorage.Accept(msg.Sender, sharedSec)
 	}
 
 	return nil

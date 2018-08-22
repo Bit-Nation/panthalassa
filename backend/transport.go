@@ -9,6 +9,4 @@ type Transport interface {
 	NextMessage() (*bpb.BackendMessage, error)
 	// close the transport
 	Close() error
-	// start the transport
-	Start() error
 }

@@ -37,6 +37,8 @@ type StartConfig struct {
 	SignedProfile       string `json:"signed_profile"`
 	EthWsEndpoint       string `json:"eth_ws_endpoint"`
 	EnableDebugging     bool   `json:"enable_debugging"`
+	PrivChatEndpoint    string `json:"private_chat_endpoint"`
+	PrivChatBearerToken string `json:"private_chat_bearer_token"`
 }
 
 // create a new panthalassa instance
@@ -54,14 +56,6 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// device api
 	deviceApi := api.New(client)
 
-	// create backend
-	trans := backend.WSTransport{}
-	defer trans.Start()
-	backend, err := backend.NewBackend(&trans, km)
-	if err != nil {
-		return err
-	}
-
 	// create p2p network
 	p2pNetwork, err := p2p.New()
 	if err != nil {
@@ -78,6 +72,17 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		return err
 	}
 
+	// create signed pre key storage
+	signedPreKeyStorage := db.NewBoltSignedPreKeyStorage(dbInstance, km)
+
+	// create backend
+	trans := backend.NewWSTransport(config.PrivChatEndpoint, config.PrivChatBearerToken, km)
+
+	backend, err := backend.NewBackend(trans, km, signedPreKeyStorage)
+	if err != nil {
+		return err
+	}
+
 	// ui api
 	uiApi := uiapi.New(uiUpstream)
 
@@ -90,11 +95,16 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// chat
 	chatInstance, err := chat.NewChat(chat.Config{
-		MessageDB: messageStorage,
-		KM:        km,
-		Backend:   backend,
-		UiApi:     uiApi,
-		Queue:     q,
+		MessageDB:            messageStorage,
+		Backend:              backend,
+		SharedSecretDB:       db.NewBoltSharedSecretStorage(dbInstance, km),
+		KM:                   km,
+		DRKeyStorage:         db.NewBoltDRKeyStorage(dbInstance, km),
+		SignedPreKeyStorage:  signedPreKeyStorage,
+		OneTimePreKeyStorage: db.NewBoltOneTimePreKeyStorage(dbInstance, km),
+		UserStorage:          db.NewBoltUserStorage(dbInstance),
+		UiApi:                uiApi,
+		Queue:                q,
 	})
 	if err != nil {
 		return err
@@ -103,15 +113,21 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// dApp storage
 	dAppStorage := dapp.NewDAppStorage(dbInstance, uiApi)
 
+	// dApp registry
+	dAppRegistry, err := dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
+		EthWSEndpoint: config.EthWsEndpoint,
+	}, deviceApi, km, dAppStorage, messageStorage, dbInstance)
+	if err != nil {
+		return err
+	}
+
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
-		km:       km,
-		upStream: client,
-		api:      deviceApi,
-		p2p:      p2pNetwork,
-		dAppReg: dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
-			EthWSEndpoint: config.EthWsEndpoint,
-		}, deviceApi, km, dAppStorage, messageStorage, dbInstance),
+		km:          km,
+		upStream:    client,
+		api:         deviceApi,
+		p2p:         p2pNetwork,
+		dAppReg:     dAppRegistry,
 		chat:        chatInstance,
 		db:          dbInstance,
 		dAppStorage: dAppStorage,

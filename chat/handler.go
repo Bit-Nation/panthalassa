@@ -3,15 +3,20 @@ package chat
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
+	"time"
+
+	"strconv"
 
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	"strconv"
+	uuid "github.com/satori/go.uuid"
 )
 
 // handles a set of protobuf messages
@@ -97,16 +102,39 @@ func (c *Chat) oneTimePreKeysHandler(req *bpb.BackendMessage_Request) (*bpb.Back
 
 func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 
-	// add to queue
-	err := c.queue.AddJob(queue.Job{
-		Type: "MESSAGE:SEND",
-		Data: map[string]interface{}{
-			"partner":       hex.EncodeToString(e.Partner),
-			"db_message_id": e.DBMessageID,
-		},
-	})
-	if err != nil {
-		logger.Error(err)
+	// when the handled message was not received we would like to send it
+	if !e.Message.Received {
+		// Generate a unique id string for the job
+		var idStr string
+		id, err := uuid.NewV4()
+		if err != nil {
+			logger.Error(err)
+			idStr = fmt.Sprint(time.Now().UnixNano())
+		} else {
+			idStr = id.String()
+		}
+		// add to queue
+		err = c.queue.AddJob(queue.Job{
+			ID:   idStr,
+			Type: "MESSAGE:SUBMIT",
+			Data: map[string]interface{}{
+				"partner":       e.Partner,
+				"db_message_id": e.DBMessageID,
+			},
+		})
+		if err != nil {
+			logger.Error(err)
+		}
+	}
+
+	dapp := ""
+	if e.Message.DApp != nil {
+		dappBytes, err := json.Marshal(e.Message.DApp)
+		if err != nil {
+			logger.Error(err)
+		} else {
+			dapp = string(dappBytes)
+		}
 	}
 
 	if e.Message.Status == db.StatusPersisted {
@@ -116,6 +144,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"created_at": e.Message.CreatedAt,
 			"chat":       hex.EncodeToString(e.Partner),
 			"received":   e.Message.Received,
+			"dapp":       dapp,
 		})
 	}
 
@@ -126,6 +155,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"created_at": e.Message.CreatedAt,
 			"chat":       hex.EncodeToString(e.Partner),
 			"received":   e.Message.Received,
+			"dapp":       dapp,
 		})
 	}
 
@@ -136,6 +166,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"created_at": e.Message.CreatedAt,
 			"chat":       hex.EncodeToString(e.Partner),
 			"received":   e.Message.Received,
+			"dapp":       dapp,
 		})
 	}
 

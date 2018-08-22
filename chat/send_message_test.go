@@ -44,6 +44,7 @@ func TestChat_SendMessageFailToFetchPreKeyBundle(t *testing.T) {
 		messageDB:        &msgStorage,
 		backend:          &backend,
 		sharedSecStorage: &sharedSecretStore,
+		km:               createKeyManager(),
 	}
 
 	err := c.SendMessage(ed25519.PublicKey{1}, db.Message{
@@ -89,6 +90,7 @@ func TestChat_SendMessageX3dhError(t *testing.T) {
 		messageDB:        &msgStorage,
 		backend:          &backend,
 		sharedSecStorage: &sharedSecretStore,
+		km:               createKeyManager(),
 	}
 
 	err := c.SendMessage(ed25519.PublicKey{1}, db.Message{
@@ -131,6 +133,7 @@ func TestChat_SendMessageNoSharedSecretThoWeShould(t *testing.T) {
 		messageDB:        &msgStorage,
 		backend:          &backend,
 		sharedSecStorage: &sharedSecretStore,
+		km:               createKeyManager(),
 	}
 
 	err := c.SendMessage(ed25519.PublicKey{1}, db.Message{
@@ -211,22 +214,8 @@ func TestChat_SendMessage(t *testing.T) {
 			require.Equal(t, rawIdPubAliceBob, msg.Sender)
 			require.Equal(t, "i am the message ID of the message to send", string(msg.MessageID))
 
-			// make sure used shared secret is correct
-			senderIDPubRaw, err := kmAlice.IdentityPublicKey()
-			require.Nil(t, err)
-			senderIDPub, err := hex.DecodeString(senderIDPubRaw)
-			require.Nil(t, err)
-
-			receiverIDPubRaw, err := kmBob.IdentityPublicKey()
-			require.Nil(t, err)
-			receiverIDPub, err := hex.DecodeString(receiverIDPubRaw)
-			require.Nil(t, err)
-
-			expectedSharedSecID, err := sharedSecretID(senderIDPub, receiverIDPub, sharedSecretBaseID)
-			require.Nil(t, err)
-
 			// make sure shared secret got attached
-			require.Equal(t, hex.EncodeToString(expectedSharedSecID), hex.EncodeToString(msg.UsedSharedSecret))
+			require.Equal(t, hex.EncodeToString(sharedSecretBaseID), hex.EncodeToString(msg.UsedSharedSecret))
 
 			// get double ratchet message from protobuf
 			var dh dr.Key
@@ -272,13 +261,10 @@ func TestChat_SendMessage(t *testing.T) {
 	}
 
 	userStorage := testUserStorage{
-		hasSignedPreKey: func(idKey ed25519.PublicKey) (bool, error) {
-			return true, nil
-		},
-		getSignedPreKey: func(idKey ed25519.PublicKey) (preKey.PreKey, error) {
+		getSignedPreKey: func(public ed25519.PublicKey) (*preKey.PreKey, error) {
 			// at this point we would return
 			// the signed pre key of our chat partner
-			return signedPreKeyBob, nil
+			return &signedPreKeyBob, nil
 		},
 	}
 
@@ -430,13 +416,10 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 	}
 
 	userStorage := testUserStorage{
-		hasSignedPreKey: func(idKey ed25519.PublicKey) (bool, error) {
-			return true, nil
-		},
-		getSignedPreKey: func(idKey ed25519.PublicKey) (preKey.PreKey, error) {
+		getSignedPreKey: func(partner ed25519.PublicKey) (*preKey.PreKey, error) {
 			// at this point we would return
 			// the signed pre key of our chat partner
-			return signedPreKeyBob, nil
+			return &signedPreKeyBob, nil
 		},
 	}
 
