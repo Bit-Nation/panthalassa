@@ -14,13 +14,13 @@ import (
 	bolt "github.com/coreos/bbolt"
 	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
-	otto "github.com/robertkrimen/otto"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 var sysLog = log.Logger("dapp")
 
 type DApp struct {
-	vm     *otto.Otto
+	vm     *duktape.Context
 	logger *logger.Logger
 	app    *Data
 	// will be called when the app shut down
@@ -74,7 +74,7 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 	}
 
 	// create VM
-	vm := otto.New()
+	vm := duktape.New()
 	vm.Interrupt = make(chan func(), 1)
 
 	// register all vm modules
