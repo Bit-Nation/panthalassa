@@ -7,7 +7,7 @@ import (
 	log "github.com/ipfs/go-log"
 	net "github.com/libp2p/go-libp2p-net"
 	logger "github.com/op/go-logging"
-	otto "github.com/robertkrimen/otto"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 var sysLog = log.Logger("logger module logger")
@@ -60,21 +60,22 @@ func (l *Logger) Close() error {
 
 // Register a module that writes console.log
 // to the given logger
-func (l *Logger) Register(vm *otto.Otto) error {
-
-	return vm.Set("console", map[string]interface{}{
-		"log": func(call otto.FunctionCall) otto.Value {
-
-			sysLog.Debug("write log statement")
-
-			toLog := []string{}
-			for _, arg := range call.ArgumentList {
-				sysLog.Debug("log: ", toLog)
-				toLog = append(toLog, arg.String())
+func (l *Logger) Register(vm *duktape.Context) error {
+	//@TODO Find a way to overwrite method console.log if neccessary, so that we don't need to call consoleLog
+	_, err := vm.PushGlobalGoFunction("consoleLog", func(context *duktape.Context) int {
+		sysLog.Debug("write log statement")
+		toLog := []string{}
+		var i int
+		for {
+			if context.GetType(i).IsNone() {
+				break
 			}
-			l.Logger.Info(strings.Join(toLog, ","))
-			return otto.Value{}
-		},
+			sysLog.Debug("log: ", toLog)
+			toLog = append(toLog, context.ToString(i))
+			i++
+		}
+		l.Logger.Info(strings.Join(toLog, ","))
+		return 0
 	})
-
+	return err
 }
