@@ -8,30 +8,74 @@ import (
 	require "github.com/stretchr/testify/require"
 )
 
-func TestNewBoltOneTimePreKeyStorage(t *testing.T) {
+func TestBoltOneTimePreKeyStorage_Put(t *testing.T) {
 
-	storage := NewBoltOneTimePreKeyStorage(createDB(), createKeyManager())
+	db := createStorm()
+
+	storage := NewBoltOneTimePreKeyStorage(db, createKeyManager())
 	c := x3dh.NewCurve25519(rand.Reader)
 
 	// test key pair
 	keyPair, err := c.GenerateKeyPair()
 	require.Nil(t, err)
 
-	// persist key pair
+	// persist private key
 	require.Nil(t, storage.Put([]x3dh.KeyPair{keyPair}))
 
-	// count key pairs (should be 1 since we persisted one)
-	keys, err := storage.Count()
+	// fetch private key
+	fetchedPriv, err := storage.Cut(keyPair.PublicKey[:])
 	require.Nil(t, err)
-	require.Equal(t, uint32(1), keys)
 
-	// make sure fetched pre key is the one we passed in
-	privKey, err := storage.Cut(keyPair.PublicKey[:])
-	require.Nil(t, err)
-	require.Equal(t, keyPair.PrivateKey, *privKey)
+	// make sure private keys are equal
+	require.Equal(t, keyPair.PrivateKey, *fetchedPriv)
 
-	// must fail since the previous cut deleted the key from the storage
-	privKey, err = storage.Cut(keyPair.PublicKey[:])
+}
+
+func TestBoltOneTimePreKeyStorage_Count(t *testing.T) {
+
+	db := createStorm()
+
+	storage := NewBoltOneTimePreKeyStorage(db, createKeyManager())
+	c := x3dh.NewCurve25519(rand.Reader)
+
+	// test key pair
+	keyPair, err := c.GenerateKeyPair()
 	require.Nil(t, err)
-	require.Nil(t, privKey)
+
+	// persist private key
+	require.Nil(t, storage.Put([]x3dh.KeyPair{keyPair}))
+
+	// count all one time pre keys
+	amount, err := storage.Count()
+	require.Nil(t, err)
+	require.Equal(t, uint32(1), amount)
+
+}
+
+func TestBoltOneTimePreKeyStorage_Cut(t *testing.T) {
+
+	db := createStorm()
+
+	storage := NewBoltOneTimePreKeyStorage(db, createKeyManager())
+	c := x3dh.NewCurve25519(rand.Reader)
+
+	// test key pair
+	keyPair, err := c.GenerateKeyPair()
+	require.Nil(t, err)
+
+	// persist private key
+	require.Nil(t, storage.Put([]x3dh.KeyPair{keyPair}))
+
+	// cut private key
+	fetchedPriv, err := storage.Cut(keyPair.PublicKey[:])
+	require.Nil(t, err)
+
+	// make sure private keys are equal
+	require.Equal(t, keyPair.PrivateKey, *fetchedPriv)
+
+	// cut again result should be nil
+	priv, err := storage.Cut(keyPair.PublicKey[:])
+	require.Nil(t, err)
+	require.Nil(t, priv)
+
 }
