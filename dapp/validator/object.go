@@ -6,42 +6,42 @@ import (
 	"sync"
 
 	eth "github.com/ethereum/go-ethereum/common"
-	otto "github.com/robertkrimen/otto"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
-type ObjValueValidator func(value otto.Value, objKey string) error
+type ObjValueValidator func(context *duktape.Context, position int) error
 
 // validate an address
-var ObjTypeAddress = func(value otto.Value, objKey string) error {
-	err := errors.New(fmt.Sprintf("Expected %s to be an ethereum address", objKey))
-	if !value.IsString() {
+var ObjTypeAddress = func(context *duktape.Context, position int) error {
+	err := errors.New(fmt.Sprintf("Expected %s to be an ethereum address", context.ToString(position)))
+	if !context.IsString(position) {
 		return err
 	}
-	if !eth.IsHexAddress(value.String()) {
+	if !eth.IsHexAddress(context.ToString(position)) {
 		return err
 	}
 	return nil
 }
 
 // Validate if value is a string
-var ObjTypeString = func(value otto.Value, objKey string) error {
-	if !value.IsString() {
-		return errors.New(fmt.Sprintf("Expected %s to be a string", objKey))
+var ObjTypeString = func(context *duktape.Context, position int) error {
+	if !context.IsString(position) {
+		return errors.New(fmt.Sprintf("Expected %s to be a string", context.ToString(position)))
 	}
 	return nil
 }
 
 // validate if value is an object
-var ObjTypeObject = func(value otto.Value, objKey string) error {
-	if !value.IsObject() {
-		return fmt.Errorf("expected %s to be a object", objKey)
+var ObjTypeObject = func(context *duktape.Context, position int) error {
+	if !context.IsObject(position) {
+		return fmt.Errorf("expected %s to be a object", context.ToString(position))
 	}
 	return nil
 }
 
-var ObjTypeBool = func(value otto.Value, objKey string) error {
-	if !value.IsBoolean() {
-		return fmt.Errorf("expected %s to be a bool", objKey)
+var ObjTypeBool = func(context *duktape.Context, position int) error {
+	if !context.IsBoolean(position) {
+		return fmt.Errorf("expected %s to be a bool", context.ToString(position))
 	}
 	return nil
 }
@@ -76,27 +76,20 @@ func (v *ObjValidator) Set(key string, validator ObjValueValidator, required boo
 
 }
 
-func (v *ObjValidator) Validate(vm *otto.Otto, obj otto.Object) *otto.Value {
+func (v *ObjValidator) Validate(context *duktape.Context, position int) error {
 
 	v.lock.Lock()
 	defer v.lock.Unlock()
 
 	for objKey, rule := range v.rules {
-
 		keyExist := false
-		for _, k := range obj.Keys() {
-			if k == objKey {
-				keyExist = true
-			}
+		if context.HasPropString(position, objKey) {
+			keyExist = true
 		}
-
 		// exit when key is required but missing
 		if !keyExist && rule.required {
-			e := vm.MakeCustomError(
-				"ValidationError",
-				fmt.Sprintf("Missing value for required key: %s", objKey),
-			)
-			return &e
+			e := fmt.Errorf("ValidationError: Missing value for required key: %s", objKey)
+			return e
 		}
 
 		// in the case the ke doesn't exist we should just move on
@@ -105,22 +98,15 @@ func (v *ObjValidator) Validate(vm *otto.Otto, obj otto.Object) *otto.Value {
 		}
 
 		// get value for key
-		value, err := obj.Get(objKey)
-		if err != nil {
-			e := vm.MakeCustomError(
-				"InternalError",
-				err.Error(),
-			)
-			return &e
+		if !context.GetPropString(position, objKey) {
+			e := fmt.Errorf("InternalError: Key doesn't exist  %s", objKey)
+			return e
 		}
-
 		// validate value
-		if err := rule.valueType(value, objKey); err != nil {
-			e := vm.MakeCustomError(
-				"ValidationError",
-				err.Error(),
-			)
-			return &e
+		// @TODO find out why -1 works here and "position" doesnt
+		if err := rule.valueType(context, -1); err != nil {
+			//e := fmt.Errorf("ValidationError : Missing value for required key: %s", context.ToString(position))
+			return err
 		}
 
 	}
