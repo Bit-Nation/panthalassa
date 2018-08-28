@@ -1,8 +1,8 @@
 package db
 
 import (
-	"time"
 	"errors"
+	"time"
 
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
@@ -25,11 +25,11 @@ type SignedPreKeyStorage interface {
 }
 
 type SignedPreKey struct {
-	ValidTill  int64           `storm:"index"`
+	ValidTill           int64 `storm:"index"`
 	EncryptedPrivateKey aes.CipherText
-	privateKey x3dh.PrivateKey
-	PublicKey  x3dh.PublicKey  `storm:"index,id"`
-	Version    uint
+	privateKey          x3dh.PrivateKey
+	PublicKey           x3dh.PublicKey `storm:"index,id"`
+	Version             uint
 }
 
 func (s *SignedPreKey) PrivateKey() x3dh.PrivateKey {
@@ -49,22 +49,22 @@ func NewBoltSignedPreKeyStorage(db *storm.DB, km *keyManager.KeyManager) *BoltSi
 }
 
 func (s *BoltSignedPreKeyStorage) Put(signedPreKey x3dh.KeyPair) error {
-	
+
 	privKeyCT, err := s.km.AESEncrypt(signedPreKey.PrivateKey[:])
 	if err != nil {
 		return err
 	}
-	
+
 	return s.db.Save(&SignedPreKey{
-		ValidTill:  time.Now().Add(SignedPreKeyValidTimeFrame).Unix(),
+		ValidTill:           time.Now().Add(SignedPreKeyValidTimeFrame).Unix(),
 		EncryptedPrivateKey: privKeyCT,
-		PublicKey:  signedPreKey.PublicKey,
-		Version:    1,
+		PublicKey:           signedPreKey.PublicKey,
+		Version:             1,
 	})
 }
 
 func (s *BoltSignedPreKeyStorage) Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
-	
+
 	// check if signed pre key exist
 	q := s.db.Select(sq.Eq("PublicKey", publicKey))
 	amount, err := q.Count(&SignedPreKey{})
@@ -74,7 +74,7 @@ func (s *BoltSignedPreKeyStorage) Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKe
 	if amount == 0 {
 		return nil, nil
 	}
-	
+
 	var spk SignedPreKey
 	if err := q.First(&spk); err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (s *BoltSignedPreKeyStorage) Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKe
 	}
 	privKey := &x3dh.PrivateKey{}
 	copy(privKey[:], plainPrivKey)
-	
+
 	return privKey, nil
 }
 
@@ -100,18 +100,18 @@ func (s *BoltSignedPreKeyStorage) All() ([]*x3dh.KeyPair, error) {
 	if err := s.db.All(&persistedSignedPreKeys); err != nil {
 		return nil, err
 	}
-	
+
 	for _, signedPreKey := range persistedSignedPreKeys {
 		priv, err := s.Get(signedPreKey.PublicKey)
 		if err != nil {
 			return nil, err
 		}
 		signedPreKeys = append(signedPreKeys, &x3dh.KeyPair{
-			PublicKey: signedPreKey.PublicKey,
+			PublicKey:  signedPreKey.PublicKey,
 			PrivateKey: *priv,
 		})
 	}
-	
+
 	return signedPreKeys, nil
 
 }
