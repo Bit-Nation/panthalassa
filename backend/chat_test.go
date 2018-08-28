@@ -65,8 +65,8 @@ func TestBackend_FetchSignedPreKey(t *testing.T) {
 	}
 
 	b, err := NewBackend(&transport, km, &testSignedPreKeyStore{
-		all: func() []*x3dh.KeyPair {
-			return []*x3dh.KeyPair{&x3dh.KeyPair{}}
+		all: func() ([]*x3dh.KeyPair, error) {
+			return []*x3dh.KeyPair{&x3dh.KeyPair{}}, nil
 		},
 	})
 	require.Nil(t, err)
@@ -131,8 +131,8 @@ func TestBackend_FetchSignedPreKeyInvalidSignature(t *testing.T) {
 	}
 
 	b, err := NewBackend(&transport, km, &testSignedPreKeyStore{
-		all: func() []*x3dh.KeyPair {
-			return []*x3dh.KeyPair{&x3dh.KeyPair{}}
+		all: func() ([]*x3dh.KeyPair, error) {
+			return []*x3dh.KeyPair{&x3dh.KeyPair{}}, nil
 		},
 	})
 	require.Nil(t, err)
@@ -208,8 +208,8 @@ func TestBackend_FetchPreKeyBundle(t *testing.T) {
 	}
 
 	b, err := NewBackend(&transport, km, &testSignedPreKeyStore{
-		all: func() []*x3dh.KeyPair {
-			return []*x3dh.KeyPair{&x3dh.KeyPair{}}
+		all: func() ([]*x3dh.KeyPair, error) {
+			return []*x3dh.KeyPair{&x3dh.KeyPair{}}, nil
 		},
 	})
 	require.Nil(t, err)

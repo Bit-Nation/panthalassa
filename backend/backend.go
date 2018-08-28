@@ -92,7 +92,12 @@ func NewBackend(trans Transport, km *km.KeyManager, signedPreKeyStorage db.Signe
 	// Uploading of signedPeyKey
 	go func() {
 		// when we have a singed pre key we just want to continue
-		if len(b.signedPreKeyStorage.All()) > 0 {
+		signedPreKeys, err := b.signedPreKeyStorage.All()
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+		if len(signedPreKeys) > 0 {
 			return
 		}
 
