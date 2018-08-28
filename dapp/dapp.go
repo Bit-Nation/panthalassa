@@ -34,15 +34,14 @@ type DApp struct {
 
 // close DApp
 func (d *DApp) Close() {
-	d.vm.Interrupt <- func() {
-		d.logger.Info(fmt.Sprintf("shutting down: %s (%s)", hex.EncodeToString(d.app.UsedSigningKey), d.app.Name))
-		for _, mod := range d.vmModules {
-			if err := mod.Close(); err != nil {
-				sysLog.Error(err)
-			}
+	defer d.vm.DestroyHeap()
+	d.logger.Info(fmt.Sprintf("shutting down: %s (%s)", hex.EncodeToString(d.app.UsedSigningKey), d.app.Name))
+	for _, mod := range d.vmModules {
+		if err := mod.Close(); err != nil {
+			sysLog.Error(err)
 		}
-		d.closeChan <- d.app
 	}
+	d.closeChan <- d.app
 }
 
 func (d *DApp) ID() string {
@@ -75,7 +74,6 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 
 	// create VM
 	vm := duktape.New()
-	vm.Interrupt = make(chan func(), 1)
 
 	// register all vm modules
 	for _, m := range vmModules {
@@ -132,7 +130,8 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 
 	// start the DApp async
 	go func() {
-		_, err := vm.Run(app.Code)
+		//@TODO make sure that the logic of otto's vm.Run is equivalent to vm.PevalString in this use case
+		err := vm.PevalString(string(app.Code))
 		if err != nil {
 			l.Errorf(err.Error())
 		}
@@ -147,7 +146,7 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 		}
 		return dApp, nil
 	case <-time.After(timeOut):
-		vm.Interrupt <- func() {}
+		//vm.Interrupt <- func() {}
 		closer <- app
 		return nil, errors.New("timeout - failed to start DApp")
 	}
