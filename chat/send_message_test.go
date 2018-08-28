@@ -256,7 +256,12 @@ func TestChat_SendMessage(t *testing.T) {
 			return true, nil
 		},
 		getYoungest: func(key ed25519.PublicKey) (*db.SharedSecret, error) {
-			return &db.SharedSecret{X3dhSS: x3dh.SharedSecret{1}, Accepted: true, BaseID: sharedSecretBaseID}, nil
+			ss := &db.SharedSecret{
+				Accepted: true,
+				ID:       sharedSecretBaseID,
+			}
+			ss.SetX3dhSecret(x3dh.SharedSecret{1})
+			return ss, nil
 		},
 	}
 
@@ -307,8 +312,8 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 	require.Nil(t, signedPreKeyBob.Sign(*kmBob))
 
 	// shared secret base id
-	sharedSecretBaseID := make([]byte, 32)
-	sharedSecretBaseID[6] = 0x42
+	id := make([]byte, 32)
+	id[6] = 0x42
 
 	plainMsgToSend := db.Message{
 		ID:         "i am the message ID of the message to send",
@@ -380,7 +385,7 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 
 			// shared secret must be added since our shared secret haven't
 			// been accepted
-			require.Equal(t, sharedSecretBaseID, plainMsg.SharedSecretBaseID)
+			require.Equal(t, id, plainMsg.SharedSecretBaseID)
 
 			// make sure the shared secret creation date is the one from
 			// the shared secret
@@ -402,16 +407,17 @@ func TestChat_SendMessageWithX3dhParameters(t *testing.T) {
 			return true, nil
 		},
 		getYoungest: func(key ed25519.PublicKey) (*db.SharedSecret, error) {
-			return &db.SharedSecret{
-				X3dhSS:                x3dh.SharedSecret{1},
+			ss := &db.SharedSecret{
 				Accepted:              false,
 				CreatedAt:             time.Unix(4, 0),
 				EphemeralKey:          x3dh.PublicKey{4, 3, 4},
 				EphemeralKeySignature: []byte{1, 3, 0, 3, 5},
 				UsedSignedPreKey:      x3dh.PublicKey{4, 5, 3, 2},
 				UsedOneTimePreKey:     &x3dh.PublicKey{3, 2, 4, 3, 2, 1},
-				BaseID:                sharedSecretBaseID,
-			}, nil
+				ID:                    id,
+			}
+			ss.SetX3dhSecret(x3dh.SharedSecret{1})
+			return ss, nil
 		},
 	}
 

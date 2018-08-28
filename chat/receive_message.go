@@ -59,7 +59,11 @@ func (c *Chat) decryptMessage(msg dr.Message, sharedSecret x3dh.SharedSecret, si
 	// we fetch all our pre keys and try to decrypt.
 	// trying all of them should be fine since we will only have
 	// around 6 - 8 signed pre keys
-	for _, signedPreKey := range c.signedPreKeyStorage.All() {
+	signedPreKeys, err := c.signedPreKeyStorage.All()
+	if err != nil {
+		return bpb.PlainChatMessage{}, err
+	}
+	for _, signedPreKey := range signedPreKeys {
 		plainChatMessage, err := decrypt(*signedPreKey)
 		if err != nil {
 			return bpb.PlainChatMessage{}, err
@@ -172,7 +176,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 			logger.Debug("found shared secret for chat init params - decrypting")
 
-			decryptedMsg, err := c.decryptMessage(drMessage, sharedSecret.X3dhSS, &signedPreKey)
+			decryptedMsg, err := c.decryptMessage(drMessage, sharedSecret.GetX3dhSecret(), &signedPreKey)
 			if err != nil {
 				return err
 			}
@@ -258,15 +262,15 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// persist shared secret in accepted mode
-		err = c.sharedSecStorage.Put(sender, db.SharedSecret{
-			X3dhSS: sharedX3dhSec,
+		ss := db.SharedSecret{
 			// safe as accepted since the sender initialized the chat
 			Accepted:  true,
 			CreatedAt: time.Unix(plainMsg.SharedSecretCreationDate, 0),
 			ID:        ssID,
-			// IDInitParams: idInitParams,
-			BaseID: plainMsg.SharedSecretBaseID,
-		})
+			Partner:   sender,
+		}
+		ss.SetX3dhSecret(sharedX3dhSec)
+		err = c.sharedSecStorage.Put(ss)
 		if err != nil {
 			return err
 		}
@@ -302,7 +306,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	}
 
 	// decrypt message with fetched x3dh shared secret
-	plainMsg, err := c.decryptMessage(drMessage, sharedSec.X3dhSS, nil)
+	plainMsg, err := c.decryptMessage(drMessage, sharedSec.GetX3dhSecret(), nil)
 	if err != nil {
 		return err
 	}
@@ -322,7 +326,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	// if the decryption didn't fail we want to mark
 	// the shared secret as accepted
 	if !sharedSec.Accepted {
-		return c.sharedSecStorage.Accept(msg.Sender, sharedSec)
+		return c.sharedSecStorage.Accept(*sharedSec)
 	}
 
 	return nil

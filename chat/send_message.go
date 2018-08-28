@@ -113,31 +113,26 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		}
 
 		// shared secret base ID
-		ssBaseID := make([]byte, 32)
-		if _, err := rand.Read(ssBaseID); err != nil {
-			return err
-		}
-
-		ssID, err := sharedSecretID(sender, receiver, ssBaseID)
-		if err != nil {
+		id := make([]byte, 32)
+		if _, err := rand.Read(id); err != nil {
 			return err
 		}
 
 		// construct shared secret
 		ss := db.SharedSecret{
-			ID:                    ssID,
-			X3dhSS:                initializedProtocol.SharedSecret,
+			ID:                    id,
 			Accepted:              false,
 			CreatedAt:             time.Now(),
 			UsedOneTimePreKey:     initializedProtocol.UsedOneTimePreKey,
 			UsedSignedPreKey:      initializedProtocol.UsedSignedPreKey,
 			EphemeralKey:          initializedProtocol.EphemeralKey,
 			EphemeralKeySignature: eks,
-			BaseID:                ssBaseID,
+			Partner:               receiver,
 		}
+		ss.SetX3dhSecret(initializedProtocol.SharedSecret)
 
 		// persist shared secret
-		if err := c.sharedSecStorage.Put(receiver, ss); err != nil {
+		if err := c.sharedSecStorage.Put(ss); err != nil {
 			return handleSendError(err)
 		}
 	}
@@ -187,16 +182,17 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	// in the case the shared secret has not been accepted
 	// we need to attach the shared secret base id
 	if !ss.Accepted {
-		if len(ss.BaseID) != 32 {
+		if len(ss.ID) != 32 {
 			return handleSendError(errors.New("base it is invalid - must have 32 bytes"))
 		}
-		plainMessage.SharedSecretBaseID = ss.BaseID
+		plainMessage.SharedSecretBaseID = ss.ID
 		plainMessage.SharedSecretCreationDate = ss.CreatedAt.Unix()
 	}
 
 	// create double ratchet session
 	var drSS dr.Key
-	copy(drSS[:], ss.X3dhSS[:])
+	x3dhSS := ss.GetX3dhSecret()
+	copy(drSS[:], x3dhSS[:])
 	var drRK dr.Key
 	copy(drRK[:], signedPreKey.PublicKey[:])
 
@@ -272,13 +268,12 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	}
 
 	// make sure the base id is OK
-	if len(ss.BaseID) != 32 {
+	if len(ss.ID) != 32 {
 		return errors.New("invalid base id - expected to be 32 bytes long")
 	}
 
 	// attach shared secret id to message
-	// @todo change this back to -> msgToSend.UsedSharedSecret, err = sharedSecretID(sender, receiver, ss.BaseID)
-	msgToSend.UsedSharedSecret = ss.BaseID
+	msgToSend.UsedSharedSecret = ss.ID
 
 	// send message to the backend
 	err = c.backend.SubmitMessages([]*bpb.ChatMessage{&msgToSend})

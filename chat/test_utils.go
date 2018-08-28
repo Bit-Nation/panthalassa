@@ -24,12 +24,11 @@ type testMessageStorage struct {
 }
 
 type testSharedSecretStorage struct {
-	hasAny               func(key ed25519.PublicKey) (bool, error)
-	getYoungest          func(key ed25519.PublicKey) (*db.SharedSecret, error)
-	put                  func(key ed25519.PublicKey, sharedSecret db.SharedSecret) error
-	secretForChatInitMsg func(partner ed25519.PublicKey, id []byte) (*db.SharedSecret, error)
-	accept               func(partner ed25519.PublicKey, sharedSec *db.SharedSecret) error
-	get                  func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error)
+	hasAny      func(key ed25519.PublicKey) (bool, error)
+	getYoungest func(key ed25519.PublicKey) (*db.SharedSecret, error)
+	put         func(sharedSecret db.SharedSecret) error
+	accept      func(sharedSec db.SharedSecret) error
+	get         func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error)
 }
 
 type testBackend struct {
@@ -43,7 +42,7 @@ type testSignedPreKeyStore struct {
 	getActive func() (*x3dh.KeyPair, error)
 	put       func(signedPreKey x3dh.KeyPair) error
 	get       func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error)
-	all       func() []*x3dh.KeyPair
+	all       func() ([]*x3dh.KeyPair, error)
 }
 
 type testUserStorage struct {
@@ -77,10 +76,6 @@ func (t *testOneTimePreKeyStorage) Put(keyPair []x3dh.KeyPair) error {
 	return t.put(keyPair)
 }
 
-func (s *testSignedPreKeyStore) GetActive() (*x3dh.KeyPair, error) {
-	return s.getActive()
-}
-
 func (s *testSignedPreKeyStore) Put(signedPreKey x3dh.KeyPair) error {
 	return s.put(signedPreKey)
 }
@@ -89,7 +84,7 @@ func (s *testSignedPreKeyStore) Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKey,
 	return s.get(publicKey)
 }
 
-func (s *testSignedPreKeyStore) All() []*x3dh.KeyPair {
+func (s *testSignedPreKeyStore) All() ([]*x3dh.KeyPair, error) {
 	return s.all()
 }
 
@@ -117,16 +112,12 @@ func (s *testSharedSecretStorage) GetYoungest(key ed25519.PublicKey) (*db.Shared
 	return s.getYoungest(key)
 }
 
-func (s *testSharedSecretStorage) Put(key ed25519.PublicKey, sharedSecret db.SharedSecret) error {
-	return s.put(key, sharedSecret)
+func (s *testSharedSecretStorage) Put(sharedSecret db.SharedSecret) error {
+	return s.put(sharedSecret)
 }
 
-func (s *testSharedSecretStorage) SecretForChatInitMsg(partner ed25519.PublicKey, id []byte) (*db.SharedSecret, error) {
-	return s.secretForChatInitMsg(partner, id)
-}
-
-func (s *testSharedSecretStorage) Accept(partner ed25519.PublicKey, sharedSec *db.SharedSecret) error {
-	return s.accept(partner, sharedSec)
+func (s *testSharedSecretStorage) Accept(sharedSec db.SharedSecret) error {
+	return s.accept(sharedSec)
 }
 
 func (s *testSharedSecretStorage) Get(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error) {
