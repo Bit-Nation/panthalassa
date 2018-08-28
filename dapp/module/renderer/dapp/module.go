@@ -6,14 +6,14 @@ import (
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
-	otto "github.com/robertkrimen/otto"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 type Module struct {
 	logger             *logger.Logger
-	vm                 *otto.Otto
-	setOpenHandlerChan chan *otto.Value
-	getOpenHandlerChan chan chan *otto.Value
+	vm                 *duktape.Context
+	setOpenHandlerChan chan *duktape.Context
+	getOpenHandlerChan chan chan *duktape.Context
 	addCBChan          chan *chan error
 	rmCBChan           chan *chan error
 	// returns a cb chan from the stack
@@ -23,38 +23,38 @@ type Module struct {
 
 var sysLog = log.Logger("renderer - dapp")
 
-func (m *Module) Register(vm *otto.Otto) error {
+// setOpenHandler must be called with a callback
+// the callback that is passed to `setOpenHandler`
+// will be called with an "data" object and a callback
+// the callback should be called (with an optional error)
+// in order to return from the function
+func (m *Module) Register(vm *duktape.Context) error {
 	m.vm = vm
-	// setOpenHandler must be called with a callback
-	// the callback that is passed to `setOpenHandler`
-	// will be called with an "data" object and a callback
-	// the callback should be called (with an optional error)
-	// in order to return from the function
-	return vm.Set("setOpenHandler", func(call otto.FunctionCall) otto.Value {
+	_, err := vm.PushGlobalGoFunction("setOpenHandler", func(context *duktape.Context) int {
 
-		//sysLog.Debug("set open handler")
+		sysLog.Debug("set open handler")
 
 		// validate function call
 		v := validator.New()
 		v.Set(0, &validator.TypeFunction)
-		if err := v.Validate(vm, call); err != nil {
-			m.logger.Error(err.String())
-			return *err
+		if err := v.Validate(context); err != nil {
+			m.logger.Error(err.Error())
+			return 1
 		}
 
 		// set renderer
-		fn := call.Argument(0)
-		m.setOpenHandlerChan <- &fn
+		m.setOpenHandlerChan <- context
 
-		return otto.Value{}
+		return 0
 	})
+	return err
 }
 
 // payload can be an arbitrary set of key value pairs (as a json string)
 func (m *Module) OpenDApp(payload string) error {
 
 	// fetch handler
-	handlerChan := make(chan *otto.Value)
+	handlerChan := make(chan *duktape.Context)
 	m.getOpenHandlerChan <- handlerChan
 	handler := <-handlerChan
 
@@ -64,10 +64,7 @@ func (m *Module) OpenDApp(payload string) error {
 	}
 
 	// convert context to otto js object
-	dataObj, err := m.vm.Object("(" + payload + ")")
-	if err != nil {
-		return err
-	}
+	dataObj := "(" + payload + ")"
 
 	cbDone := make(chan error)
 
@@ -78,31 +75,39 @@ func (m *Module) OpenDApp(payload string) error {
 
 		// call the renderer
 		// we pass in data object and a callback
-		_, err = handler.Call(*handler, dataObj, func(call otto.FunctionCall) otto.Value {
+		_, err := handler.PushGlobalGoFunction("callbackOpenDApp", func(context *duktape.Context) int {
 
 			// remove cb chan from state
 			defer func() {
 				m.rmCBChan <- &cbDone
 			}()
 
-			// fetch params from the callback call
-			err := call.Argument(0)
-
 			// if there is an error, set it in the response
-			if !err.IsUndefined() && !err.IsNull() {
-				cbDone <- errors.New(err.String())
-				return otto.Value{}
+			if !context.IsUndefined(0) && !context.IsNull(0) {
+				callbackerr := context.ToString(0)
+				cbDone <- errors.New(callbackerr)
+				return 1
 			}
 
 			cbDone <- nil
 
-			return otto.Value{}
+			return 0
 
 		})
 
 		if err != nil {
 			m.logger.Error(err.Error())
 		}
+		err = handler.PevalString(dataObj)
+		if err != nil {
+			m.logger.Error(err.Error())
+		}
+		err = handler.PevalString(`callbackOpenDApp`)
+		if err != nil {
+			m.logger.Error(err.Error())
+		}
+
+		handler.Call(2)
 
 	}()
 
@@ -118,8 +123,8 @@ func New(l *logger.Logger) *Module {
 
 	m := &Module{
 		logger:             l,
-		setOpenHandlerChan: make(chan *otto.Value),
-		getOpenHandlerChan: make(chan chan *otto.Value),
+		setOpenHandlerChan: make(chan *duktape.Context),
+		getOpenHandlerChan: make(chan chan *duktape.Context),
 		addCBChan:          make(chan *chan error),
 		rmCBChan:           make(chan *chan error),
 		nextCBChan:         make(chan chan *chan error),
@@ -128,7 +133,7 @@ func New(l *logger.Logger) *Module {
 
 	go func() {
 
-		openHandler := new(otto.Value)
+		openHandler := new(duktape.Context)
 		cbChans := map[*chan error]bool{}
 
 		for {
