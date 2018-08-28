@@ -25,6 +25,7 @@ func TestBoltOneTimePreKeyStorage_Put(t *testing.T) {
 	// fetch private key
 	fetchedPriv, err := storage.Cut(keyPair.PublicKey[:])
 	require.Nil(t, err)
+	require.NotNil(t, fetchedPriv)
 
 	// make sure private keys are equal
 	require.Equal(t, keyPair.PrivateKey, *fetchedPriv)

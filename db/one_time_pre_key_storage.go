@@ -7,9 +7,11 @@ import (
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
 	storm "github.com/asdine/storm"
+	sq "github.com/asdine/storm/q"
 )
 
 type oneTimePreKey struct {
+	ID      int            `storm:"id,increment"`
 	PubKey  x3dh.PublicKey `storm:"unique,index"`
 	PrivKey aes.CipherText
 }
@@ -34,19 +36,32 @@ func NewBoltOneTimePreKeyStorage(db *storm.DB, km *km.KeyManager) *BoltOneTimePr
 
 func (s *BoltOneTimePreKeyStorage) Cut(pubKey []byte) (*x3dh.PrivateKey, error) {
 
+	if len(pubKey) != 32 {
+		return nil, errors.New("got invalid public key with length != 32")
+	}
+	x3dhPub := x3dh.PublicKey{}
+	copy(x3dhPub[:], pubKey)
+
 	privKey := new(x3dh.PrivateKey)
 
-	// find one time pre key
-	otpk := new(oneTimePreKey)
-	if err := s.db.Find("PubKey", pubKey, otpk); err != nil {
+	// check if a record exist
+	q := s.db.Select(sq.Eq("PubKey", x3dhPub))
+	amount, err := q.Count(&oneTimePreKey{})
+	if err != nil {
 		return nil, err
 	}
-	if otpk == nil {
+	if amount <= 0 {
 		return nil, nil
 	}
 
+	// find one time pre key
+	var oneTimePreKey oneTimePreKey
+	if err := q.First(&oneTimePreKey); err != nil {
+		return nil, err
+	}
+
 	// decrypt private key and copy over
-	plainPrivKey, err := s.km.AESDecrypt(otpk.PrivKey)
+	plainPrivKey, err := s.km.AESDecrypt(oneTimePreKey.PrivKey)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +70,7 @@ func (s *BoltOneTimePreKeyStorage) Cut(pubKey []byte) (*x3dh.PrivateKey, error) 
 	}
 	copy(privKey[:], plainPrivKey)
 
-	return privKey, s.db.DeleteStruct(otpk)
+	return privKey, s.db.DeleteStruct(&oneTimePreKey)
 
 }
 
