@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"fmt"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
@@ -15,13 +14,23 @@ import (
 
 type SharedSecret struct {
 	// @todo figure out how to ignore fields in storm
-	X3dhSS    x3dh.SharedSecret
-	x3dhSS    aes.CipherText
+	X3dhSS    aes.CipherText
+	x3dhSS    x3dh.SharedSecret
 	Accepted  bool              `storm:"index"`
 	CreatedAt time.Time         `storm:"index"`
 	DestroyAt *time.Time        `storm:"index"`
 	Partner   ed25519.PublicKey `storm:"index"`
 	ID        []byte            `storm:"index"`
+	DBID      int               `storm:"id,increment"`
+}
+
+// @todo I don't like this solution. However, we still need to figure out
+// @todo how to ignore fields from storm
+func (ss *SharedSecret) GetX3dhSecret() x3dh.SharedSecret {
+	return ss.x3dhSS
+}
+func (ss *SharedSecret) SetX3dhSecret(secret x3dh.SharedSecret) {
+	ss.x3dhSS = secret
 }
 
 // the persistedSharedSecret is almost the same as SharedSecret except for
@@ -73,30 +82,35 @@ func (b *BoltSharedSecretStorage) HasAny(partner ed25519.PublicKey) (bool, error
 }
 
 func (b *BoltSharedSecretStorage) GetYoungest(partner ed25519.PublicKey) (*SharedSecret, error) {
-	shSec := new(SharedSecret)
-	shSec = nil
+
+	var shSec SharedSecret
 
 	// fetch shared secret
 	q := b.db.Select(sq.Eq("Partner", partner))
-	err := q.OrderBy("CreatedAt").First(shSec)
+	amount, err := q.OrderBy("CreatedAt").Count(&shSec)
 	if err != nil {
 		return nil, err
 	}
-	if shSec == nil {
+	if amount == 0 {
 		return nil, nil
 	}
 
+	// fetch first shared secret
+	if err := q.OrderBy("CreatedAt").Reverse().First(&shSec); err != nil {
+		return nil, err
+	}
+
 	// decrypt shared secret
-	plainSharedSec, err := b.km.AESDecrypt(shSec.x3dhSS)
+	plainSharedSec, err := b.km.AESDecrypt(shSec.X3dhSS)
 	if err != nil {
 		return nil, err
 	}
 	if len(plainSharedSec) != 32 {
 		return nil, errors.New("got invalid plain shared secret with len != 32")
 	}
-	copy(shSec.X3dhSS[:], plainSharedSec)
+	copy(shSec.x3dhSS[:], plainSharedSec)
 
-	return shSec, nil
+	return &shSec, nil
 
 }
 
@@ -110,14 +124,13 @@ func (b *BoltSharedSecretStorage) Put(ss SharedSecret) error {
 		return errors.New("chat partner must have a length of 32")
 	}
 
-	if ss.X3dhSS == [32]byte{} {
+	if ss.x3dhSS == [32]byte{} {
 		return errors.New("can't persist empty shared secret")
 	}
 
 	var err error
-
 	// encrypt shared secret
-	ss.x3dhSS, err = b.km.AESEncrypt(ss.X3dhSS[:])
+	ss.X3dhSS, err = b.km.AESEncrypt(ss.x3dhSS[:])
 	if err != nil {
 		return err
 	}
@@ -132,40 +145,43 @@ func (b *BoltSharedSecretStorage) Accept(sharedSec SharedSecret) error {
 		sq.Eq("ID", sharedSec.ID),
 	))
 
-	ss := new(SharedSecret)
+	var ss SharedSecret
 	if err := q.First(&ss); err != nil {
 		return err
-	}
-	if ss == nil {
-		return fmt.Errorf("couldn't find shared secret for partner %x with id %x", sharedSec.Partner, sharedSec.ID)
 	}
 
 	ss.Accepted = true
 
-	return b.db.Update(ss)
+	return b.db.Update(&ss)
 }
 
 func (b *BoltSharedSecretStorage) Get(partner ed25519.PublicKey, id []byte) (*SharedSecret, error) {
-	ss := new(SharedSecret)
-	ss = nil
 
-	// fetch shared secret
+	var ss SharedSecret
+
+	// check if shared secret exist
 	q := b.db.Select(sq.And(sq.Eq("Partner", partner), sq.Eq("ID", id)))
-	if err := q.First(&ss); err != nil {
+	amount, err := q.Count(&SharedSecret{})
+	if err != nil {
 		return nil, err
 	}
-	if ss == nil {
+	if amount == 0 {
 		return nil, nil
 	}
 
+	if err := q.First(&ss); err != nil {
+		return nil, err
+	}
+
 	// decrypt plain shared secret
-	plainSharedSec, err := b.km.AESDecrypt(ss.x3dhSS)
+	plainSharedSec, err := b.km.AESDecrypt(ss.X3dhSS)
 	if err != nil {
 		return nil, err
 	}
 	if len(plainSharedSec) != 32 {
 		return nil, errors.New("invalid plain shared secret with len != 32")
 	}
+	copy(ss.x3dhSS[:], plainSharedSec)
 
-	return ss, err
+	return &ss, err
 }

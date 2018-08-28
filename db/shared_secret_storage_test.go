@@ -3,11 +3,11 @@ package db
 import (
 	"crypto/rand"
 	"testing"
-
-	"github.com/Bit-Nation/x3dh"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/ed25519"
 	"time"
+
+	x3dh "github.com/Bit-Nation/x3dh"
+	require "github.com/stretchr/testify/require"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 func TestBoltSharedSecretStorage_Put(t *testing.T) {
@@ -32,7 +32,7 @@ func TestBoltSharedSecretStorage_Put(t *testing.T) {
 	}), "chat partner must have a length of 32")
 
 	// persist shared secret with invalid x3dh shared secret
-	require.Equal(t, storage.Put(SharedSecret{
+	require.EqualError(t, storage.Put(SharedSecret{
 		ID:      ID,
 		Partner: pub,
 	}), "can't persist empty shared secret")
@@ -40,13 +40,15 @@ func TestBoltSharedSecretStorage_Put(t *testing.T) {
 	err = storage.Put(SharedSecret{
 		ID:      ID,
 		Partner: pub,
-		X3dhSS:  x3dh.SharedSecret{1},
+		x3dhSS:  x3dh.SharedSecret{1},
 	})
 	require.Nil(t, err)
 
 	sharedSec, err := storage.Get(pub, ID)
 	require.Nil(t, err)
-	require.Equal(t, x3dh.SharedSecret{1}, sharedSec.X3dhSS)
+	require.NotNil(t, sharedSec)
+
+	require.Equal(t, x3dh.SharedSecret{1}, sharedSec.x3dhSS)
 
 }
 
@@ -65,7 +67,7 @@ func TestBoltSharedSecretStorage_Accept(t *testing.T) {
 
 	// persist shared secret
 	require.Nil(t, storage.Put(SharedSecret{
-		X3dhSS:  [32]byte{1, 2},
+		x3dhSS:  [32]byte{1, 2},
 		ID:      ID,
 		Partner: pub,
 	}))
@@ -75,11 +77,11 @@ func TestBoltSharedSecretStorage_Accept(t *testing.T) {
 		Partner: make([]byte, 32),
 		ID:      make([]byte, 32),
 	})
-	require.Equal(t, err, "")
+	require.EqualError(t, err, "not found")
 
 	// accept shared secret
 	require.Nil(t, storage.Accept(SharedSecret{
-		X3dhSS:  [32]byte{1, 2},
+		x3dhSS:  [32]byte{1, 2},
 		ID:      ID,
 		Partner: pub,
 	}))
@@ -107,7 +109,7 @@ func TestBoltSharedSecretStorage_Get(t *testing.T) {
 
 	// persist shared secret
 	require.Nil(t, storage.Put(SharedSecret{
-		X3dhSS:  [32]byte{1, 2},
+		x3dhSS:  [32]byte{1, 2},
 		ID:      ID,
 		Partner: pub,
 	}))
@@ -116,13 +118,12 @@ func TestBoltSharedSecretStorage_Get(t *testing.T) {
 	ss, err := storage.Get(pub, ID)
 	require.Nil(t, err)
 	require.NotNil(t, ss)
+	require.Equal(t, [32]byte{1, 2}, ss.x3dhSS)
 
 	// shared secret should be nil if shared secret doesn't exist
 	ss, err = storage.Get(pub, make([]byte, 32))
 	require.Nil(t, err)
 	require.Nil(t, ss)
-
-	require.Equal(t, [32]byte{1, 2}, ss.X3dhSS)
 
 }
 
@@ -141,7 +142,7 @@ func TestBoltSharedSecretStorage_GetYoungest(t *testing.T) {
 
 	// persist first shared secret
 	require.Nil(t, storage.Put(SharedSecret{
-		X3dhSS:    [32]byte{},
+		x3dhSS:    [32]byte{1},
 		CreatedAt: time.Now().Truncate(time.Minute),
 		ID:        ID,
 		Partner:   pub,
@@ -153,7 +154,7 @@ func TestBoltSharedSecretStorage_GetYoungest(t *testing.T) {
 
 	// persist second shared secret
 	require.Nil(t, storage.Put(SharedSecret{
-		X3dhSS:    [32]byte{1, 2},
+		x3dhSS:    [32]byte{1, 2},
 		ID:        ID,
 		CreatedAt: time.Now(),
 		Partner:   pub,
@@ -164,7 +165,7 @@ func TestBoltSharedSecretStorage_GetYoungest(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, ss)
 
-	require.Equal(t, [32]byte{1, 2}, ss.X3dhSS)
+	require.Equal(t, [32]byte{1, 2}, ss.x3dhSS)
 
 }
 
@@ -184,7 +185,7 @@ func TestBoltSharedSecretStorage_HasAny(t *testing.T) {
 
 	// persist first shared secret
 	require.Nil(t, storage.Put(SharedSecret{
-		X3dhSS:    [32]byte{1, 2},
+		x3dhSS:    [32]byte{1, 2},
 		ID:        make([]byte, 32),
 		CreatedAt: time.Now().Truncate(time.Minute),
 		Partner:   pub,
