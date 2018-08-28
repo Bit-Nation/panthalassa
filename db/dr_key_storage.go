@@ -12,6 +12,7 @@ import (
 )
 
 type DRKey struct {
+	ID     int            `storm:"id,increment"`
 	Key    dr.Key         `storm:"index"`
 	MsgNum uint           `storm:"index"`
 	MsgKey aes.CipherText `storm:"index"`
@@ -39,10 +40,6 @@ func NewBoltDRKeyStorage(db *storm.DB, km *km.KeyManager) *BoltDRKeyStorage {
 }
 
 var logger = log.Logger("database")
-
-var (
-	doubleRatchetKeyStoreBucket = []byte("double_ratchet_key_store")
-)
 
 func uintToBytes(uint uint) []byte {
 	num := make([]byte, 8)
@@ -120,14 +117,14 @@ func (s *BoltDRKeyStorage) DeleteMk(k dr.Key, msgNum uint) {
 		sq.Eq("Key", k),
 		sq.Eq("MsgNum", msgNum),
 	))
-	drKey := DRKey{}
+	var drKey DRKey
 	if err := q.First(&drKey); err != nil {
 		logger.Error(err)
 		return
 	}
 
 	// delete it
-	if err := s.db.DeleteStruct(drKey); err != nil {
+	if err := s.db.DeleteStruct(&drKey); err != nil {
 		logger.Error(err)
 		return
 	}
@@ -138,12 +135,10 @@ func (s *BoltDRKeyStorage) DeletePk(k dr.Key) {
 
 	// delete all DR keys under the given key
 	q := s.db.Select(sq.Eq("Key", k))
-	err := q.Each(DRKey{}, func(i interface{}) error {
-		return s.db.DeleteStruct(i)
-	})
 
+	var drKey DRKey
 	// @todo we need to change the dr package to use a better interface
-	if err != nil {
+	if err := q.Delete(&drKey); err != nil {
 		logger.Error(err)
 	}
 
@@ -184,6 +179,11 @@ func (s *BoltDRKeyStorage) All() map[dr.Key]map[uint]dr.Key {
 			return map[dr.Key]map[uint]dr.Key{}
 		}
 		copy(drk[:], plainDRKey)
+
+		if _, exist := keys[drKey.Key]; !exist {
+			keys[drKey.Key] = map[uint]dr.Key{}
+		}
+
 		keys[drKey.Key][drKey.MsgNum] = drk
 	}
 

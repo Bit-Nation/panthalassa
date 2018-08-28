@@ -37,12 +37,13 @@ func TestStore_Put(t *testing.T) {
 
 	crypto := dr.DefaultCrypto{}
 	keyPair, err := crypto.GenerateDH()
+	priv := keyPair.PrivateKey()
 	require.Nil(t, err)
 
 	s.Put(keyPair.PublicKey(), 3, keyPair.PrivateKey())
 
 	q := db.Select(sq.And(
-		sq.Eq("Key", ""),
+		sq.Eq("Key", keyPair.PublicKey()),
 		sq.Eq("MsgNum", 3),
 	))
 	var drk DRKey
@@ -50,12 +51,12 @@ func TestStore_Put(t *testing.T) {
 
 	// a few redundant check's - but mooooore is better
 	require.Equal(t, keyPair.PublicKey(), drk.Key)
-	require.Equal(t, 3, drk.MsgNum)
+	require.Equal(t, uint(3), drk.MsgNum)
 
 	// check the private key
 	plainKey, err := km.AESDecrypt(drk.MsgKey)
 	require.Nil(t, err)
-	require.Equal(t, hex.EncodeToString(keyPair.PrivateKey()[:]), hex.EncodeToString(plainKey))
+	require.Equal(t, hex.EncodeToString(priv[:]), hex.EncodeToString(plainKey))
 
 }
 
@@ -68,9 +69,10 @@ func TestStore_Get(t *testing.T) {
 
 	crypto := dr.DefaultCrypto{}
 	keyPair, err := crypto.GenerateDH()
+	priv := keyPair.PrivateKey()
 	require.Nil(t, err)
 
-	encryptedPrivKey, err := km.AESEncrypt(keyPair.PrivateKey()[:])
+	encryptedPrivKey, err := km.AESEncrypt(priv[:])
 	require.Nil(t, err)
 
 	// persist test dr key
@@ -108,9 +110,10 @@ func TestStore_DeleteMk(t *testing.T) {
 	crypto := dr.DefaultCrypto{}
 	keyPair, err := crypto.GenerateDH()
 	pubKey := keyPair.PublicKey()
+	priv := keyPair.PrivateKey()
 	require.Nil(t, err)
 
-	ct, err := km.AESEncrypt(keyPair.PrivateKey()[:])
+	ct, err := km.AESEncrypt(priv[:])
 	require.Nil(t, err)
 
 	// persist double ratchet key
@@ -168,11 +171,6 @@ func TestStore_Count(t *testing.T) {
 
 	s := NewBoltDRKeyStorage(db, km)
 
-	crypto := dr.DefaultCrypto{}
-	keyPair, err := crypto.GenerateDH()
-	pubKey := keyPair.PublicKey()
-	require.Nil(t, err)
-
 	// persist a few test message keys
 	saveTestKey := func(k dr.Key, msgNum uint) {
 		err := db.Save(&DRKey{
@@ -194,7 +192,7 @@ func TestStore_Count(t *testing.T) {
 	saveTestKey(dr.Key{1}, 4)
 
 	// delete message key bucket
-	require.Equal(t, uint(4), s.Count(pubKey))
+	require.Equal(t, uint(4), s.Count(dr.Key{1, 2, 3}))
 
 }
 
@@ -212,7 +210,8 @@ func TestStore_AllSuccess(t *testing.T) {
 	require.Nil(t, err)
 
 	// persist the first key pair
-	ct, err := km.AESEncrypt(keyPairOne.PrivateKey()[:])
+	privKeyOne := keyPairOne.PrivateKey()
+	ct, err := km.AESEncrypt(privKeyOne[:])
 	require.Nil(t, err)
 	err = db.Save(&DRKey{
 		Key:    keyPairOne.PublicKey(),
@@ -222,7 +221,8 @@ func TestStore_AllSuccess(t *testing.T) {
 	require.Nil(t, err)
 
 	// persist second key pair
-	ct, err = km.AESEncrypt(keyPairTwo.PrivateKey()[:])
+	privKeyTwo := keyPairTwo.PrivateKey()
+	ct, err = km.AESEncrypt(privKeyTwo[:])
 	require.Nil(t, err)
 	err = db.Save(&DRKey{
 		Key:    keyPairTwo.PublicKey(),
