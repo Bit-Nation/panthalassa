@@ -1,18 +1,14 @@
 package db
 
 import (
-	"encoding/json"
-	"fmt"
 	"time"
+	"errors"
 
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	x3dh "github.com/Bit-Nation/x3dh"
-	bolt "github.com/coreos/bbolt"
-)
-
-var (
-	signedPreKeyBucketName = []byte("signed_pre_keys")
+	storm "github.com/asdine/storm"
+	sq "github.com/asdine/storm/q"
 )
 
 const (
@@ -25,22 +21,27 @@ type SignedPreKeyStorage interface {
 	// @todo publish signed pre key to backend
 	Put(signedPreKey x3dh.KeyPair) error
 	Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error)
-	All() []*x3dh.KeyPair
+	All() ([]*x3dh.KeyPair, error)
 }
 
 type SignedPreKey struct {
-	ValidTill  int64           `json:"valid_till"`
-	PrivateKey x3dh.PrivateKey `json:"private_key"`
-	PublicKey  x3dh.PublicKey  `json:"public_key"`
-	Version    uint            `json:"version"`
+	ValidTill  int64           `storm:"index"`
+	EncryptedPrivateKey aes.CipherText
+	privateKey x3dh.PrivateKey
+	PublicKey  x3dh.PublicKey  `storm:"index,id"`
+	Version    uint
+}
+
+func (s *SignedPreKey) PrivateKey() x3dh.PrivateKey {
+	return s.privateKey
 }
 
 type BoltSignedPreKeyStorage struct {
-	db *bolt.DB
+	db *storm.DB
 	km *keyManager.KeyManager
 }
 
-func NewBoltSignedPreKeyStorage(db *bolt.DB, km *keyManager.KeyManager) *BoltSignedPreKeyStorage {
+func NewBoltSignedPreKeyStorage(db *storm.DB, km *keyManager.KeyManager) *BoltSignedPreKeyStorage {
 	return &BoltSignedPreKeyStorage{
 		db: db,
 		km: km,
@@ -48,159 +49,69 @@ func NewBoltSignedPreKeyStorage(db *bolt.DB, km *keyManager.KeyManager) *BoltSig
 }
 
 func (s *BoltSignedPreKeyStorage) Put(signedPreKey x3dh.KeyPair) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-
-		// signed pre key bucket
-		signedPreKeyBucket, err := tx.CreateBucketIfNotExists(signedPreKeyBucketName)
-		if err != nil {
-			return err
-		}
-
-		spk := SignedPreKey{
-			ValidTill:  time.Now().Add(SignedPreKeyValidTimeFrame).Unix(),
-			PrivateKey: signedPreKey.PrivateKey,
-			PublicKey:  signedPreKey.PublicKey,
-			Version:    1,
-		}
-		// raw signed pre key
-		rawSignedPreKey, err := json.Marshal(spk)
-		if err != nil {
-			return err
-		}
-
-		// encrypt signed pre key
-		ct, err := s.km.AESEncrypt(rawSignedPreKey)
-		if err != nil {
-			return err
-		}
-
-		// raw encrypted signed pre  key
-		rawEncSignedPreKey, err := ct.Marshal()
-		if err != nil {
-			return err
-		}
-
-		// persist signed pre key
-		return signedPreKeyBucket.Put(signedPreKey.PublicKey[:], rawEncSignedPreKey)
-
+	
+	privKeyCT, err := s.km.AESEncrypt(signedPreKey.PrivateKey[:])
+	if err != nil {
+		return err
+	}
+	
+	return s.db.Save(&SignedPreKey{
+		ValidTill:  time.Now().Add(SignedPreKeyValidTimeFrame).Unix(),
+		EncryptedPrivateKey: privKeyCT,
+		PublicKey:  signedPreKey.PublicKey,
+		Version:    1,
 	})
-}
-
-func (s *BoltSignedPreKeyStorage) getSignedPreKey(publicKey x3dh.PublicKey) (*SignedPreKey, error) {
-	signedPreKey := new(SignedPreKey)
-	signedPreKey = nil
-
-	err := s.db.View(func(tx *bolt.Tx) error {
-
-		// signed pre key bucket
-		signedPreKeyBucket := tx.Bucket(signedPreKeyBucketName)
-		if signedPreKeyBucket == nil {
-			return nil
-		}
-
-		// raw encrypted signed pre key
-		rawEncryptedSignedPreKey := signedPreKeyBucket.Get(publicKey[:])
-		if rawEncryptedSignedPreKey == nil {
-			return nil
-		}
-
-		// unmarshal aes cipher text
-		ct := aes.CipherText{}
-		if err := json.Unmarshal(rawEncryptedSignedPreKey, &ct); err != nil {
-			return err
-		}
-
-		// decrypt signed pre key
-		rawSignedPreKey, err := s.km.AESDecrypt(ct)
-		if err != nil {
-			return err
-		}
-
-		skp := SignedPreKey{}
-		if err := json.Unmarshal(rawSignedPreKey, &skp); err != nil {
-			return err
-		}
-		signedPreKey = &skp
-
-		return nil
-	})
-
-	return signedPreKey, err
-
 }
 
 func (s *BoltSignedPreKeyStorage) Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
-	privKey := new(x3dh.PrivateKey)
-	privKey = nil
-
-	err := s.db.View(func(tx *bolt.Tx) error {
-
-		// fetch signed pre key
-		signedPreKey, err := s.getSignedPreKey(publicKey)
-		if err != nil {
-			return err
-		}
-
-		privKey = &signedPreKey.PrivateKey
-
-		return nil
-	})
-
-	return privKey, err
+	
+	// check if signed pre key exist
+	q := s.db.Select(sq.Eq("PublicKey", publicKey))
+	amount, err := q.Count(&SignedPreKey{})
+	if err != nil {
+		return nil, err
+	}
+	if amount == 0 {
+		return nil, nil
+	}
+	
+	var spk SignedPreKey
+	if err := q.First(&spk); err != nil {
+		return nil, err
+	}
+	plainPrivKey, err := s.km.AESDecrypt(spk.EncryptedPrivateKey)
+	if len(plainPrivKey) != 32 {
+		return nil, errors.New("received invalid private key (len != 32)")
+	}
+	if err != nil {
+		return nil, err
+	}
+	privKey := &x3dh.PrivateKey{}
+	copy(privKey[:], plainPrivKey)
+	
+	return privKey, nil
 }
 
-func (s *BoltSignedPreKeyStorage) All() []*x3dh.KeyPair {
+func (s *BoltSignedPreKeyStorage) All() ([]*x3dh.KeyPair, error) {
 
 	signedPreKeys := []*x3dh.KeyPair{}
 
-	err := s.db.View(func(tx *bolt.Tx) error {
-
-		// signed pre key bucket
-		signedPreKeyBucket := tx.Bucket(signedPreKeyBucketName)
-		if signedPreKeyBucket == nil {
-			return nil
-		}
-
-		return signedPreKeyBucket.ForEach(func(pubKey, _ []byte) error {
-
-			// key must be a x3dh public key
-			if len(pubKey) != 32 {
-				return fmt.Errorf("got invalid public key: %x - must have length of 32 bytes", pubKey)
-			}
-
-			pub := x3dh.PublicKey{}
-			copy(pub[:], pubKey)
-
-			signedPreKey, err := s.getSignedPreKey(pub)
-			if err != nil {
-				return err
-			}
-
-			if signedPreKey == nil {
-				return fmt.Errorf("tried to fetch signed pre key of public key: %x", pubKey)
-			}
-
-			if signedPreKey.PrivateKey == [32]byte{} {
-				return fmt.Errorf("got invalid private key (32x0) for public key: %x", pubKey)
-			}
-
-			// append signed pre key
-			signedPreKeys = append(signedPreKeys, &x3dh.KeyPair{
-				PrivateKey: signedPreKey.PrivateKey,
-				PublicKey:  signedPreKey.PublicKey,
-			})
-
-			return nil
-
-		})
-
-	})
-
-	// @todo we should return the error instead of just logging it
-	if err != nil {
-		logger.Error(err)
+	var persistedSignedPreKeys []SignedPreKey
+	if err := s.db.All(&persistedSignedPreKeys); err != nil {
+		return nil, err
 	}
-
-	return signedPreKeys
+	
+	for _, signedPreKey := range persistedSignedPreKeys {
+		priv, err := s.Get(signedPreKey.PublicKey)
+		if err != nil {
+			return nil, err
+		}
+		signedPreKeys = append(signedPreKeys, &x3dh.KeyPair{
+			PublicKey: signedPreKey.PublicKey,
+			PrivateKey: *priv,
+		})
+	}
+	
+	return signedPreKeys, nil
 
 }
