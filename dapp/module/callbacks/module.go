@@ -8,7 +8,7 @@ import (
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
-	otto "github.com/robertkrimen/otto"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 var debugger = log.Logger("callbacks")
@@ -34,7 +34,7 @@ func New(l *logger.Logger) *Module {
 
 		var count uint
 
-		functions := map[uint]*otto.Value{}
+		functions := map[uint]*duktape.Context{}
 		cbChans := map[*chan error]bool{}
 
 		for {
@@ -110,7 +110,7 @@ func New(l *logger.Logger) *Module {
 }
 
 type addFunction struct {
-	fn       *otto.Value
+	fn       *duktape.Context
 	respChan chan struct {
 		id    uint
 		error error
@@ -119,12 +119,12 @@ type addFunction struct {
 
 type fetchFunction struct {
 	id       uint
-	respChan chan *otto.Value
+	respChan chan *duktape.Context
 }
 
 type Module struct {
 	logger             *logger.Logger
-	vm                 *otto.Otto
+	vm                 *duktape.Context
 	reqLim             *reqLim.Count
 	addFunctionChan    chan addFunction
 	fetchFunctionChan  chan fetchFunction
@@ -146,37 +146,34 @@ func (m *Module) Close() error {
 // e.g. myRegisteredFunction(payloadObj, cb)
 // the callback must be called in order to "return" from the function
 func (m *Module) CallFunction(id uint, payload string) error {
-
+	idInt := int(id) - 1 // @TODO find out why there are discrepencies between the id and stack positioning
 	debugger.Debug(fmt.Errorf("call function with id: %d and payload: %s", id, payload))
 
-	respChan := make(chan *otto.Value)
+	respChan := make(chan *duktape.Context)
 	m.fetchFunctionChan <- fetchFunction{
 		id:       id,
 		respChan: respChan,
 	}
-	fn := <-respChan
+	context := <-respChan
 
-	if fn == nil {
+	if context == nil || context.GetType(idInt).IsNone() {
 		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
 	}
 
 	// check if function is registered
-	if !fn.IsFunction() {
+	if !context.IsFunction(idInt) {
 		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
 	}
 
 	// parse params
-	objArgs, err := m.vm.Object("(" + payload + ")")
-	if err != nil {
-		return err
-	}
+	objArgs := "(" + payload + ")"
 
 	done := make(chan error, 1)
 	m.addCBChan <- &done
 
 	alreadyCalled := false
 
-	_, err = fn.Call(*fn, objArgs, func(call otto.FunctionCall) otto.Value {
+	_, err := context.PushGlobalGoFunction("callbackCallFunction", func(context *duktape.Context) int {
 
 		defer func() {
 			m.rmCBChan <- &done
@@ -185,25 +182,32 @@ func (m *Module) CallFunction(id uint, payload string) error {
 		// check if callback has already been called
 		if alreadyCalled {
 			m.logger.Error("Already called callback")
-			return m.vm.MakeCustomError("Callback", "Already called callback")
+			//return m.vm.MakeCustomError("Callback", "Already called callback")
+			return 1
 		}
 		alreadyCalled = true
 
-		// check parameters
-		err := call.Argument(0)
-
-		if !err.IsUndefined() {
-			done <- errors.New(err.String())
-			return otto.Value{}
+		if !context.IsUndefined(0) {
+			done <- errors.New(context.ToString(0))
+			return 1
 		}
 
 		done <- nil
-		return otto.Value{}
+		return 0
 
 	})
 	if err != nil {
 		m.logger.Error(err.Error())
 	}
+	err = context.PevalString(objArgs)
+	if err != nil {
+		m.logger.Error(err.Error())
+	}
+	err = context.PevalString(`callbackCallFunction`)
+	if err != nil {
+		m.logger.Error(err.Error())
+	}
+	context.Call(2)
 
 	return <-done
 
@@ -215,19 +219,16 @@ func (m *Module) CallFunction(id uint, payload string) error {
 // a registered function will be called with an object containing information
 // and a callback that should be called (with an optional error) in order to
 // "return"
-func (m *Module) Register(vm *otto.Otto) error {
+func (m *Module) Register(vm *duktape.Context) error {
 	m.vm = vm
-	err := vm.Set("registerFunction", func(call otto.FunctionCall) otto.Value {
+	_, err := vm.PushGlobalGoFunction("registerFunction", func(context *duktape.Context) int {
 		// validate function call
 		v := validator.New()
 		v.Set(0, &validator.TypeFunction)
-		if err := v.Validate(vm, call); err != nil {
-			m.logger.Error(fmt.Sprintf(`registerFunction needs a callback as it's first param %s`, err.String()))
-			return *err
+		if err := v.Validate(context); err != nil {
+			m.logger.Error(fmt.Sprintf(`registerFunction needs a callback as it's first param %s`, err.Error()))
+			return 1
 		}
-
-		// callback
-		fn := call.Argument(0)
 
 		// add function to stack
 		idRespChan := make(chan struct {
@@ -236,7 +237,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 		}, 1)
 		m.addFunctionChan <- addFunction{
 			respChan: idRespChan,
-			fn:       &fn,
+			fn:       context,
 		}
 		// response
 		addResp := <-idRespChan
@@ -244,14 +245,11 @@ func (m *Module) Register(vm *otto.Otto) error {
 		// exit vm on error
 		if addResp.error != nil {
 			m.logger.Error(addResp.error.Error())
-			return otto.Value{}
+			return 1
 		}
 
-		// convert function id to otto value
-		functionId, err := otto.ToValue(addResp.id)
-		if err != nil {
-			m.logger.Error(err.Error())
-		}
+		// convert function id to int
+		functionId := int(addResp.id)
 
 		return functionId
 
@@ -260,27 +258,22 @@ func (m *Module) Register(vm *otto.Otto) error {
 		return err
 	}
 
-	return vm.Set("unRegisterFunction", func(call otto.FunctionCall) otto.Value {
+	_, err = vm.PushGlobalGoFunction("unRegisterFunction", func(context *duktape.Context) int {
 
 		// validate function call
 		v := validator.New()
 		v.Set(0, &validator.TypeNumber)
-		if err := v.Validate(vm, call); err != nil {
-			return *err
+		if err := v.Validate(context); err != nil {
+			return 1
 		}
 
 		// function id
-		funcID := call.Argument(0)
-		id, err := funcID.ToInteger()
-		if err != nil {
-			m.logger.Error(err.Error())
-			return otto.Value{}
-		}
+		funcID := context.ToInt(0)
 
 		// delete function from channel
-		m.deleteFunctionChan <- uint(id)
+		m.deleteFunctionChan <- uint(funcID)
 
-		return otto.Value{}
+		return 0
 	})
-
+	return err
 }
