@@ -13,15 +13,19 @@ import (
 )
 
 type SharedSecret struct {
-	// @todo figure out how to ignore fields in storm
-	X3dhSS    aes.CipherText
-	x3dhSS    x3dh.SharedSecret
-	Accepted  bool              `storm:"index"`
-	CreatedAt time.Time         `storm:"index"`
-	DestroyAt *time.Time        `storm:"index"`
-	Partner   ed25519.PublicKey `storm:"index"`
-	ID        []byte            `storm:"index"`
-	DBID      int               `storm:"id,increment"`
+	// this prop is filled in during saving the shared secret
+	X3dhSS                aes.CipherText
+	x3dhSS                x3dh.SharedSecret
+	Accepted              bool              `storm:"index"`
+	CreatedAt             time.Time         `storm:"index"`
+	DestroyAt             *time.Time        `storm:"index"`
+	Partner               ed25519.PublicKey `storm:"index"`
+	ID                    []byte            `storm:"index"`
+	DBID                  int               `storm:"id,increment"`
+	UsedOneTimePreKey     *x3dh.PublicKey
+	UsedSignedPreKey      x3dh.PublicKey
+	EphemeralKey          x3dh.PublicKey
+	EphemeralKeySignature []byte
 }
 
 // @todo I don't like this solution. However, we still need to figure out
@@ -47,7 +51,7 @@ type SharedSecretStorage interface {
 	Put(ss SharedSecret) error
 	// accept will mark the given shared secret as accepted
 	// and will set a destroy date for all other shared secrets
-	Accept(partner ed25519.PublicKey, sharedSec *SharedSecret) error
+	Accept(sharedSec SharedSecret) error
 	// get sender public key and shared secret id
 	Get(key ed25519.PublicKey, sharedSecretID []byte) (*SharedSecret, error)
 }
