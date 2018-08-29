@@ -6,6 +6,7 @@ import (
 
 	migration "github.com/Bit-Nation/panthalassa/db/migration"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
+	storm "github.com/asdine/storm"
 	bolt "github.com/coreos/bbolt"
 )
 
@@ -22,7 +23,7 @@ func KMToDBPath(dir string, km *km.KeyManager) (string, error) {
 }
 
 // open a database
-func Open(path string, mode os.FileMode, options *bolt.Options) (*bolt.DB, error) {
+func Open(path string, mode os.FileMode, options *bolt.Options) (*storm.DB, error) {
 
 	migrations := []migration.Migration{}
 
@@ -33,7 +34,7 @@ func Open(path string, mode os.FileMode, options *bolt.Options) (*bolt.DB, error
 	}
 
 	// open database
-	db, err := bolt.Open(path, mode, options)
+	db, err := storm.Open(path, storm.BoltOptions(mode, options))
 	if err != nil {
 		return nil, err
 	}
