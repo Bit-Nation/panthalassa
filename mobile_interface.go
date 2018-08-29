@@ -87,7 +87,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	uiApi := uiapi.New(uiUpstream)
 
 	// open message storage
-	messageStorage := db.NewChatMessageStorage(dbInstance, []func(db.MessagePersistedEvent){}, km)
+	chatStorage := db.NewChatStorage(dbInstance, []func(db.MessagePersistedEvent){}, km)
 
 	// queue instance
 	jobStorage := queue.NewStorage(dbInstance)
@@ -95,7 +95,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// chat
 	chatInstance, err := chat.NewChat(chat.Config{
-		MessageDB:            messageStorage,
+		ChatStorage:          chatStorage,
 		Backend:              backend,
 		SharedSecretDB:       db.NewBoltSharedSecretStorage(dbInstance, km),
 		KM:                   km,
@@ -116,7 +116,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// dApp registry
 	dAppRegistry, err := dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
 		EthWSEndpoint: config.EthWsEndpoint,
-	}, deviceApi, km, dAppStorage, messageStorage, dbInstance)
+	}, deviceApi, km, dAppStorage, chatStorage)
 	if err != nil {
 		return err
 	}

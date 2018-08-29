@@ -241,8 +241,8 @@ func TestBackend_SubmitMessage(t *testing.T) {
 	}
 
 	b, err := NewBackend(&transport, nil, &testSignedPreKeyStore{
-		all: func() []*x3dh.KeyPair {
-			return []*x3dh.KeyPair{&x3dh.KeyPair{}}
+		all: func() ([]*x3dh.KeyPair, error) {
+			return []*x3dh.KeyPair{&x3dh.KeyPair{}}, nil
 		},
 	})
 	require.Nil(t, err)
