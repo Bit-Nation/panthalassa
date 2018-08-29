@@ -23,7 +23,7 @@ import (
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
-	bolt "github.com/coreos/bbolt"
+	storm "github.com/asdine/storm"
 	log "github.com/ipfs/go-log"
 	host "github.com/libp2p/go-libp2p-host"
 	net "github.com/libp2p/go-libp2p-net"
@@ -59,7 +59,7 @@ type Registry struct {
 	km                 *keyManager.KeyManager
 	dAppDB             dapp.Storage
 	msgDB              db.ChatStorage
-	db                 *bolt.DB
+	db                 *storm.DB
 	addDAppChan        chan *dapp.DApp
 	fetchDAppChan      chan fetchDAppChanStr
 	addDevStreamChan   chan addDevStreamChanStr

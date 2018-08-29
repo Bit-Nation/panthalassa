@@ -7,17 +7,17 @@ import (
 	"testing"
 	"time"
 
-	bolt "github.com/coreos/bbolt"
+	storm "github.com/asdine/storm"
 	require "github.com/stretchr/testify/require"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-func createDB() *bolt.DB {
+func createStorm() *storm.DB {
 	dbPath, err := filepath.Abs(os.TempDir() + "/" + time.Now().String())
 	if err != nil {
 		panic(err)
 	}
-	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: time.Second})
+	db, err := storm.Open(dbPath)
 	if err != nil {
 		panic(err)
 	}
@@ -26,7 +26,7 @@ func createDB() *bolt.DB {
 
 func TestBoltStorage_CRUD(t *testing.T) {
 
-	db := createDB()
+	db := createStorm()
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
 
@@ -35,22 +35,6 @@ func TestBoltStorage_CRUD(t *testing.T) {
 
 	// put value into storage
 	require.Nil(t, s.Put([]byte("key"), []byte("value")))
-
-	// make sure the right bucket got created
-	err = db.View(func(tx *bolt.Tx) error {
-
-		// fetch dApp bucket
-		dAppBucket := tx.Bucket(dAppDBBucketName)
-		require.NotNil(t, dAppDBBucketName)
-
-		// dApp DB
-		// bucket must not be null
-		dAppDB := dAppBucket.Bucket(pub)
-		require.NotNil(t, dAppDB)
-
-		return nil
-	})
-	require.Nil(t, err)
 
 	// key should exist in storage
 	exist, err := s.Has([]byte("key"))
