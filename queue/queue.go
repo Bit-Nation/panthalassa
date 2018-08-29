@@ -21,14 +21,14 @@ type Processor interface {
 
 type Storage interface {
 	PersistJob(j Job) error
-	DeleteJob(id string) error
+	DeleteJob(j Job) error
 	Map(queue chan Job)
 }
 
 type Job struct {
-	ID   string                 `json:"id"`
-	Type string                 `json:"type"`
-	Data map[string]interface{} `json:"data"`
+	ID   int `storm:"id,increment"`
+	Type string
+	Data map[string]interface{}
 }
 
 type Queue struct {
@@ -92,7 +92,7 @@ func (q *Queue) fetchProcessor(processor string) (Processor, error) {
 }
 
 func (q *Queue) DeleteJob(j Job) error {
-	return q.storage.DeleteJob(j.ID)
+	return q.storage.DeleteJob(j)
 }
 
 func New(s Storage, jobStackSize uint, concurrency uint) *Queue {
@@ -122,6 +122,7 @@ func New(s Storage, jobStackSize uint, concurrency uint) *Queue {
 				case j := <-q.jobStack:
 					// fetch processor
 					p, err := q.fetchProcessor(j.Type)
+
 					if err != nil {
 						logger.Error(err)
 						time.Sleep(time.Second * 5)
