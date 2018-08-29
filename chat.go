@@ -118,3 +118,22 @@ func Messages(partner string, startStr string, amount int) (string, error) {
 	return string(messages), nil
 
 }
+
+func MarkMessagesAsRead(partner string) error {
+
+	// make sure panthalassa has been started
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+
+	partnerByte, err := hex.DecodeString(partner)
+	if err != nil {
+		return err
+	}
+	if len(partnerByte) != 32 {
+		return errors.New("partner must have length of 32 bytes")
+	}
+
+	return panthalassaInstance.chat.MarkMessagesAsRead(partnerByte)
+
+}

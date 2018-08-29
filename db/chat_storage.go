@@ -228,7 +228,10 @@ type ChatStorage interface {
 	CreateChat(partner ed25519.PublicKey) error
 	AddListener(func(e MessagePersistedEvent))
 	AllChats() ([]Chat, error)
+	// set state of chat to unread messages
 	UnreadMessages(c Chat) error
+	// set state of chat all messages read
+	ReadMessages(partner ed25519.PublicKey) error
 }
 
 type MessagePersistedEvent struct {
@@ -277,6 +280,15 @@ func (s *BoltChatStorage) UnreadMessages(c Chat) error {
 		return err
 	}
 	fc.UnreadMessages = true
+	return s.db.Save(&fc)
+}
+
+func (s *BoltChatStorage) ReadMessages(partner ed25519.PublicKey) error {
+	var fc Chat
+	if err := s.db.One("Partner", partner, &fc); err != nil {
+		return err
+	}
+	fc.UnreadMessages = false
 	return s.db.Save(&fc)
 }
 
