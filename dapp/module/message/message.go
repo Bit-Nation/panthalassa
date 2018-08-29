@@ -12,24 +12,25 @@ import (
 	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
+	uuid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 type Module struct {
-	msgStorage db.ChatMessageStorage
-	dAppPubKey ed25519.PublicKey
-	logger     *logger.Logger
-	reqLim     *reqLim.CountThrottling
+	chatStorage db.ChatStorage
+	dAppPubKey  ed25519.PublicKey
+	logger      *logger.Logger
+	reqLim      *reqLim.CountThrottling
 }
 
 var sysLog = log.Logger("messsage")
 
-func New(msgStorage db.ChatMessageStorage, dAppPubKey ed25519.PublicKey, logger *logger.Logger) *Module {
+func New(msgStorage db.ChatStorage, dAppPubKey ed25519.PublicKey, logger *logger.Logger) *Module {
 	return &Module{
-		msgStorage: msgStorage,
-		dAppPubKey: dAppPubKey,
-		logger:     logger,
-		reqLim:     reqLim.NewCountThrottling(4, time.Second*60, 10, errors.New("send message queue is full")),
+		chatStorage: msgStorage,
+		dAppPubKey:  dAppPubKey,
+		logger:      logger,
+		reqLim:      reqLim.NewCountThrottling(4, time.Second*60, 10, errors.New("send message queue is full")),
 	}
 }
 
@@ -162,9 +163,37 @@ func (m *Module) Register(vm *otto.Otto) error {
 			defer func() {
 				dec <- struct{}{}
 			}()
-			if err := m.msgStorage.PersistDAppMessage(chat, dAppMessage); err != nil {
+
+			chat, err := m.chatStorage.GetChat(chat)
+			if err != nil {
 				handleError(err.Error())
+				return
 			}
+			if chat == nil {
+				handleError("chat doesn't exist")
+				return
+			}
+
+			id, err := uuid.NewV4()
+			if err != nil {
+				handleError(err.Error())
+				return
+			}
+
+			err = chat.PersistMessage(db.Message{
+				ID:        id.String(),
+				Version:   1,
+				Status:    db.StatusPersisted,
+				Received:  false,
+				DApp:      &dAppMessage,
+				CreatedAt: time.Now().UnixNano(),
+			})
+
+			if err != nil {
+				handleError(err.Error())
+				return
+			}
+
 			if _, err := cb.Call(cb); err != nil {
 				m.logger.Error(err.Error())
 			}
