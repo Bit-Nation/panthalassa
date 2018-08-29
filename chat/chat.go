@@ -41,7 +41,7 @@ type Chat struct {
 	queue                *queue.Queue
 }
 
-func (c *Chat) AllChats() ([]ed25519.PublicKey, error) {
+func (c *Chat) AllChats() ([]db.Chat, error) {
 	return c.chatStorage.AllChats()
 }
 

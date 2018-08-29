@@ -227,7 +227,7 @@ type ChatStorage interface {
 	GetChat(partner ed25519.PublicKey) (*Chat, error)
 	CreateChat(partner ed25519.PublicKey) error
 	AddListener(func(e MessagePersistedEvent))
-	AllChats() ([]ed25519.PublicKey, error)
+	AllChats() ([]Chat, error)
 }
 
 type MessagePersistedEvent struct {
@@ -274,8 +274,9 @@ func (s *BoltChatStorage) AddListener(fn func(e MessagePersistedEvent)) {
 	s.postPersistListener = append(s.postPersistListener, fn)
 }
 
-func (s *BoltChatStorage) AllChats() ([]ed25519.PublicKey, error) {
-	return []ed25519.PublicKey{}, nil
+func (s *BoltChatStorage) AllChats() ([]Chat, error) {
+	chats := new([]Chat)
+	return *chats, s.db.All(chats)
 }
 
 func NewChatStorage(db *storm.DB, listeners []func(event MessagePersistedEvent), km *km.KeyManager) *BoltChatStorage {

@@ -42,12 +42,13 @@ func AllChats() (string, error) {
 		return "", err
 	}
 
-	chatsStr := []string{}
+	chatsRep := map[string]interface{}{}
 	for _, chat := range chats {
-		chatsStr = append(chatsStr, hex.EncodeToString(chat))
+		chatsRep["chat"] = chat.Partner
+		chatsRep["unread_messages"] = chat.UnreadMessages
 	}
 
-	chatList, err := json.Marshal(chatsStr)
+	chatList, err := json.Marshal(chatsRep)
 	if err != nil {
 		return "", err
 	}
