@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -51,11 +50,14 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	}
 
 	var handleSendError = func(err error) error {
+		/**
 		updateError := c.messageDB.UpdateStatus(receiver, dbMessage.DatabaseID, db.StatusFailedToSend)
 		if updateError != nil {
 			return errors.New(fmt.Sprintf("failed to update status with error: %s - original error: %s", updateError, err))
 		}
 		return err
+		*/
+		return nil
 	}
 
 	var fetchSignedPreKey = func(userIDPubKey ed25519.PublicKey) (prekey.PreKey, error) {
@@ -281,5 +283,6 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		return handleSendError(err)
 	}
 
-	return c.messageDB.UpdateStatus(receiver, dbMessage.DatabaseID, db.StatusSent)
+	return nil
+	// return c.messageDB.UpdateStatus(receiver, dbMessage.DatabaseID, db.StatusSent)
 }

@@ -125,6 +125,24 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 	logger.Debugf("double ratchet message %s", drMessage)
 
+	// make sure chat exist
+	chat, err := c.chatStorage.GetChat(msg.Sender)
+	if err != nil {
+		return err
+	}
+	if chat == nil {
+		if err := c.chatStorage.CreateChat(msg.Sender); err != nil {
+			return err
+		}
+	}
+	chat, err = c.chatStorage.GetChat(msg.Sender)
+	if err != nil {
+		return err
+	}
+	if chat == nil {
+		return errors.New("chat must exist at this point")
+	}
+
 	// handle chat init message
 	if isChatInitMessage(msg) {
 
@@ -182,11 +200,12 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			}
 			// convert proto plain message to decrypted message
 			dbMessage, err := protoPlainMsgToMessage(&decryptedMsg)
+			dbMessage.Status = db.StatusPersisted
 			dbMessage.Sender = sender
 			if err != nil {
 				return err
 			}
-			return c.messageDB.PersistReceivedMessage(msg.Sender, dbMessage)
+			return chat.PersistMessage(dbMessage)
 		}
 
 		// fetch used one time pre key
@@ -282,7 +301,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 
-		return c.messageDB.PersistReceivedMessage(sender, dbMessage)
+		return chat.PersistMessage(dbMessage)
 
 	}
 
@@ -313,13 +332,14 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 	// convert proto message to database message
 	dbMessage, err := protoPlainMsgToMessage(&plainMsg)
+	dbMessage.Status = db.StatusPersisted
 	dbMessage.Sender = sender
 	if err != nil {
 		return err
 	}
 
 	// persist message
-	if err := c.messageDB.PersistReceivedMessage(msg.Sender, dbMessage); err != nil {
+	if err := chat.PersistMessage(dbMessage); err != nil {
 		return err
 	}
 

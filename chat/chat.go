@@ -28,7 +28,7 @@ type Backend interface {
 }
 
 type Chat struct {
-	messageDB            db.ChatMessageStorage
+	chatStorage          db.ChatStorage
 	backend              Backend
 	sharedSecStorage     db.SharedSecretStorage
 	x3dh                 *x3dh.X3dh
@@ -42,15 +42,19 @@ type Chat struct {
 }
 
 func (c *Chat) AllChats() ([]ed25519.PublicKey, error) {
-	return c.messageDB.AllChats()
+	return c.chatStorage.AllChats()
 }
 
 func (c *Chat) Messages(partner ed25519.PublicKey, start int64, amount uint) ([]db.Message, error) {
-	return c.messageDB.Messages(partner, start, amount)
+	chat, err := c.chatStorage.GetChat(partner)
+	if err != nil {
+		return []db.Message{}, err
+	}
+	return chat.Messages(start, amount)
 }
 
 type Config struct {
-	MessageDB            db.ChatMessageStorage
+	ChatStorage          db.ChatStorage
 	Backend              Backend
 	SharedSecretDB       db.SharedSecretStorage
 	KM                   *keyManager.KeyManager
@@ -79,7 +83,7 @@ func NewChat(conf Config) (*Chat, error) {
 	myX3dh := x3dh.New(&c25519, sha256.New(), "pangea-chat", myChatIDKeyPair)
 
 	c := &Chat{
-		messageDB:            conf.MessageDB,
+		chatStorage:          conf.ChatStorage,
 		backend:              conf.Backend,
 		sharedSecStorage:     conf.SharedSecretDB,
 		x3dh:                 &myX3dh,
@@ -93,16 +97,16 @@ func NewChat(conf Config) (*Chat, error) {
 	}
 
 	err = c.queue.RegisterProcessor(&SubmitMessagesProcessor{
-		chat:  c,
-		msgDB: c.messageDB,
-		queue: c.queue,
+		chat:   c,
+		chatDB: c.chatStorage,
+		queue:  c.queue,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	// add message handler that will inform the ui about updates
-	c.messageDB.AddListener(c.handlePersistedMessage)
+	c.chatStorage.AddListener(c.handlePersistedMessage)
 
 	// register messages handler
 	c.backend.AddRequestHandler(c.messagesHandler)

@@ -1,20 +1,141 @@
 package chat
 
+/**
 import (
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"testing"
+	"encoding/hex"
 
 	db "github.com/Bit-Nation/panthalassa/db"
-	bpb "github.com/Bit-Nation/protobuffers"
-	x3dh "github.com/Bit-Nation/x3dh"
-	proto "github.com/gogo/protobuf/proto"
 	require "github.com/stretchr/testify/require"
-	dr "github.com/tiabc/doubleratchet"
-	ed25519 "golang.org/x/crypto/ed25519"
+	queue "github.com/Bit-Nation/panthalassa/queue"
+	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
+	backend "github.com/Bit-Nation/panthalassa/backend"
+	bpb "github.com/Bit-Nation/protobuffers"
+	"time"
+	"fmt"
 )
 
+type chatTestBackendTransport struct {
+	sendChan chan *bpb.BackendMessage
+	receiveChan chan *bpb.BackendMessage
+}
+
+func (t *chatTestBackendTransport) Send(msg *bpb.BackendMessage) error {
+	t.sendChan <- msg
+	return nil
+}
+
+// will return the next message from the transport
+func (t *chatTestBackendTransport) NextMessage() (*bpb.BackendMessage, error) {
+	return <-t.receiveChan, nil
+}
+
+// close the transport
+func (t *chatTestBackendTransport) Close() error {
+	close(t.sendChan)
+	close(t.receiveChan)
+	return nil
+}
+
+func createAliceAndBob() (alice *Chat, aliceTrans *chatTestBackendTransport, bob *Chat, bobTrans *chatTestBackendTransport, err error) {
+
+	// creates a chat. Don't forget to set the backend.
+	createChat := func() (*Chat, *chatTestBackendTransport, error) {
+
+		storm := createStorm()
+		km := createKeyManager()
+
+		chatStorage := db.NewChatStorage(storm, []func(e db.MessagePersistedEvent){}, km)
+		ssStorage := db.NewBoltSharedSecretStorage(storm, km)
+		drKeyStorage := db.NewBoltDRKeyStorage(storm, km)
+		signedPreKeyStorage := db.NewBoltSignedPreKeyStorage(storm, km)
+		oneTimePreKeyStorage := db.NewBoltOneTimePreKeyStorage(storm, km)
+		userStorage := db.NewBoltUserStorage(storm)
+		q := queue.New(queue.NewStorage(storm), 5, 1)
+
+		trans := chatTestBackendTransport{
+			sendChan: make(chan *bpb.BackendMessage, 10),
+			receiveChan: make(chan *bpb.BackendMessage, 10),
+		}
+
+		up := uiapi.New(nil)
+		b, err := backend.NewBackend(&trans, km, signedPreKeyStorage)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		c, err := NewChat(Config{
+			ChatStorage: chatStorage,
+			Backend: b,
+			SharedSecretDB: ssStorage,
+			KM: km,
+			DRKeyStorage: drKeyStorage,
+			SignedPreKeyStorage: signedPreKeyStorage,
+			OneTimePreKeyStorage: oneTimePreKeyStorage,
+			UserStorage: userStorage,
+			UiApi: up,
+			Queue: q,
+		})
+		return c, &trans, err
+	}
+
+	// create alice
+	alice, aliceTrans, err = createChat()
+	if err != nil {
+		return nil,nil, nil, nil, err
+	}
+
+	// create bob
+	bob, bobTrans, err = createChat()
+	if err != nil {
+		return nil,nil, nil, nil, err
+	}
+
+	return
+
+}
+*/
+
+/**
+func TestChatBetweenAliceAndBob(t *testing.T) {
+
+	alice, aliceTrans, bob, _, err := createAliceAndBob()
+	require.Nil(t, err)
+	aliceIDKeyStr, err := alice.km.IdentityPublicKey()
+	require.Nil(t, err)
+	aliceIDKey, err := hex.DecodeString(aliceIDKeyStr)
+	require.Nil(t, err)
+
+	bobIDKeyStr, err := bob.km.IdentityPublicKey()
+	require.Nil(t, err)
+	bobIDKey, err := hex.DecodeString(bobIDKeyStr)
+	require.Nil(t, err)
+
+	err = alice.SendMessage(bobIDKey, db.Message{
+		ID: "my message id",
+		Message: []byte("hi"),
+		Version: 1,
+		Status: db.StatusPersisted,
+		CreatedAt: time.Now().UnixNano(),
+		Sender: aliceIDKey,
+	})
+	require.Nil(t, err)
+
+	go func() {
+		for {
+			msg := <-aliceTrans.sendChan
+
+		}
+	}()
+
+	select {
+
+	}
+
+}
+*/
+
+/**
 func TestByteSliceTox3dhPub(t *testing.T) {
 
 	// to short
@@ -97,13 +218,18 @@ func TestChatInitEphemeralKeySignatureValidation(t *testing.T) {
 	sender, _, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
 
+	km := createKeyManager()
+	stormDB := createStorm()
+	chatStorage := db.NewChatStorage(stormDB, nil, km)
+
 	c := Chat{
+		chatStorage: chatStorage,
 		signedPreKeyStorage: &testSignedPreKeyStore{
 			get: func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
 				return &x3dh.PrivateKey{}, nil
 			},
 		},
-		km: createKeyManager(),
+		km: km,
 	}
 
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
@@ -128,7 +254,12 @@ func TestChatInitChatIDKeySignatureValidation(t *testing.T) {
 	sender, senderPriv, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
 
+	km := createKeyManager()
+	stormDB := createStorm()
+	chatStorage := db.NewChatStorage(stormDB, nil, km)
+
 	c := Chat{
+		chatStorage: chatStorage,
 		signedPreKeyStorage: &testSignedPreKeyStore{
 			get: func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
 				return &x3dh.PrivateKey{}, nil
@@ -189,7 +320,7 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 	require.Nil(t, err)
 
 	// marshal message
-	rawPlainMsg, err := proto.Marshal(&bpb.PlainChatMessage{Message: []byte("hi bob")})
+	rawPlainMsg, err := proto.Marshal(&bpb.PlainChatMessage{Message: []byte("hi bob"), MessageID: "my-message-id", Version: 1})
 	require.Nil(t, err)
 
 	// double ratchet message for bob
@@ -220,7 +351,12 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 		UsedSharedSecret:         make([]byte, 32),
 	}
 
+	km := createKeyManager()
+	stormDB := createStorm()
+	chatStorage := db.NewChatStorage(stormDB, nil, km)
+
 	c := Chat{
+		chatStorage: chatStorage,
 		signedPreKeyStorage: &testSignedPreKeyStore{
 			get: func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
 				require.Equal(t, bobSignedPreKey.PublicKey, publicKey)
@@ -232,13 +368,6 @@ func TestChatInitDecryptMessageWhenSecretExist(t *testing.T) {
 				ss := &db.SharedSecret{}
 				ss.SetX3dhSecret(sharedSecret)
 				return ss, nil
-			},
-		},
-		messageDB: &testMessageStorage{
-			persistReceivedMessage: func(partner ed25519.PublicKey, msg db.Message) error {
-				require.Equal(t, senderPub, partner)
-				require.Equal(t, "hi bob", string(msg.Message))
-				return nil
 			},
 		},
 		km: bobKm,
@@ -295,6 +424,8 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 		SharedSecretBaseID:       sharedSecretIDRef,
 		SharedSecretCreationDate: 4,
 		CreatedAt:                444,
+		MessageID:                "message-id",
+		Version:                  1,
 	})
 	require.Nil(t, err)
 
@@ -327,9 +458,14 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 	bobIDPub, err := hex.DecodeString(bobIDPubRaw)
 	require.Nil(t, err)
 
+	// chat storage
+	stormDB := createStorm()
+	chatStorage := db.NewChatStorage(stormDB, nil, km)
+
 	sharedSecChan := make(chan *db.SharedSecret, 1)
 	c := Chat{
-		km: km,
+		chatStorage: chatStorage,
+		km:          km,
 		signedPreKeyStorage: &testSignedPreKeyStore{
 			get: func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
 				// the public key must be bob's signed pre key
@@ -361,14 +497,6 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 				return nil, nil
 			},
 		},
-		messageDB: &testMessageStorage{
-			persistReceivedMessage: func(partner ed25519.PublicKey, msg db.Message) error {
-				require.Equal(t, senderPub, partner)
-				require.Equal(t, "hi bob", string(msg.Message))
-				require.Equal(t, int64(444), msg.CreatedAt)
-				return nil
-			},
-		},
 		oneTimePreKeyStorage: &testOneTimePreKeyStorage{
 			cut: func(pubKey []byte) (*x3dh.PrivateKey, error) {
 				return nil, nil
@@ -385,8 +513,13 @@ func TestChatInitSharedSecretAgreementAndMsgPersistence(t *testing.T) {
 
 func TestChatHandleInvalidShortSharedSecretID(t *testing.T) {
 
+	km := createKeyManager()
+	stormDB := createStorm()
+	chatStorage := db.NewChatStorage(stormDB, nil, km)
+
 	c := Chat{
-		km: createKeyManager(),
+		chatStorage: chatStorage,
+		km:          km,
 	}
 
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
@@ -411,7 +544,12 @@ func TestChatHandleNoSharedSecret(t *testing.T) {
 	usedSharedSecret := make([]byte, 32)
 	usedSharedSecret[3] = 0x33
 
+	km := createKeyManager()
+	stormDB := createStorm()
+	chatStorage := db.NewChatStorage(stormDB, nil, km)
+
 	c := Chat{
+		chatStorage: chatStorage,
 		sharedSecStorage: &testSharedSecretStorage{
 			get: func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error) {
 				require.Equal(t, pub, key)
@@ -419,7 +557,7 @@ func TestChatHandleNoSharedSecret(t *testing.T) {
 				return nil, nil
 			},
 		},
-		km: createKeyManager(),
+		km: km,
 	}
 
 	err = c.handleReceivedMessage(&bpb.ChatMessage{
@@ -476,6 +614,8 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 	rawPlainMsg, err := proto.Marshal(&bpb.PlainChatMessage{
 		Message:            []byte("hi bob"),
 		SharedSecretBaseID: sharedSecretIDRef,
+		MessageID:          "message-id",
+		Version:            1,
 	})
 	require.Nil(t, err)
 
@@ -505,8 +645,13 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 		UsedSharedSecret: expectedSharedSecretID,
 	}
 
+	// chat storage
+	stormDB := createStorm()
+	chatStorage := db.NewChatStorage(stormDB, nil, km)
+
 	c := Chat{
-		km: km,
+		chatStorage: chatStorage,
+		km:          km,
 		signedPreKeyStorage: &testSignedPreKeyStore{
 			get: func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error) {
 				// the public key must be bob's signed pre key
@@ -537,13 +682,6 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 				return nil
 			},
 		},
-		messageDB: &testMessageStorage{
-			persistReceivedMessage: func(partner ed25519.PublicKey, msg db.Message) error {
-				require.Equal(t, senderPub, partner)
-				require.Equal(t, "hi bob", string(msg.Message))
-				return nil
-			},
-		},
 		x3dh:         &bobX3dh,
 		drKeyStorage: &dr.KeysStorageInMemory{},
 	}
@@ -552,3 +690,4 @@ func TestChatHandleDecryptSuccessfullyAndAcceptSharedSecret(t *testing.T) {
 	require.Nil(t, err)
 
 }
+*/

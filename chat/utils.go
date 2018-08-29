@@ -166,6 +166,7 @@ func protoPlainMsgToMessage(msg *bpb.PlainChatMessage) (db.Message, error) {
 		ID:        msg.MessageID,
 		Message:   msg.Message,
 		CreatedAt: msg.CreatedAt,
+		Version:   uint(msg.Version),
 	}
 
 	if isDAppMessage(msg) {

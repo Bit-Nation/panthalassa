@@ -9,7 +9,11 @@ import (
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
+	"github.com/asdine/storm"
 	ed25519 "golang.org/x/crypto/ed25519"
+	"os"
+	"path/filepath"
+	"time"
 )
 
 type testMessageStorage struct {
@@ -182,6 +186,18 @@ func (s *testUserStorage) PutSignedPreKey(idKey ed25519.PublicKey, key preKey.Pr
 
 func (s *testMessageStorage) PersistDAppMessage(partner ed25519.PublicKey, msg db.DAppMessage) error {
 	return s.persistDAppMessage(partner, msg)
+}
+
+func createStorm() *storm.DB {
+	dbPath, err := filepath.Abs(os.TempDir() + "/" + time.Now().String())
+	if err != nil {
+		panic(err)
+	}
+	db, err := storm.Open(dbPath)
+	if err != nil {
+		panic(err)
+	}
+	return db
 }
 
 func createKeyManager() *km.KeyManager {
