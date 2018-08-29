@@ -228,6 +228,7 @@ type ChatStorage interface {
 	CreateChat(partner ed25519.PublicKey) error
 	AddListener(func(e MessagePersistedEvent))
 	AllChats() ([]Chat, error)
+	UnreadMessages(c Chat) error
 }
 
 type MessagePersistedEvent struct {
@@ -268,6 +269,15 @@ func (s *BoltChatStorage) CreateChat(partner ed25519.PublicKey) error {
 	return s.db.Save(&Chat{
 		Partner: partner,
 	})
+}
+
+func (s *BoltChatStorage) UnreadMessages(c Chat) error {
+	var fc Chat
+	if err := s.db.One("ID", c.ID, &fc); err != nil {
+		return err
+	}
+	fc.UnreadMessages = true
+	return s.db.Save(&fc)
 }
 
 func (s *BoltChatStorage) AddListener(fn func(e MessagePersistedEvent)) {

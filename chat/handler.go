@@ -99,6 +99,19 @@ func (c *Chat) oneTimePreKeysHandler(req *bpb.BackendMessage_Request) (*bpb.Back
 
 func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 
+	// if the message was received we want to
+	// to switch the chat boolean flag (UnreadMessages) to true
+	// and tell the client that we got new unread messages
+	if e.Message.Received {
+		if err := c.chatStorage.UnreadMessages(e.Chat); err != nil {
+			logger.Error(err)
+			return
+		}
+		c.uiApi.Send("CHAT:UNREAD", map[string]interface{}{
+			"chat": e.Chat.Partner,
+		})
+	}
+
 	// when the handled message was not received we would like to send it
 	if !e.Message.Received {
 		// add to queue
