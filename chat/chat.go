@@ -50,6 +50,9 @@ func (c *Chat) Messages(partner ed25519.PublicKey, start int64, amount uint) ([]
 	if err != nil {
 		return nil, err
 	}
+	if chat == nil {
+		return []*db.Message{}, nil
+	}
 	return chat.Messages(start, amount)
 }
 
