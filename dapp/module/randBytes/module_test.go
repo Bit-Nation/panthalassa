@@ -25,7 +25,7 @@ func TestCreateRandomBytes(t *testing.T) {
 		}
 
 		generatedBytes := (context.ToString(-1))
-		if generatedBytes != "[1 4 6]" {
+		if generatedBytes != "1, 4, 6" {
 			panic("it's not the same bytes")
 		}
 

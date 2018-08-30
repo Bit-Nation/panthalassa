@@ -3,6 +3,7 @@ package randBytes
 import (
 	"crypto/rand"
 	"fmt"
+	"strings"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
@@ -62,8 +63,9 @@ func (m *Module) Register(vm *duktape.Context) error {
 		// call callback
 		context.PopN(itemsToPopBeforeCallback)
 		context.PushUndefined()
-		//@TODO check if we must return bytes in "1, 4, 6" format or if [1 4 6] works too
-		context.PushString(fmt.Sprint(destination))
+		byteString := fmt.Sprint(destination)
+		jsFriendlyString := strings.Replace(strings.TrimSuffix(strings.TrimPrefix(byteString, "["), "]"), " ", ", ", -1)
+		context.PushString(jsFriendlyString)
 		context.Call(2)
 		return 0
 	})
