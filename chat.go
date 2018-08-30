@@ -42,10 +42,12 @@ func AllChats() (string, error) {
 		return "", err
 	}
 
-	chatsRep := map[string]interface{}{}
+	chatsRep := []map[string]interface{}{}
 	for _, chat := range chats {
-		chatsRep["chat"] = chat.Partner
-		chatsRep["unread_messages"] = chat.UnreadMessages
+		chatsRep = append(chatsRep, map[string]interface{}{
+			"chat":            chat.Partner,
+			"unread_messages": chat.UnreadMessages,
+		})
 	}
 
 	chatList, err := json.Marshal(chatsRep)
