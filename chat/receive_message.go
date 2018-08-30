@@ -100,16 +100,6 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		return errors.New("got invalid double ratchet public key - must have a length of 32")
 	}
 
-	// decode our id key
-	ourRawIDPubKey, err := c.km.IdentityPublicKey()
-	if err != nil {
-		return err
-	}
-	ourIDPubKey, err := hex.DecodeString(ourRawIDPubKey)
-	if err != nil {
-		return err
-	}
-
 	drMessage := dr.Message{
 		Header: dr.MessageHeader{
 			DH: func() dr.Key {
@@ -208,12 +198,6 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return chat.PersistMessage(dbMessage)
 		}
 
-		// fetch used one time pre key
-		oneTimePreKeyPriv, err := c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
-		if err != nil {
-			return err
-		}
-
 		x3dhEphemeralKey, err := byteSliceTox3dhPub(msg.EphemeralKey)
 		if err != nil {
 			return err
@@ -231,12 +215,21 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// derive shared x3dh secret
-		sharedX3dhSec, err := c.x3dh.SecretFromRemote(x3dh.ProtocolInitialisation{
+		x3dhInit := x3dh.ProtocolInitialisation{
 			RemoteIdKey:        remoteChatIdKey,
 			RemoteEphemeralKey: x3dhEphemeralKey,
-			MyOneTimePreKey:    oneTimePreKeyPriv,
 			MySignedPreKey:     signedPreKey.PrivateKey,
-		})
+		}
+
+		// fetch used one time pre key if we sent one
+		if len(msg.OneTimePreKey) != 0 {
+			x3dhInit.MyOneTimePreKey, err = c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
+			if err != nil {
+				return err
+			}
+		}
+
+		sharedX3dhSec, err := c.x3dh.SecretFromRemote(x3dhInit)
 		if err != nil {
 			return err
 		}
@@ -269,23 +262,16 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return errors.New("invalid used shared secret id")
 		}
 
-		// generate shared secret id
-		ssID, err := sharedSecretID(sender, ourIDPubKey, plainMsg.SharedSecretBaseID)
-		if err != nil {
-			return err
-		}
-
 		// make sure creation date is valid
 		if plainMsg.SharedSecretCreationDate == 0 {
 			return errors.New("abort chat initialization - invalid shared secret creation date")
 		}
-
 		// persist shared secret in accepted mode
 		ss := db.SharedSecret{
 			// safe as accepted since the sender initialized the chat
 			Accepted:  true,
 			CreatedAt: time.Unix(plainMsg.SharedSecretCreationDate, 0),
-			ID:        ssID,
+			ID:        plainMsg.SharedSecretBaseID,
 			Partner:   sender,
 		}
 		ss.SetX3dhSecret(sharedX3dhSec)
@@ -297,6 +283,8 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		// convert plain protobuf message to database message
 		dbMessage, err := protoPlainMsgToMessage(&plainMsg)
 		dbMessage.Sender = sender
+		dbMessage.Status = db.StatusPersisted
+		dbMessage.Received = true
 		if err != nil {
 			return err
 		}
