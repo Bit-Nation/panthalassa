@@ -22,11 +22,11 @@ type PreKey struct {
 	x3dh.KeyPair
 	IdentityPublicKey [32]byte
 	Signature         []byte
-	Time              time.Time
+	// unix timestamp in second
+	Time int64
 }
 
 func (p *PreKey) hash() (mh.Multihash, error) {
-
 	// make sure it has the right size
 	if p.IdentityPublicKey == [32]byte{} {
 		return nil, errors.New("got invalid identity key public key")
@@ -39,8 +39,8 @@ func (p *PreKey) hash() (mh.Multihash, error) {
 	b := bytes.NewBuffer(p.PublicKey[:])
 	b.Write(p.IdentityPublicKey[:])
 
-	timeStamp := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(timeStamp, p.Time.Unix())
+	timeStamp := make([]byte, 8)
+	n := binary.PutVarint(timeStamp, p.Time)
 
 	b.Write(timeStamp[:n])
 	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
@@ -100,7 +100,7 @@ func (p PreKey) ToProtobuf() (pb.PreKey, error) {
 		Key:                  p.PublicKey[:],
 		IdentityKey:          p.IdentityPublicKey[:],
 		IdentityKeySignature: p.Signature,
-		TimeStamp:            p.Time.Unix(),
+		TimeStamp:            p.Time,
 	}, nil
 }
 
@@ -113,7 +113,7 @@ func FromProtoBuf(preKey pb.PreKey) (PreKey, error) {
 	}
 	p := PreKey{
 		Signature: preKey.IdentityKeySignature,
-		Time:      time.Unix(preKey.TimeStamp, 0),
+		Time:      preKey.TimeStamp,
 	}
 	copy(p.PublicKey[:], preKey.Key[:32])
 	copy(p.IdentityPublicKey[:], preKey.IdentityKey[:32])
@@ -122,5 +122,6 @@ func FromProtoBuf(preKey pb.PreKey) (PreKey, error) {
 
 // check if pre key is older than given date
 func (p PreKey) OlderThan(past time.Duration) bool {
-	return p.Time.After(time.Now().Truncate(past))
+	t := time.Unix(p.Time, 0)
+	return t.After(time.Now().Truncate(past))
 }
