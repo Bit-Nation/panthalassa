@@ -58,12 +58,16 @@ func (s *BoltDRKeyStorage) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) {
 		sq.Eq("Key", k),
 		sq.Eq("MsgNum", msgNum),
 	))
+
+	// count
+	amount, err := q.Count(&DRKey{})
+	if amount <= 0 {
+		return dr.Key{}, false
+	}
+
 	drKey := &DRKey{}
 	if err := q.First(drKey); err != nil {
 		logger.Error(err)
-		return dr.Key{}, false
-	}
-	if drKey == nil {
 		return dr.Key{}, false
 	}
 

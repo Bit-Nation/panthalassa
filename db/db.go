@@ -28,8 +28,7 @@ func Open(path string, mode os.FileMode, options *bolt.Options) (*storm.DB, erro
 	migrations := []migration.Migration{}
 
 	// migrate the database
-	err := migration.Migrate(path, migrations)
-	if err != nil {
+	if err := migration.Migrate(path, migrations); err != nil {
 		return nil, err
 	}
 
