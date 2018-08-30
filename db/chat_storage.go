@@ -201,7 +201,7 @@ func (c *Chat) PersistMessage(msg Message) error {
 	return nil
 }
 
-func (c *Chat) Messages(start int64, amount uint) ([]Message, error) {
+func (c *Chat) Messages(start int64, amount uint) ([]*Message, error) {
 
 	// default query should only select from the last
 	q := c.db.Select(sq.And(sq.Eq("ChatID", c.ID)))
@@ -212,16 +212,16 @@ func (c *Chat) Messages(start int64, amount uint) ([]Message, error) {
 		q = c.db.Select(sq.And(sq.Eq("ChatID", c.ID), sq.Gte("UniqueMsgID", start)))
 	}
 
-	var messages []Message
+	var messages []*Message
 	if err := q.OrderBy("UniqueMsgID").Reverse().Limit(int(amount)).Find(&messages); err != nil {
-		return []Message{}, err
+		return nil, err
 	}
 
 	// decrypt messages
 	for _, m := range messages {
 		plainMessage, err := c.km.AESDecrypt(m.PersistedMessage)
 		if err != nil {
-			return []Message{}, err
+			return nil, err
 		}
 		m.Message = plainMessage
 	}
