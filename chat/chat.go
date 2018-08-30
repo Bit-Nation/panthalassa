@@ -45,10 +45,10 @@ func (c *Chat) AllChats() ([]db.Chat, error) {
 	return c.chatStorage.AllChats()
 }
 
-func (c *Chat) Messages(partner ed25519.PublicKey, start int64, amount uint) ([]db.Message, error) {
+func (c *Chat) Messages(partner ed25519.PublicKey, start int64, amount uint) ([]*db.Message, error) {
 	chat, err := c.chatStorage.GetChat(partner)
 	if err != nil {
-		return []db.Message{}, err
+		return nil, err
 	}
 	return chat.Messages(start, amount)
 }

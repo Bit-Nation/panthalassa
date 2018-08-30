@@ -1,22 +1,22 @@
 package chat
 
-/**
 import (
-	"testing"
 	"encoding/hex"
+	"fmt"
+	"testing"
+	"time"
 
+	backend "github.com/Bit-Nation/panthalassa/backend"
 	db "github.com/Bit-Nation/panthalassa/db"
-	require "github.com/stretchr/testify/require"
+	profile "github.com/Bit-Nation/panthalassa/profile"
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
-	backend "github.com/Bit-Nation/panthalassa/backend"
 	bpb "github.com/Bit-Nation/protobuffers"
-	"time"
-	"fmt"
+	require "github.com/stretchr/testify/require"
 )
 
 type chatTestBackendTransport struct {
-	sendChan chan *bpb.BackendMessage
+	sendChan    chan *bpb.BackendMessage
 	receiveChan chan *bpb.BackendMessage
 }
 
@@ -37,6 +37,10 @@ func (t *chatTestBackendTransport) Close() error {
 	return nil
 }
 
+type upStream struct{}
+
+func (u *upStream) Send(data string) {}
+
 func createAliceAndBob() (alice *Chat, aliceTrans *chatTestBackendTransport, bob *Chat, bobTrans *chatTestBackendTransport, err error) {
 
 	// creates a chat. Don't forget to set the backend.
@@ -54,27 +58,27 @@ func createAliceAndBob() (alice *Chat, aliceTrans *chatTestBackendTransport, bob
 		q := queue.New(queue.NewStorage(storm), 5, 1)
 
 		trans := chatTestBackendTransport{
-			sendChan: make(chan *bpb.BackendMessage, 10),
+			sendChan:    make(chan *bpb.BackendMessage, 10),
 			receiveChan: make(chan *bpb.BackendMessage, 10),
 		}
 
-		up := uiapi.New(nil)
+		up := uiapi.New(&upStream{})
 		b, err := backend.NewBackend(&trans, km, signedPreKeyStorage)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		c, err := NewChat(Config{
-			ChatStorage: chatStorage,
-			Backend: b,
-			SharedSecretDB: ssStorage,
-			KM: km,
-			DRKeyStorage: drKeyStorage,
-			SignedPreKeyStorage: signedPreKeyStorage,
+			ChatStorage:          chatStorage,
+			Backend:              b,
+			SharedSecretDB:       ssStorage,
+			KM:                   km,
+			DRKeyStorage:         drKeyStorage,
+			SignedPreKeyStorage:  signedPreKeyStorage,
 			OneTimePreKeyStorage: oneTimePreKeyStorage,
-			UserStorage: userStorage,
-			UiApi: up,
-			Queue: q,
+			UserStorage:          userStorage,
+			UiApi:                up,
+			Queue:                q,
 		})
 		return c, &trans, err
 	}
@@ -82,58 +86,152 @@ func createAliceAndBob() (alice *Chat, aliceTrans *chatTestBackendTransport, bob
 	// create alice
 	alice, aliceTrans, err = createChat()
 	if err != nil {
-		return nil,nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// create bob
 	bob, bobTrans, err = createChat()
 	if err != nil {
-		return nil,nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	return
 
 }
-*/
 
-/**
 func TestChatBetweenAliceAndBob(t *testing.T) {
 
-	alice, aliceTrans, bob, _, err := createAliceAndBob()
-	require.Nil(t, err)
-	aliceIDKeyStr, err := alice.km.IdentityPublicKey()
-	require.Nil(t, err)
-	aliceIDKey, err := hex.DecodeString(aliceIDKeyStr)
-	require.Nil(t, err)
+	alice, aliceTrans, bob, bobTrans, err := createAliceAndBob()
 
+	// listen for bob's messages
+	bobReceivedMsgChan := make(chan db.MessagePersistedEvent, 10)
+	bob.chatStorage.AddListener(func(e db.MessagePersistedEvent) {
+		bobReceivedMsgChan <- e
+	})
 	bobIDKeyStr, err := bob.km.IdentityPublicKey()
 	require.Nil(t, err)
 	bobIDKey, err := hex.DecodeString(bobIDKeyStr)
 	require.Nil(t, err)
 
-	err = alice.SendMessage(bobIDKey, db.Message{
-		ID: "my message id",
-		Message: []byte("hi"),
-		Version: 1,
-		Status: db.StatusPersisted,
-		CreatedAt: time.Now().UnixNano(),
-		Sender: aliceIDKey,
+	// listen for alice messages
+	aliceReceivedMsgChan := make(chan db.MessagePersistedEvent, 10)
+	alice.chatStorage.AddListener(func(e db.MessagePersistedEvent) {
+		aliceReceivedMsgChan <- e
 	})
+	aliceIDKeyStr, err := alice.km.IdentityPublicKey()
 	require.Nil(t, err)
+	aliceIDKey, err := hex.DecodeString(aliceIDKeyStr)
+	require.Nil(t, err)
+
+	bobPreKeyBundleChan := make(chan *bpb.PreKey, 1)
 
 	go func() {
 		for {
-			msg := <-aliceTrans.sendChan
+			select {
+			case msg := <-bobTrans.sendChan:
 
+				if msg.Request != nil {
+
+					// handle uploaded pre key
+					if msg.Request.NewSignedPreKey != nil {
+						bobPreKeyBundleChan <- msg.Request.NewSignedPreKey
+						bobTrans.receiveChan <- &bpb.BackendMessage{
+							RequestID: msg.RequestID,
+						}
+						continue
+					}
+
+					fmt.Println(msg)
+
+				}
+
+			}
 		}
 	}()
 
-	select {
+	go func() {
 
+		// wait for bob to publish his signed pre key
+		bobSignedPreKey := <-bobPreKeyBundleChan
+
+		for {
+			select {
+			case msg := <-aliceTrans.sendChan:
+
+				// handle the pre key bundle request for bob
+				if len(msg.Request.PreKeyBundle) != 0 {
+
+					bobProfile, err := profile.SignProfile("bob", "", "", *bob.km)
+					if err != nil {
+						panic(err)
+					}
+					bobProfileProto, err := bobProfile.ToProtobuf()
+					if err != nil {
+						panic(err)
+					}
+
+					aliceTrans.receiveChan <- &bpb.BackendMessage{
+						RequestID: msg.RequestID,
+						Response: &bpb.BackendMessage_Response{
+							PreKeyBundle: &bpb.BackendMessage_PreKeyBundle{
+								SignedPreKey: bobSignedPreKey,
+								Profile:      bobProfileProto,
+							},
+						},
+					}
+					continue
+				}
+
+				// handle upload of our new pre key bundle
+				if msg.Request.NewSignedPreKey != nil {
+					aliceTrans.receiveChan <- &bpb.BackendMessage{
+						RequestID: msg.RequestID,
+					}
+					continue
+				}
+
+				// handle message send to bob
+				// (the nice thing is that we can write it from alice to bob :))
+				if len(msg.Request.Messages) != 0 {
+					bobTrans.receiveChan <- msg
+					aliceTrans.receiveChan <- &bpb.BackendMessage{
+						RequestID: msg.RequestID,
+					}
+					continue
+				}
+
+			}
+		}
+	}()
+	require.Nil(t, err)
+
+	require.Nil(t, alice.SavePrivateMessage(bobIDKey, []byte("hi bob")))
+
+	for {
+		select {
+		case msgEv := <-aliceReceivedMsgChan:
+			fmt.Println(msgEv.Message)
+		case msgEv := <-bobReceivedMsgChan:
+
+			msg := msgEv.Message
+
+			// make sure the messages is as we expect it to be
+			require.Equal(t, "hi bob", string(msg.Message))
+
+			err := bob.SendMessage(aliceIDKey, db.Message{
+				ID:        "an id",
+				Message:   []byte("hi alice"),
+				Version:   1,
+				Status:    db.StatusPersisted,
+				CreatedAt: time.Now().UnixNano(),
+				Sender:    bobIDKey,
+			})
+			require.Nil(t, err)
+
+		}
 	}
 
 }
-*/
 
 /**
 func TestByteSliceTox3dhPub(t *testing.T) {
