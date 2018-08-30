@@ -249,26 +249,52 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 	for {
 		select {
 		case msgEv := <-aliceReceivedMsgChan:
-			fmt.Println(string(msgEv.Message.Message))
-			fmt.Println(msgEv.Message.Received)
-			if msgEv.Message.Received {
+
+			msg := msgEv.Message
+
+			if msg.Received {
+
+				// make sure message is as we expect it to be
 				require.Equal(t, "hi alice", string(msgEv.Message.Message))
+				require.Equal(t, hex.EncodeToString(bobIDKey), hex.EncodeToString(msg.Sender))
+				require.Equal(t, uint(1), msg.Version)
+				require.Equal(t, db.StatusPersisted, msg.Status)
+
+				// make sure shared secret got accepted
+				shSec, err := alice.sharedSecStorage.GetYoungest(bobIDKey)
+				require.Nil(t, err)
+				require.NotNil(t, shSec)
+				require.True(t, shSec.Accepted)
+
 				done <- struct{}{}
 			}
+
 		case msgEv := <-bobReceivedMsgChan:
 
 			msg := msgEv.Message
 
 			// handle received messages
 			if msg.Received {
+
 				// make sure the messages is as we expect it to be
 				require.Equal(t, "hi bob", string(msg.Message))
-				err := bob.SavePrivateMessage(aliceIDKey, []byte("hi alice"))
+				require.True(t, msg.Received)
+				require.Equal(t, db.StatusPersisted, msg.Status)
+				require.Equal(t, uint(1), msg.Version)
+
+				// make sure shared secret got persisted
+				shSec, err := bob.sharedSecStorage.GetYoungest(aliceIDKey)
+				require.Nil(t, err)
+				require.NotNil(t, shSec)
+				require.Equal(t, hex.EncodeToString(aliceIDKey), hex.EncodeToString(shSec.Partner))
+				require.True(t, shSec.Accepted)
+
+				err = bob.SavePrivateMessage(aliceIDKey, []byte("hi alice"))
 				require.Nil(t, err)
 			}
 
 		case <-done:
-			fmt.Println("done")
+			return
 		}
 	}
 

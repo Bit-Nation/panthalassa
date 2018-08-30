@@ -52,7 +52,7 @@ func TestPreKey_ToProtobufAndBack(t *testing.T) {
 	k := PreKey{
 		IdentityPublicKey: [32]byte{1},
 		Signature:         []byte{2},
-		Time:              now,
+		Time:              now.Unix(),
 	}
 	k.PublicKey = [32]byte{3}
 
@@ -61,7 +61,7 @@ func TestPreKey_ToProtobufAndBack(t *testing.T) {
 
 	require.Equal(t, hex.EncodeToString(k.IdentityPublicKey[:]), hex.EncodeToString(pp.IdentityKey))
 	require.Equal(t, k.Signature, pp.IdentityKeySignature)
-	require.Equal(t, k.Time.Unix(), pp.TimeStamp)
+	require.Equal(t, k.Time, pp.TimeStamp)
 	require.Equal(t, hex.EncodeToString(k.PublicKey[:]), hex.EncodeToString(pp.Key))
 
 	k, err = FromProtoBuf(pp)
@@ -69,14 +69,14 @@ func TestPreKey_ToProtobufAndBack(t *testing.T) {
 
 	require.Equal(t, hex.EncodeToString(pp.IdentityKey), hex.EncodeToString(k.IdentityPublicKey[:]))
 	require.Equal(t, pp.IdentityKeySignature, k.Signature)
-	require.Equal(t, pp.TimeStamp, k.Time.Unix())
+	require.Equal(t, pp.TimeStamp, k.Time)
 	require.Equal(t, hex.EncodeToString(pp.Key), hex.EncodeToString(k.PublicKey[:]))
 
 }
 
 func TestPreKey_OlderThan(t *testing.T) {
 	k := PreKey{
-		Time: time.Now().Truncate(time.Second * 10),
+		Time: time.Now().Truncate(time.Second * 10).Unix(),
 	}
 	require.False(t, k.OlderThan(time.Second*5))
 }

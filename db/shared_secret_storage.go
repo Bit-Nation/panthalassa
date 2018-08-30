@@ -95,6 +95,7 @@ func (b *BoltSharedSecretStorage) GetYoungest(partner ed25519.PublicKey) (*Share
 	if err != nil {
 		return nil, err
 	}
+
 	if amount == 0 {
 		return nil, nil
 	}
