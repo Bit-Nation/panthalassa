@@ -46,13 +46,14 @@ func TestFuncUnRegisterSuccess(t *testing.T) {
 	require.Nil(t, m.Register(vm))
 
 	// register function
-	_, err := vm.PushGlobalGoFunction("callbackTestFuncUnRegisterSuccess", func(context *duktape.Context) int {
+	funcId, err := vm.PushGlobalGoFunction("callbackTestFuncUnRegisterSuccess", func(context *duktape.Context) int {
 		return 0
 	})
 	require.Nil(t, err)
-	funcId := vm.PevalStringNoresult(`registerFunction(callbackTestFuncUnRegisterSuccess)`)
+	err = vm.PevalString(`registerFunction(callbackTestFuncUnRegisterSuccess)`)
+	require.Nil(t, err)
 	// make sure the id is the one we expect it to be
-	id := funcId + 1 // @TODO Maybe handle funcId better
+	id := funcId
 	require.Equal(t, int(1), id)
 
 	// make sure function exist
