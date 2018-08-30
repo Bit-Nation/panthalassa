@@ -183,12 +183,12 @@ func (c *Chat) PersistMessage(msg Message) error {
 
 	// emit all registered event listeners
 	for _, l := range c.postPersistListener {
-		go func() {
+		go func(l func(e MessagePersistedEvent)) {
 			l(MessagePersistedEvent{
 				Chat:    *c,
 				Message: msg,
 			})
-		}()
+		}(l)
 	}
 
 	return nil
