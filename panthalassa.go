@@ -9,6 +9,7 @@ import (
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	db "github.com/Bit-Nation/panthalassa/db"
+	dyncall "github.com/Bit-Nation/panthalassa/dyncall"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	storm "github.com/asdine/storm"
@@ -26,6 +27,7 @@ type Panthalassa struct {
 	chatDB      db.ChatStorage
 	db          *storm.DB
 	dAppStorage dapp.Storage
+	dyncall     *dyncall.Registry
 }
 
 //Stop the panthalassa instance

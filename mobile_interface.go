@@ -14,6 +14,8 @@ import (
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	db "github.com/Bit-Nation/panthalassa/db"
+	documents "github.com/Bit-Nation/panthalassa/documents"
+	dyncall "github.com/Bit-Nation/panthalassa/dyncall"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	profile "github.com/Bit-Nation/panthalassa/profile"
@@ -121,6 +123,23 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		return err
 	}
 
+	// dyncall registry
+	dcr := dyncall.New()
+
+	docStorage := documents.NewStorage(dbInstance, km)
+
+	// create document all call
+	docAllCall := documents.NewDocumentAllCall(docStorage)
+	if err := dcr.Register(docAllCall); err != nil {
+		return err
+	}
+
+	// create document all call
+	docCreateAll := documents.NewDocumentCreateCall(docStorage)
+	if err := dcr.Register(docCreateAll); err != nil {
+		return err
+	}
+
 	//Create panthalassa instance
 	panthalassaInstance = &Panthalassa{
 		km:          km,
@@ -131,6 +150,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		chat:        chatInstance,
 		db:          dbInstance,
 		dAppStorage: dAppStorage,
+		dyncall:     dcr,
 	}
 
 	return nil
@@ -458,5 +478,28 @@ func DApps() (string, error) {
 	// marshal dapps
 	rawDApps, err := json.Marshal(dApps)
 	return string(rawDApps), err
+
+}
+
+func Call(command, payload string) (string, error) {
+
+	var goPayload map[string]interface{}
+
+	if err := json.Unmarshal([]byte(payload), &goPayload); err != nil {
+		return "", err
+	}
+
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa first")
+	}
+
+	res, err := panthalassaInstance.dyncall.Call(command, goPayload)
+	if err != nil {
+		return "", err
+	}
+
+	response, err := json.Marshal(res)
+
+	return string(response), err
 
 }
