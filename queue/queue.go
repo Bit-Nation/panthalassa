@@ -20,7 +20,7 @@ type Processor interface {
 }
 
 type Storage interface {
-	PersistJob(j Job) error
+	PersistJob(j *Job) error
 	DeleteJob(j Job) error
 	Map(queue chan Job)
 }
@@ -71,7 +71,7 @@ func (q *Queue) AddJob(j Job) error {
 		return err
 	}
 	// persist job
-	if err := q.storage.PersistJob(j); err != nil {
+	if err := q.storage.PersistJob(&j); err != nil {
 		return err
 	}
 	// add job to stack so that queue will pick it up

@@ -8,8 +8,8 @@ type BoltQueueStorage struct {
 	db *storm.DB
 }
 
-func (s *BoltQueueStorage) PersistJob(j Job) error {
-	return s.db.Save(&j)
+func (s *BoltQueueStorage) PersistJob(j *Job) error {
+	return s.db.Save(j)
 }
 
 func (s *BoltQueueStorage) DeleteJob(j Job) error {

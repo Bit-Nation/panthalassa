@@ -1,10 +1,10 @@
 package chat
 
 import (
+	"encoding/hex"
 	"errors"
 	"time"
-	"encoding/hex"
-	
+
 	db "github.com/Bit-Nation/panthalassa/db"
 	uuid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"

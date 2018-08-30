@@ -134,6 +134,13 @@ func (c *Chat) GetMessage(msgID int64) (*Message, error) {
 	if err := q.First(&m); err != nil {
 		return &Message{}, nil
 	}
+
+	// decrypt original message
+	m.Message, err = c.km.AESDecrypt(m.PersistedMessage)
+	if err != nil {
+		return nil, err
+	}
+
 	return &m, nil
 
 }

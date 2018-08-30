@@ -35,7 +35,7 @@ func TestBoltQueueStorage_PersistAndDeleteJob(t *testing.T) {
 	}
 
 	// persist job
-	err := s.PersistJob(jobToPersist)
+	err := s.PersistJob(&jobToPersist)
 	require.Nil(t, err)
 	var jobs []Job
 	require.Nil(t, s.db.All(&jobs))
@@ -61,7 +61,7 @@ func TestBoltQueueStorage_Map(t *testing.T) {
 			"key": "value",
 		},
 	}
-	err := s.PersistJob(firstJob)
+	err := s.PersistJob(&firstJob)
 	require.Nil(t, err)
 
 	// persist second job
@@ -72,7 +72,7 @@ func TestBoltQueueStorage_Map(t *testing.T) {
 			"key": "value",
 		},
 	}
-	err = s.PersistJob(secondJob)
+	err = s.PersistJob(&secondJob)
 	require.Nil(t, err)
 
 	stack := make(chan Job, 2)
