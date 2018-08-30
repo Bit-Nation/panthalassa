@@ -175,6 +175,7 @@ func (c *Chat) PersistMessage(msg Message) error {
 			return errors.New("can't persist message - couldn't create unique msg id")
 		}
 		tried++
+		lastUniqueMsgID++
 	}
 	msg.UniqueMsgID = lastUniqueMsgID
 

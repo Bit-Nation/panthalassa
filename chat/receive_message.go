@@ -192,6 +192,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			dbMessage, err := protoPlainMsgToMessage(&decryptedMsg)
 			dbMessage.Status = db.StatusPersisted
 			dbMessage.Sender = sender
+			dbMessage.Received = true
 			if err != nil {
 				return err
 			}
@@ -322,6 +323,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	dbMessage, err := protoPlainMsgToMessage(&plainMsg)
 	dbMessage.Status = db.StatusPersisted
 	dbMessage.Sender = sender
+	dbMessage.Received = true
 	if err != nil {
 		return err
 	}
