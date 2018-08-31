@@ -75,7 +75,7 @@ func NewDocumentAllCall(db *Storage) *DocumentAllCall {
 }
 
 func (c *DocumentAllCall) CallID() string {
-	return "DOCUMENT:All"
+	return "DOCUMENT:ALL"
 }
 
 func (c *DocumentAllCall) Validate(map[string]interface{}) error {
