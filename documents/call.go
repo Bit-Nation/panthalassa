@@ -124,7 +124,7 @@ func (c *DocumentUpdateCall) Validate(map[string]interface{}) error {
 
 func (c *DocumentUpdateCall) Handle(data map[string]interface{}) (map[string]interface{}, error) {
 
-	docID, k := data["doc_id"].(int)
+	docID, k := data["doc_id"].(float64)
 	if !k {
 		return map[string]interface{}{}, errors.New("expect doc_id to be an integer")
 	}
@@ -140,7 +140,7 @@ func (c *DocumentUpdateCall) Handle(data map[string]interface{}) (map[string]int
 	}
 
 	var doc Document
-	if err := c.s.db.Find("ID", docID, &doc); err != nil {
+	if err := c.s.db.Find("ID", int(docID), &doc); err != nil {
 		return map[string]interface{}{}, err
 	}
 
@@ -170,13 +170,13 @@ func (d *DocumentDeleteCall) Validate(map[string]interface{}) error {
 
 func (d *DocumentDeleteCall) Handle(data map[string]interface{}) (map[string]interface{}, error) {
 
-	docID, k := data["doc_id"].(int)
+	docID, k := data["doc_id"].(float64)
 	if !k {
 		return map[string]interface{}{}, errors.New("expect doc_id to be an integer")
 	}
 
 	var doc Document
-	if err := d.s.db.Find("ID", docID, &doc); err != nil {
+	if err := d.s.db.Find("ID", int(docID), &doc); err != nil {
 		return map[string]interface{}{}, err
 	}
 
