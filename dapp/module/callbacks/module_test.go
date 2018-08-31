@@ -19,14 +19,15 @@ func TestFuncRegistration(t *testing.T) {
 	require.Nil(t, m.Register(vm))
 
 	require.Equal(t, uint(0), m.reqLim.Count())
-	_, err := vm.PushGlobalGoFunction("callbackTestFuncRegistration", func(context *duktape.Context) int {
+	funcId, err := vm.PushGlobalGoFunction("callbackTestFuncRegistration", func(context *duktape.Context) int {
 		return 0
 	})
 	require.Nil(t, err)
-	funcId := vm.PevalStringNoresult(`registerFunction(callbackTestFuncRegistration)`)
+	err = vm.PevalString(`registerFunction(callbackTestFuncRegistration)`)
+	require.Nil(t, err)
 	require.Equal(t, uint(1), m.reqLim.Count())
 
-	id := funcId + 1 // @TODO Maybe handle funcId better
+	id := funcId
 	require.Equal(t, int(1), id)
 
 	// fetch function and assert

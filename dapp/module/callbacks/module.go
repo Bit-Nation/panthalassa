@@ -146,7 +146,6 @@ func (m *Module) Close() error {
 // e.g. myRegisteredFunction(payloadObj, cb)
 // the callback must be called in order to "return" from the function
 func (m *Module) CallFunction(id uint, payload string) error {
-	idInt := int(id) - 1 // @TODO find out why there are discrepencies between the id and stack positioning
 	debugger.Debug(fmt.Errorf("call function with id: %d and payload: %s", id, payload))
 
 	respChan := make(chan *duktape.Context)
@@ -156,12 +155,12 @@ func (m *Module) CallFunction(id uint, payload string) error {
 	}
 	context := <-respChan
 
-	if context == nil || context.GetType(idInt).IsNone() {
+	if context == nil || context.GetType(0).IsNone() {
 		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
 	}
 
 	// check if function is registered
-	if !context.IsFunction(idInt) {
+	if !context.IsFunction(0) {
 		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
 	}
 
