@@ -2,6 +2,7 @@ package db
 
 import (
 	"crypto/rand"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,7 +14,7 @@ import (
 )
 
 func createDB() *bolt.DB {
-	dbPath, err := filepath.Abs(os.TempDir() + "/" + time.Now().String())
+	dbPath, err := filepath.Abs(os.TempDir() + "/" + fmt.Sprint(time.Now().UnixNano()))
 	if err != nil {
 		panic(err)
 	}

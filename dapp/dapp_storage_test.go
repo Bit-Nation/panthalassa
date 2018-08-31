@@ -221,7 +221,7 @@ func TestBoltDAppStorage_Get(t *testing.T) {
 }
 
 func createDB() *bolt.DB {
-	dbPath, err := filepath.Abs(os.TempDir() + "/" + time.Now().String())
+	dbPath, err := filepath.Abs(os.TempDir() + "/" + fmt.Sprint(time.Now().UnixNano()))
 	if err != nil {
 		panic(err)
 	}
