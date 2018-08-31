@@ -206,14 +206,17 @@ func (m *Module) CallFunction(id uint, payload string) error {
 	if err != nil {
 		m.logger.Error(err.Error())
 	}
+	// Push objArgs to the stack as first parameter
 	err = vm.PevalString(objArgs)
 	if err != nil {
 		m.logger.Error(err.Error())
 	}
+	// Push callbackCallFunction to the stack as second parameter
 	err = vm.PevalString(`callbackCallFunction`)
 	if err != nil {
 		m.logger.Error(err.Error())
 	}
+	// Use 2 when calling as we just pushed 2 parameters to the stack
 	vm.Call(2)
 	return <-done
 
