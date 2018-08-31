@@ -186,7 +186,7 @@ func TestFuncCallBackTwice(t *testing.T) {
 
 	require.Nil(t, m.Register(vm))
 	_, err := vm.PushGlobalGoFunction("callbackTestFuncCallBackTwiceTestUndefined", func(context *duktape.Context) int {
-		if context.ToString(0) != "not undefined on purpose" {
+		if !context.IsUndefined(0) {
 			panic("expected value to be undefined")
 		}
 		return 0
@@ -224,7 +224,7 @@ func TestFuncCallBackTwice(t *testing.T) {
 		}
 		context.Pop()
 		context.DupTop()
-		context.PushString("not undefined on purpose")
+		context.PushUndefined()
 		context.PevalString(`callbackTestFuncCallBackTwiceTestUndefined`)
 		context.Call(2)
 
@@ -248,7 +248,8 @@ func TestFuncCallBackTwice(t *testing.T) {
 	}
 	require.NotNil(t, <-respChan)
 
-	m.CallFunction(1, `{key: "value"}`)
+	err = m.CallFunction(1, `{key: "value"}`)
+	require.Nil(t, err)
 
 }
 

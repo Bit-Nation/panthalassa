@@ -215,7 +215,6 @@ func (m *Module) CallFunction(id uint, payload string) error {
 		m.logger.Error(err.Error())
 	}
 	context.Call(2)
-
 	return <-done
 
 }
