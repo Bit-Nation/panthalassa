@@ -103,3 +103,83 @@ func (c *DocumentAllCall) Handle(data map[string]interface{}) (map[string]interf
 		"docs": jsonDocs,
 	}, nil
 }
+
+type DocumentUpdateCall struct {
+	s *Storage
+}
+
+func NewDocumentUpdateCall(s *Storage) *DocumentUpdateCall {
+	return &DocumentUpdateCall{
+		s: s,
+	}
+}
+
+func (c *DocumentUpdateCall) CallID() string {
+	return "DOCUMENT:UPDATE"
+}
+
+func (c *DocumentUpdateCall) Validate(map[string]interface{}) error {
+	return nil
+}
+
+func (c *DocumentUpdateCall) Handle(data map[string]interface{}) (map[string]interface{}, error) {
+
+	docID, k := data["doc_id"].(int)
+	if !k {
+		return map[string]interface{}{}, errors.New("expect doc_id to be an integer")
+	}
+
+	title, k := data["title"].(string)
+	if !k {
+		return map[string]interface{}{}, errors.New("expect title to be an string")
+	}
+
+	description, k := data["description"].(string)
+	if !k {
+		return map[string]interface{}{}, errors.New("expect description to be an string")
+	}
+
+	var doc Document
+	if err := c.s.db.Find("ID", docID, &doc); err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	doc.Title = title
+	doc.Description = description
+
+	return map[string]interface{}{}, c.s.db.Update(&doc)
+}
+
+type DocumentDeleteCall struct {
+	s *Storage
+}
+
+func NewDocumentDeleteCall(s *Storage) *DocumentDeleteCall {
+	return &DocumentDeleteCall{
+		s: s,
+	}
+}
+
+func (d *DocumentDeleteCall) CallID() string {
+	return "DOCUMENT:DELETE"
+}
+
+func (d *DocumentDeleteCall) Validate(map[string]interface{}) error {
+	return nil
+}
+
+func (d *DocumentDeleteCall) Handle(data map[string]interface{}) (map[string]interface{}, error) {
+
+	docID, k := data["doc_id"].(int)
+	if !k {
+		return map[string]interface{}{}, errors.New("expect doc_id to be an integer")
+	}
+
+	var doc Document
+	if err := d.s.db.Find("ID", docID, &doc); err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	return map[string]interface{}{}, d.s.db.DeleteStruct(&doc)
+
+}

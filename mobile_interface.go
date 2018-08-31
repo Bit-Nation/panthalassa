@@ -128,15 +128,27 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	docStorage := documents.NewStorage(dbInstance, km)
 
-	// create document all call
+	// register document all call
 	docAllCall := documents.NewDocumentAllCall(docStorage)
 	if err := dcr.Register(docAllCall); err != nil {
 		return err
 	}
 
 	// create document all call
-	docCreateAll := documents.NewDocumentCreateCall(docStorage)
-	if err := dcr.Register(docCreateAll); err != nil {
+	docCreateCall := documents.NewDocumentCreateCall(docStorage)
+	if err := dcr.Register(docCreateCall); err != nil {
+		return err
+	}
+
+	// create document update call
+	docUpdateCall := documents.NewDocumentUpdateCall(docStorage)
+	if err := dcr.Register(docUpdateCall); err != nil {
+		return err
+	}
+
+	// create document delete call
+	docDeleteCall := documents.NewDocumentDeleteCall(docStorage)
+	if err := dcr.Register(docDeleteCall); err != nil {
 		return err
 	}
 
