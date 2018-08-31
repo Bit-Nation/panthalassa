@@ -153,14 +153,14 @@ func (m *Module) CallFunction(id uint, payload string) error {
 		id:       id,
 		respChan: respChan,
 	}
-	context := <-respChan
+	vm := <-respChan
 
-	if context == nil || context.GetType(0).IsNone() {
+	if vm == nil || vm.GetType(0).IsNone() {
 		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
 	}
 
 	// check if function is registered
-	if !context.IsFunction(0) {
+	if !vm.IsFunction(0) {
 		return errors.New(fmt.Sprintf("function with id: %d does not exist", id))
 	}
 
@@ -172,7 +172,7 @@ func (m *Module) CallFunction(id uint, payload string) error {
 
 	alreadyCalled := false
 
-	_, err := context.PushGlobalGoFunction("callbackCallFunction", func(context *duktape.Context) int {
+	_, err := vm.PushGlobalGoFunction("callbackCallFunction", func(context *duktape.Context) int {
 
 		defer func() {
 			m.rmCBChan <- &done
@@ -206,15 +206,15 @@ func (m *Module) CallFunction(id uint, payload string) error {
 	if err != nil {
 		m.logger.Error(err.Error())
 	}
-	err = context.PevalString(objArgs)
+	err = vm.PevalString(objArgs)
 	if err != nil {
 		m.logger.Error(err.Error())
 	}
-	err = context.PevalString(`callbackCallFunction`)
+	err = vm.PevalString(`callbackCallFunction`)
 	if err != nil {
 		m.logger.Error(err.Error())
 	}
-	context.Call(2)
+	vm.Call(2)
 	return <-done
 
 }
