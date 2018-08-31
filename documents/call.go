@@ -176,7 +176,7 @@ func (d *DocumentDeleteCall) Handle(data map[string]interface{}) (map[string]int
 	}
 
 	var doc Document
-	if err := d.s.db.Find("ID", int(docID), &doc); err != nil {
+	if err := d.s.db.One("ID", int(docID), &doc); err != nil {
 		return map[string]interface{}{}, err
 	}
 
