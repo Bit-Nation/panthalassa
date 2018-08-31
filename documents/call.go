@@ -139,15 +139,15 @@ func (c *DocumentUpdateCall) Handle(data map[string]interface{}) (map[string]int
 		return map[string]interface{}{}, errors.New("expect description to be an string")
 	}
 
-	var doc Document
-	if err := c.s.db.Find("ID", int(docID), &doc); err != nil {
+	doc := new(Document)
+	if err := c.s.db.Find("ID", int(docID), doc); err != nil {
 		return map[string]interface{}{}, err
 	}
 
 	doc.Title = title
 	doc.Description = description
 
-	return map[string]interface{}{}, c.s.db.Update(&doc)
+	return map[string]interface{}{}, c.s.db.Update(doc)
 }
 
 type DocumentDeleteCall struct {
