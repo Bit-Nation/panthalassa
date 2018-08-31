@@ -130,7 +130,7 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 
 	// start the DApp async
 	go func() {
-		//@TODO make sure that the logic of otto's vm.Run is equivalent to vm.PevalString in this use case
+		// Synonymous to vm.Run in Otto
 		err := vm.PevalString(string(app.Code))
 		if err != nil {
 			l.Errorf(err.Error())
