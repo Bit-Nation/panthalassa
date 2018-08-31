@@ -1,9 +1,9 @@
 package documents
 
 import (
+	"encoding/base64"
 	"errors"
 	"time"
-	"encoding/base64"
 )
 
 type DocumentCreateCall struct {
@@ -31,13 +31,13 @@ func (c *DocumentCreateCall) Handle(data map[string]interface{}) (map[string]int
 	if !k {
 		return map[string]interface{}{}, errors.New("title must be a string")
 	}
-	
+
 	// mime type
 	mimeType, k := data["mime_type"].(string)
 	if !k {
 		return map[string]interface{}{}, errors.New("mime type must be a string")
 	}
-	
+
 	// content
 	content, k := data["content"].(string)
 	if !k {
@@ -47,12 +47,19 @@ func (c *DocumentCreateCall) Handle(data map[string]interface{}) (map[string]int
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
-	
+
+	// description
+	description, k := data["description"].(string)
+	if !k {
+		return map[string]interface{}{}, errors.New("description type must be a string")
+	}
+
 	return map[string]interface{}{}, c.s.Save(&Document{
-		Title: title,
-		Content: contentBuff,
-		MimeType: mimeType,
-		CreatedAt: time.Now().Unix(),
+		Title:       title,
+		Content:     contentBuff,
+		Description: description,
+		MimeType:    mimeType,
+		CreatedAt:   time.Now().Unix(),
 	})
 
 }
@@ -76,19 +83,20 @@ func (c *DocumentAllCall) Validate(map[string]interface{}) error {
 }
 
 func (c *DocumentAllCall) Handle(data map[string]interface{}) (map[string]interface{}, error) {
-	
+
 	docs, err := c.s.All()
 	if err != nil {
 		return map[string]interface{}{}, nil
 	}
-	
+
 	jsonDocs := []map[string]interface{}{}
 	for _, d := range docs {
 		jsonDocs = append(jsonDocs, map[string]interface{}{
-			"id": d.ID,
-			"content": d.Content,
-			"mime_type": d.MimeType,
-			"title": d.Title,
+			"id":          d.ID,
+			"content":     d.Content,
+			"mime_type":   d.MimeType,
+			"description": d.Description,
+			"title":       d.Title,
 		})
 	}
 	return map[string]interface{}{
