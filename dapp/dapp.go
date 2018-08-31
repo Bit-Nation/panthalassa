@@ -146,7 +146,6 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 		}
 		return dApp, nil
 	case <-time.After(timeOut):
-		//vm.Interrupt <- func() {}
 		closer <- app
 		return nil, errors.New("timeout - failed to start DApp")
 	}

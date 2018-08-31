@@ -148,7 +148,9 @@ func (m *Module) Register(vm *duktape.Context) error {
 			if err := m.msgStorage.PersistDAppMessage(chat, dAppMessage); err != nil {
 				handleError(err.Error())
 			}
-			//@TODO FIND OUT WHY DO WE NEED TO CLEAR THE STACK LIKE THIS?
+			// See https://duktape.org/api.html
+			// Each function description includes Stack : (No effect on value stack) or a description of the effect it has on the stack
+			// When we call functions which modify the stack, we need to Pop them in order for things to work as intended
 			context.PopN(itemsToPopBeforeCallback)
 			context.PushUndefined()
 			context.Call(1)
