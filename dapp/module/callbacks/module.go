@@ -181,13 +181,21 @@ func (m *Module) CallFunction(id uint, payload string) error {
 		// check if callback has already been called
 		if alreadyCalled {
 			m.logger.Error("Already called callback")
-			//return m.vm.MakeCustomError("Callback", "Already called callback")
+			if context.IsFunction(1) {
+				context.PushString("Callback: Already called callback")
+				context.Call(1)
+			}
 			return 1
 		}
 		alreadyCalled = true
 
 		if !context.IsUndefined(0) {
-			done <- errors.New(context.ToString(0))
+			firstParameter := context.ToString(0)
+			if context.IsFunction(1) {
+				context.PushString(firstParameter)
+				context.Call(1)
+			}
+			done <- errors.New(firstParameter)
 			return 1
 		}
 

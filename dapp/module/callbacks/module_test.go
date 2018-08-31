@@ -185,8 +185,26 @@ func TestFuncCallBackTwice(t *testing.T) {
 	vm := duktape.New()
 
 	require.Nil(t, m.Register(vm))
+	_, err := vm.PushGlobalGoFunction("callbackTestFuncCallBackTwiceTestUndefined", func(context *duktape.Context) int {
+		if context.ToString(0) != "not undefined on purpose" {
+			panic("expected value to be undefined")
+		}
+		return 0
+	})
+	require.Nil(t, err)
 
-	_, err := vm.PushGlobalGoFunction("callbackTestFuncCallBackTwice", func(context *duktape.Context) int {
+	_, err = vm.PushGlobalGoFunction("callbackTestFuncCallBackTwiceTestAlreadyCalled", func(context *duktape.Context) int {
+		if !context.IsString(0) {
+			panic("expected value to be string")
+		}
+		if context.ToString(0) != "Callback: Already called callback" {
+			panic("Expected an error that tells me that I alrady called the callback")
+		}
+		return 0
+	})
+	require.Nil(t, err)
+
+	_, err = vm.PushGlobalGoFunction("callbackTestFuncCallBackTwice", func(context *duktape.Context) int {
 
 		if !context.IsObject(0) {
 			panic("callbackTestFuncCallSuccess : 0 is not an object")
@@ -206,19 +224,14 @@ func TestFuncCallBackTwice(t *testing.T) {
 		}
 		context.Pop()
 		context.DupTop()
-		context.PushUndefined()
-		context.Call(1)
-		// @TODO find a way to test "expected value to be undefined"
-		//if !val.IsUndefined() {
-		//	panic("expected value to be undefined")
-		//}
+		context.PushString("not undefined on purpose")
+		context.PevalString(`callbackTestFuncCallBackTwiceTestUndefined`)
+		context.Call(2)
+
 		context.Pop()
 		context.PushUndefined()
-		context.Call(1)
-		// @TODO find a way to test "Callback: Already called callback"
-		//if val.String() != "Callback: Already called callback" {
-		//	panic("Expected an error that tells me that I alrady called the callback")
-		//}
+		context.PevalString(`callbackTestFuncCallBackTwiceTestAlreadyCalled`)
+		context.Call(2)
 
 		return 0
 
