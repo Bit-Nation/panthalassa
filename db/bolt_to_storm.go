@@ -357,7 +357,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 					CreatedAt:             s.CreatedAt,
 					DestroyAt:             s.DestroyAt,
 					Partner:               partner,
-					ID:                    s.ID,
+					ID:                    s.BaseID,
 					UsedOneTimePreKey:     s.UsedOneTimePreKey,
 					UsedSignedPreKey:      s.UsedSignedPreKey,
 					EphemeralKey:          s.EphemeralKey,
