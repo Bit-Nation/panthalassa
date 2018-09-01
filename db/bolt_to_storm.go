@@ -35,7 +35,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			Data map[string]interface{} `json:"data"`
 		}
 
-		return b.ForEach(func(_, v []byte) error {
+		err := b.ForEach(func(oldJob, v []byte) error {
 
 			// unmarshal old job
 			var j Job
@@ -53,10 +53,14 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			}
 
 			// delete
-			return tx.DeleteBucket([]byte("queue_storage"))
+			return b.Delete(oldJob)
 
 		})
+		if err != nil {
+			return err
+		}
 
+		return tx.DeleteBucket([]byte("queue_storage"))
 	})
 	if err != nil {
 		return err
@@ -72,7 +76,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 
 		drKeyStorage := NewBoltDRKeyStorage(db, m.Km)
 
-		return b.ForEach(func(plainDrKey, v []byte) error {
+		err := b.ForEach(func(plainDrKey, v []byte) error {
 
 			if len(plainDrKey) != 32 {
 				return errors.New("got dr key that isn't 32 bytes long")
@@ -119,13 +123,18 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 				return err
 			}
 
-			return tx.DeleteBucket(plainDrKey)
+			return b.Delete(plainDrKey)
 
 		})
+		if err != nil {
+			return err
+		}
+
+		return tx.DeleteBucket([]byte("double_ratchet_key_store"))
 
 	})
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// migrate one time pre keys
