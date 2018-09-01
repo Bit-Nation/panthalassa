@@ -313,6 +313,9 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 		})
 
 	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 
