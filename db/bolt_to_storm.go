@@ -146,6 +146,62 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return nil
 		}
 
+		oneTimePreKeyStorage := NewBoltOneTimePreKeyStorage(db, m.Km)
+
+		err := b.ForEach(func(pubKey, privKeyCT []byte) error {
+
+			xPub := x3dh.PublicKey{}
+			xPriv := x3dh.PrivateKey{}
+
+			if len(pubKey) != 32 {
+				return errors.New("got invalid public key during signed pre key migration")
+			}
+
+			ct, err := aes.Unmarshal(privKeyCT)
+			if err != nil {
+				return err
+			}
+
+			plainPrivKey, err := m.Km.AESDecrypt(ct)
+			if err != nil {
+				return err
+			}
+
+			if len(plainPrivKey) != 32 {
+				return errors.New("got invalid private key during signed pre key migration")
+			}
+
+			copy(xPub[:], pubKey)
+			copy(xPriv[:], plainPrivKey)
+
+			return oneTimePreKeyStorage.Put([]x3dh.KeyPair{
+				x3dh.KeyPair{
+					PublicKey:  xPub,
+					PrivateKey: xPriv,
+				},
+			})
+
+			return b.Delete(pubKey)
+
+		})
+		if err != nil {
+			return err
+		}
+
+		return tx.DeleteBucket([]byte("one_time_pre_keys"))
+	})
+	if err != nil {
+		return err
+	}
+
+	// migrate signed pre keys
+	err = db.Bolt.Update(func(tx *bolt.Tx) error {
+
+		b := tx.Bucket([]byte("signed_pre_keys"))
+		if b == nil {
+			return nil
+		}
+
 		signedPreKeyStorage := NewBoltSignedPreKeyStorage(db.WithTransaction(tx), m.Km)
 
 		err := b.ForEach(func(pubKey, privKeyCT []byte) error {
@@ -186,7 +242,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return err
 		}
 
-		return tx.DeleteBucket([]byte("one_time_pre_keys"))
+		return tx.DeleteBucket([]byte("signed_pre_keys"))
 	})
 	if err != nil {
 		return err

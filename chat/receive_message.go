@@ -66,7 +66,7 @@ func (c *Chat) decryptMessage(msg dr.Message, sharedSecret x3dh.SharedSecret, si
 	for _, signedPreKey := range signedPreKeys {
 		plainChatMessage, err := decrypt(*signedPreKey)
 		if err != nil {
-			return bpb.PlainChatMessage{}, err
+			logger.Warning("failed to decrypt message with signed pre key - this might be ok since we don't know which one was used")
 		}
 		return plainChatMessage, nil
 	}
@@ -168,10 +168,10 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		if err != nil {
 			return err
 		}
-		signedPreKey.PrivateKey = *signedPreKeyPriv
 		if signedPreKeyPriv == nil {
 			return errors.New("chat init - failed to fetch signed pre key")
 		}
+		signedPreKey.PrivateKey = *signedPreKeyPriv
 
 		// fetch shared secret based on chat init params
 		sharedSecret, err := c.sharedSecStorage.Get(msg.Sender, msg.UsedSharedSecret)
