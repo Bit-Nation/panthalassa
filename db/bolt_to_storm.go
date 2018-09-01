@@ -282,7 +282,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 					return err
 				}
 
-				m := Message{}
+				m := OldMessage{}
 				if err := json.Unmarshal(rawMessage, &m); err != nil {
 					return err
 				}
