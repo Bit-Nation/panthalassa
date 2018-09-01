@@ -5,7 +5,7 @@ import (
 )
 
 type BoltQueueStorage struct {
-	db *storm.DB
+	db storm.Node
 }
 
 func (s *BoltQueueStorage) PersistJob(j *Job) error {
@@ -34,7 +34,7 @@ func (s *BoltQueueStorage) Map(queue chan Job) {
 	}()
 }
 
-func NewStorage(db *storm.DB) *BoltQueueStorage {
+func NewStorage(db storm.Node) *BoltQueueStorage {
 	return &BoltQueueStorage{
 		db: db,
 	}

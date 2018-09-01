@@ -109,7 +109,7 @@ type Chat struct {
 	// partner will only be filled if this is a private chat
 	Partner             ed25519.PublicKey `storm:"index,unique"`
 	UnreadMessages      bool
-	db                  *storm.DB
+	db                  storm.Node
 	km                  *km.KeyManager
 	postPersistListener []func(event MessagePersistedEvent)
 }
@@ -248,7 +248,7 @@ type MessagePersistedEvent struct {
 }
 
 type BoltChatStorage struct {
-	db                  *storm.DB
+	db                  storm.Node
 	postPersistListener []func(event MessagePersistedEvent)
 	km                  *km.KeyManager
 }
@@ -309,7 +309,7 @@ func (s *BoltChatStorage) AllChats() ([]Chat, error) {
 	return *chats, s.db.All(chats)
 }
 
-func NewChatStorage(db *storm.DB, listeners []func(event MessagePersistedEvent), km *km.KeyManager) *BoltChatStorage {
+func NewChatStorage(db storm.Node, listeners []func(event MessagePersistedEvent), km *km.KeyManager) *BoltChatStorage {
 	return &BoltChatStorage{
 		db:                  db,
 		postPersistListener: listeners,

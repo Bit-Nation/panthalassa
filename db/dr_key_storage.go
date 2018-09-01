@@ -29,10 +29,10 @@ type DRKeyStorage interface {
 
 type BoltDRKeyStorage struct {
 	km *km.KeyManager
-	db *storm.DB
+	db storm.Node
 }
 
-func NewBoltDRKeyStorage(db *storm.DB, km *km.KeyManager) *BoltDRKeyStorage {
+func NewBoltDRKeyStorage(db storm.Node, km *km.KeyManager) *BoltDRKeyStorage {
 	return &BoltDRKeyStorage{
 		km: km,
 		db: db,

@@ -37,11 +37,11 @@ func (s *SignedPreKey) PrivateKey() x3dh.PrivateKey {
 }
 
 type BoltSignedPreKeyStorage struct {
-	db *storm.DB
+	db storm.Node
 	km *keyManager.KeyManager
 }
 
-func NewBoltSignedPreKeyStorage(db *storm.DB, km *keyManager.KeyManager) *BoltSignedPreKeyStorage {
+func NewBoltSignedPreKeyStorage(db storm.Node, km *keyManager.KeyManager) *BoltSignedPreKeyStorage {
 	return &BoltSignedPreKeyStorage{
 		db: db,
 		km: km,

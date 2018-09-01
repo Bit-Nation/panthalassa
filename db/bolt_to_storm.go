@@ -21,8 +21,8 @@ type BoltToStormMigration struct {
 func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 
 	// migrate queue jobs
-	queueStorage := queue.NewStorage(db)
 	err := db.Bolt.Update(func(tx *bolt.Tx) error {
+		queueStorage := queue.NewStorage(db.WithTransaction(tx))
 
 		b := tx.Bucket([]byte("queue_storage"))
 		if b == nil {
@@ -74,7 +74,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return nil
 		}
 
-		drKeyStorage := NewBoltDRKeyStorage(db, m.Km)
+		drKeyStorage := NewBoltDRKeyStorage(db.WithTransaction(tx), m.Km)
 
 		err := b.ForEach(func(plainDrKey, v []byte) error {
 
@@ -145,7 +145,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return nil
 		}
 
-		signedPreKeyStorage := NewBoltSignedPreKeyStorage(db, m.Km)
+		signedPreKeyStorage := NewBoltSignedPreKeyStorage(db.WithTransaction(tx), m.Km)
 
 		return b.ForEach(func(pubKey, privKeyCT []byte) error {
 
@@ -230,7 +230,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return nil
 		}
 
-		chatDB := NewChatStorage(db, []func(event MessagePersistedEvent){}, m.Km)
+		chatDB := NewChatStorage(db.WithTransaction(tx), []func(event MessagePersistedEvent){}, m.Km)
 
 		type OldDAppMessage struct {
 			DAppPublicKey []byte                 `json:"dapp_public_key"`
