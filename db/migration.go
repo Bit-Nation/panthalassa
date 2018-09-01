@@ -102,6 +102,9 @@ func Migrate(prodDBFile string, migrations []Migration) error {
 
 	// check if production database exist
 	if _, err := os.Stat(prodDBFile); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 
