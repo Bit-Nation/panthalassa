@@ -192,85 +192,6 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 		return err
 	}
 
-	// shared secret migration
-	err = db.Bolt.Update(func(tx *bolt.Tx) error {
-
-		b := tx.Bucket([]byte("shared_secrets"))
-		if b == nil {
-			return nil
-		}
-
-		sharedSecretStorage := NewBoltSharedSecretStorage(db.WithTransaction(tx), m.Km)
-
-		type OldSharedSecret struct {
-			X3dhSS                x3dh.SharedSecret `json:"-"`
-			Accepted              bool              `json:"accepted"`
-			CreatedAt             time.Time         `json:"created_at"`
-			DestroyAt             *time.Time        `json:"destroy_at"`
-			EphemeralKey          x3dh.PublicKey    `json:"ephemeral_key"`
-			EphemeralKeySignature []byte            `json:"ephemeral_key_signature"`
-			UsedSignedPreKey      x3dh.PublicKey    `json:"used_signed_pre_key"`
-			UsedOneTimePreKey     *x3dh.PublicKey   `json:"used_one_time_pre_key"`
-			// the base id chosen by the initiator of the chat
-			BaseID []byte `json:"base_id"`
-			// id used for indexing (calculated based on a few parameters)
-			ID []byte `json:"id"`
-			// the id based on the chat init params
-			IDInitParams []byte `json:"id_init_params"`
-		}
-
-		type PersistedSharedSecret struct {
-			OldSharedSecret
-			X3dhSS aes.CipherText `json:"x3dh_shared_secret"`
-		}
-
-		err := b.ForEach(func(k, rawSharedSecret []byte) error {
-			s := PersistedSharedSecret{}
-			if err := json.Unmarshal(rawSharedSecret, &s); err != nil {
-				return err
-			}
-
-			// decrypt shared secret
-			plainSharedSecret, err := m.Km.AESDecrypt(s.X3dhSS)
-			if err != nil {
-				return err
-			}
-
-			// make sure shared secret is correct
-			if len(plainSharedSecret) != 32 {
-				return errors.New("got invalid shared secret")
-			}
-
-			ss := x3dh.SharedSecret{}
-			copy(ss[:], plainSharedSecret)
-
-			newSharedSecret := SharedSecret{
-				x3dhSS:    ss,
-				Accepted:  s.Accepted,
-				CreatedAt: s.CreatedAt,
-				DestroyAt: s.DestroyAt,
-				// TODO Where to get partner from?
-				// Partner:               s.Partner,
-				ID:                    s.ID,
-				UsedOneTimePreKey:     s.UsedOneTimePreKey,
-				UsedSignedPreKey:      s.UsedSignedPreKey,
-				EphemeralKey:          s.EphemeralKey,
-				EphemeralKeySignature: s.EphemeralKeySignature,
-			}
-
-			return sharedSecretStorage.Put(newSharedSecret)
-		})
-		if err != nil {
-			return err
-		}
-
-		return tx.DeleteBucket([]byte("shared_secrets"))
-
-	})
-	if err != nil {
-		return err
-	}
-
 	// migrate chats
 	err = db.Bolt.Update(func(tx *bolt.Tx) error {
 
@@ -360,6 +281,99 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			})
 
 		})
+
+	})
+	if err != nil {
+		return err
+	}
+
+	// shared secret migration
+	err = db.Bolt.Update(func(tx *bolt.Tx) error {
+
+		b := tx.Bucket([]byte("shared_secrets"))
+		if b == nil {
+			return nil
+		}
+
+		sharedSecretStorage := NewBoltSharedSecretStorage(db.WithTransaction(tx), m.Km)
+
+		type OldSharedSecret struct {
+			X3dhSS                x3dh.SharedSecret `json:"-"`
+			Accepted              bool              `json:"accepted"`
+			CreatedAt             time.Time         `json:"created_at"`
+			DestroyAt             *time.Time        `json:"destroy_at"`
+			EphemeralKey          x3dh.PublicKey    `json:"ephemeral_key"`
+			EphemeralKeySignature []byte            `json:"ephemeral_key_signature"`
+			UsedSignedPreKey      x3dh.PublicKey    `json:"used_signed_pre_key"`
+			UsedOneTimePreKey     *x3dh.PublicKey   `json:"used_one_time_pre_key"`
+			// the base id chosen by the initiator of the chat
+			BaseID []byte `json:"base_id"`
+			// id used for indexing (calculated based on a few parameters)
+			ID []byte `json:"id"`
+			// the id based on the chat init params
+			IDInitParams []byte `json:"id_init_params"`
+		}
+
+		type PersistedSharedSecret struct {
+			OldSharedSecret
+			X3dhSS aes.CipherText `json:"x3dh_shared_secret"`
+		}
+
+		err := b.ForEach(func(partner, _ []byte) error {
+
+			if len(partner) != 32 {
+				return errors.New("got invalid partner during shared secret migration")
+			}
+
+			partnerBucket := b.Bucket(partner)
+			if partnerBucket == nil {
+				return nil
+			}
+
+			return partnerBucket.ForEach(func(_, rawSharedSecret []byte) error {
+
+				s := PersistedSharedSecret{}
+				if err := json.Unmarshal(rawSharedSecret, &s); err != nil {
+					return err
+				}
+
+				// decrypt shared secret
+				plainSharedSecret, err := m.Km.AESDecrypt(s.X3dhSS)
+				if err != nil {
+					return err
+				}
+
+				// make sure shared secret is correct
+				if len(plainSharedSecret) != 32 {
+					return errors.New("got invalid shared secret")
+				}
+
+				ss := x3dh.SharedSecret{}
+				copy(ss[:], plainSharedSecret)
+
+				newSharedSecret := SharedSecret{
+					x3dhSS:                ss,
+					Accepted:              s.Accepted,
+					CreatedAt:             s.CreatedAt,
+					DestroyAt:             s.DestroyAt,
+					Partner:               partner,
+					ID:                    s.ID,
+					UsedOneTimePreKey:     s.UsedOneTimePreKey,
+					UsedSignedPreKey:      s.UsedSignedPreKey,
+					EphemeralKey:          s.EphemeralKey,
+					EphemeralKeySignature: s.EphemeralKeySignature,
+				}
+
+				return sharedSecretStorage.Put(newSharedSecret)
+
+			})
+
+		})
+		if err != nil {
+			return err
+		}
+
+		return tx.DeleteBucket([]byte("shared_secrets"))
 
 	})
 	if err != nil {
