@@ -15,7 +15,7 @@ import (
 )
 
 type BoltToStormMigration struct {
-	km *keyManager.KeyManager
+	Km *keyManager.KeyManager
 }
 
 func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
@@ -70,7 +70,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return nil
 		}
 
-		drKeyStorage := NewBoltDRKeyStorage(db, m.km)
+		drKeyStorage := NewBoltDRKeyStorage(db, m.Km)
 
 		return b.ForEach(func(plainDrKey, v []byte) error {
 
@@ -94,7 +94,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 					return err
 				}
 
-				plainSecret, err := m.km.AESDecrypt(ct)
+				plainSecret, err := m.Km.AESDecrypt(ct)
 				if err != nil {
 					return err
 				}
@@ -136,7 +136,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return nil
 		}
 
-		signedPreKeyStorage := NewBoltSignedPreKeyStorage(db, m.km)
+		signedPreKeyStorage := NewBoltSignedPreKeyStorage(db, m.Km)
 
 		return b.ForEach(func(pubKey, privKeyCT []byte) error {
 
@@ -152,7 +152,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 				return err
 			}
 
-			plainPrivKey, err := m.km.AESDecrypt(ct)
+			plainPrivKey, err := m.Km.AESDecrypt(ct)
 			if err != nil {
 				return err
 			}
@@ -221,7 +221,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return nil
 		}
 
-		chatDB := NewChatStorage(db, []func(event MessagePersistedEvent){}, m.km)
+		chatDB := NewChatStorage(db, []func(event MessagePersistedEvent){}, m.Km)
 
 		type OldDAppMessage struct {
 			DAppPublicKey []byte                 `json:"dapp_public_key"`
@@ -268,7 +268,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 					return err
 				}
 
-				rawMessage, err := m.km.AESDecrypt(ct)
+				rawMessage, err := m.Km.AESDecrypt(ct)
 				if err != nil {
 					return err
 				}

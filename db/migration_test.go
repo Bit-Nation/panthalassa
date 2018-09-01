@@ -10,19 +10,20 @@ import (
 	"testing"
 	"time"
 
+	storm "github.com/asdine/storm"
 	bolt "github.com/coreos/bbolt"
 	require "github.com/stretchr/testify/require"
 )
 
 type migration struct {
 	version           uint32
-	migrationFunction func(m *bolt.DB) error
+	migrationFunction func(m *storm.DB) error
 }
 
 func (m *migration) Version() uint32 {
 	return m.version
 }
-func (m *migration) Migrate(db *bolt.DB) error {
+func (m *migration) Migrate(db *storm.DB) error {
 	return m.migrationFunction(db)
 }
 
@@ -155,7 +156,7 @@ func TestMigrateTimeoutOnOpen(t *testing.T) {
 func TestMigrateSystemBucketError(t *testing.T) {
 
 	// fake set system bucket
-	setupSystemBucket = func(db *bolt.DB) error {
+	setupSystemBucket = func(db *storm.DB) error {
 		return nil
 	}
 
@@ -222,8 +223,8 @@ func TestMigrateSuccess(t *testing.T) {
 	migrations := []Migration{
 		&migration{
 			version: 1,
-			migrationFunction: func(m *bolt.DB) error {
-				return m.Update(func(tx *bolt.Tx) error {
+			migrationFunction: func(m *storm.DB) error {
+				return m.Bolt.Update(func(tx *bolt.Tx) error {
 					b, err := tx.CreateBucket([]byte("key_value_store"))
 					if err != nil {
 						return err
@@ -274,8 +275,8 @@ func TestMigrateRevertChangesOnError(t *testing.T) {
 	migrations := []Migration{
 		&migration{
 			version: 1,
-			migrationFunction: func(m *bolt.DB) error {
-				err := m.Update(func(tx *bolt.Tx) error {
+			migrationFunction: func(m *storm.DB) error {
+				err := m.Bolt.Update(func(tx *bolt.Tx) error {
 					b, err := tx.CreateBucket([]byte("key_value_store"))
 					if err != nil {
 						return err

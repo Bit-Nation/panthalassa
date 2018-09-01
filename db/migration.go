@@ -53,8 +53,8 @@ func doubleMigration(migrations []Migration) Migration {
 	return nil
 }
 
-var setupSystemBucket = func(db *bolt.DB) error {
-	return db.Update(func(tx *bolt.Tx) error {
+var setupSystemBucket = func(db *storm.DB) error {
+	return db.Bolt.Update(func(tx *bolt.Tx) error {
 
 		// fetch system bucket
 		systemBucket, err := tx.CreateBucketIfNotExists(systemBucketName)
@@ -94,8 +94,7 @@ var prepareMigration = func(file string) (string, error) {
 // migrate migrates a bold db database
 func Migrate(prodDBFile string, migrations []Migration) error {
 
-	// make su
-	// re there are no double migrations
+	// make sure there are no double migrations
 	mig := doubleMigration(migrations)
 	if mig != nil {
 		return errors.New(fmt.Sprintf("a migration with id (%d) was already registered", mig.Version()))
@@ -107,7 +106,7 @@ func Migrate(prodDBFile string, migrations []Migration) error {
 	}
 
 	// open production database
-	prodDB, err := bolt.Open(prodDBFile, 0644, &bolt.Options{Timeout: time.Second})
+	prodDB, err := storm.Open(prodDBFile, storm.BoltOptions(0644, &bolt.Options{Timeout: time.Second}))
 	defer prodDB.Close()
 	if err != nil {
 		return err
@@ -123,7 +122,7 @@ func Migrate(prodDBFile string, migrations []Migration) error {
 	if err != nil {
 		return err
 	}
-	err = prodDB.View(func(tx *bolt.Tx) error {
+	err = prodDB.Bolt.View(func(tx *bolt.Tx) error {
 		return tx.CopyFile(dbBackupFile, 0644)
 	})
 	if err != nil {
@@ -139,7 +138,7 @@ func Migrate(prodDBFile string, migrations []Migration) error {
 		var version uint32
 
 		// read version of the migration database
-		err := prodDB.View(func(tx *bolt.Tx) error {
+		err := prodDB.Bolt.View(func(tx *bolt.Tx) error {
 			// fetch system bucket
 			buck := tx.Bucket(systemBucketName)
 			if buck == nil {
@@ -190,7 +189,7 @@ func Migrate(prodDBFile string, migrations []Migration) error {
 		}
 
 		// update version of last migration on database
-		err = prodDB.Update(func(tx *bolt.Tx) error {
+		err = prodDB.Bolt.Update(func(tx *bolt.Tx) error {
 			// fetch bucket
 			buck := tx.Bucket(systemBucketName)
 			if buck == nil {

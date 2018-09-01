@@ -21,6 +21,7 @@ import (
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
+	"github.com/asdine/storm"
 	bolt "github.com/coreos/bbolt"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
@@ -72,13 +73,15 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// migrate
 	migrations := []db.Migration{
-		&db.BoltToStormMigration{},
+		&db.BoltToStormMigration{
+			Km: km,
+		},
 	}
 	if err := db.Migrate(dbPath, migrations); err != nil {
 		return err
 	}
 
-	dbInstance, err := db.Open(dbPath, 0644, &bolt.Options{Timeout: time.Second})
+	dbInstance, err := storm.Open(dbPath, storm.BoltOptions(0644, &bolt.Options{Timeout: time.Second}))
 	if err != nil {
 		return err
 	}
