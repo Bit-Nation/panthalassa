@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"time"
 
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
@@ -147,7 +148,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 
 		signedPreKeyStorage := NewBoltSignedPreKeyStorage(db.WithTransaction(tx), m.Km)
 
-		return b.ForEach(func(pubKey, privKeyCT []byte) error {
+		err := b.ForEach(func(pubKey, privKeyCT []byte) error {
 
 			xPub := x3dh.PublicKey{}
 			xPriv := x3dh.PrivateKey{}
@@ -181,21 +182,27 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return b.Delete(pubKey)
 
 		})
+		if err != nil {
+			return err
+		}
+
+		return tx.DeleteBucket([]byte("one_time_pre_keys"))
 	})
 	if err != nil {
 		return err
 	}
 
-	/**
 	// shared secret migration
-	err = m.db.Bolt.Update(func(tx *bolt.Tx) error {
+	err = db.Bolt.Update(func(tx *bolt.Tx) error {
 
 		b := tx.Bucket([]byte("shared_secrets"))
 		if b == nil {
 			return nil
 		}
 
-		type SharedSecret struct {
+		sharedSecretStorage := NewBoltSharedSecretStorage(db.WithTransaction(tx), m.Km)
+
+		type OldSharedSecret struct {
 			X3dhSS                x3dh.SharedSecret `json:"-"`
 			Accepted              bool              `json:"accepted"`
 			CreatedAt             time.Time         `json:"created_at"`
@@ -212,15 +219,43 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			IDInitParams []byte `json:"id_init_params"`
 		}
 
-		return b.ForEach(func(k, rawSharedSecret []byte) error {
+		type PersistedSharedSecret struct {
+			OldSharedSecret
+			X3dhSS aes.CipherText `json:"x3dh_shared_secret"`
+		}
 
+		err := b.ForEach(func(k, rawSharedSecret []byte) error {
+			s := PersistedSharedSecret{}
+			if err := json.Unmarshal(rawSharedSecret, &s); err != nil {
+				return err
+			}
+
+			newSharedSecret := SharedSecret{
+				x3dhSS:                s.X3dhSS,
+				Accepted:              s.Accepted,
+				CreatedAt:             s.CreatedAt,
+				DestroyAt:             s.DestroyAt,
+				// TODO Where to get partner from?
+				// Partner:               s.Partner,
+				ID:                    s.ID,
+				UsedOneTimePreKey:     s.UsedOneTimePreKey,
+				UsedSignedPreKey:      s.UsedSignedPreKey,
+				EphemeralKey:          s.EphemeralKey,
+				EphemeralKeySignature: s.EphemeralKeySignature,
+			}
+
+			return sharedSecretStorage.Put(newSharedSecret)
 		})
+		if err != nil {
+			return err
+		}
+
+		return tx.DeleteBucket([]byte("shared_secrets"))
 
 	})
 	if err != nil {
 		return err
 	}
-	*/
 
 	// migrate chats
 	err = db.Bolt.Update(func(tx *bolt.Tx) error {

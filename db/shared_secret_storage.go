@@ -37,13 +37,6 @@ func (ss *SharedSecret) SetX3dhSecret(secret x3dh.SharedSecret) {
 	ss.x3dhSS = secret
 }
 
-// the persistedSharedSecret is almost the same as SharedSecret except for
-// that the X3dhSS value is an AES cipher text.
-type persistedSharedSecret struct {
-	SharedSecret
-	X3dhSS aes.CipherText `json:"x3dh_shared_secret"`
-}
-
 type SharedSecretStorage interface {
 	HasAny(key ed25519.PublicKey) (bool, error)
 	// must return an error if no shared secret found
@@ -56,7 +49,7 @@ type SharedSecretStorage interface {
 	Get(key ed25519.PublicKey, sharedSecretID []byte) (*SharedSecret, error)
 }
 
-func NewBoltSharedSecretStorage(db *storm.DB, km *keyManager.KeyManager) *BoltSharedSecretStorage {
+func NewBoltSharedSecretStorage(db storm.Node, km *keyManager.KeyManager) *BoltSharedSecretStorage {
 	return &BoltSharedSecretStorage{
 		db: db,
 		km: km,
@@ -64,7 +57,7 @@ func NewBoltSharedSecretStorage(db *storm.DB, km *keyManager.KeyManager) *BoltSh
 }
 
 type BoltSharedSecretStorage struct {
-	db *storm.DB
+	db storm.Node
 	km *keyManager.KeyManager
 }
 
