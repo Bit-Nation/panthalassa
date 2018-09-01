@@ -230,11 +230,25 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 				return err
 			}
 
+			// decrypt shared secret
+			plainSharedSecret, err := m.Km.AESDecrypt(s.X3dhSS)
+			if err != nil {
+				return err
+			}
+
+			// make sure shared secret is correct
+			if len(plainSharedSecret) != 32 {
+				return errors.New("got invalid shared secret")
+			}
+
+			ss := x3dh.SharedSecret{}
+			copy(ss[:], plainSharedSecret)
+
 			newSharedSecret := SharedSecret{
-				x3dhSS:                s.X3dhSS,
-				Accepted:              s.Accepted,
-				CreatedAt:             s.CreatedAt,
-				DestroyAt:             s.DestroyAt,
+				x3dhSS:    ss,
+				Accepted:  s.Accepted,
+				CreatedAt: s.CreatedAt,
+				DestroyAt: s.DestroyAt,
 				// TODO Where to get partner from?
 				// Partner:               s.Partner,
 				ID:                    s.ID,
