@@ -1,4 +1,4 @@
-package migration
+package db
 
 import (
 	"crypto/rand"

@@ -69,6 +69,15 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	if err != nil {
 		return err
 	}
+
+	// migrate
+	migrations := []db.Migration{
+		&db.BoltToStormMigration{},
+	}
+	if err := db.Migrate(dbPath, migrations); err != nil {
+		return err
+	}
+
 	dbInstance, err := db.Open(dbPath, 0644, &bolt.Options{Timeout: time.Second})
 	if err != nil {
 		return err

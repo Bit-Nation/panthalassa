@@ -1,4 +1,4 @@
-package migration
+package db
 
 import (
 	"crypto/rand"
@@ -12,11 +12,12 @@ import (
 	"sort"
 	"time"
 
+	storm "github.com/asdine/storm"
 	bolt "github.com/coreos/bbolt"
 )
 
 type Migration interface {
-	Migrate(db *bolt.DB) error
+	Migrate(db *storm.DB) error
 	Version() uint32
 }
 
