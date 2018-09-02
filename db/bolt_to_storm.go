@@ -234,7 +234,6 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			privKey := signedPreKey.PrivateKey
 
 			if len(privKey) != 32 {
-				logger.Debugf("Private key len: %d...", len(privKey));
 				return errors.New("got invalid private key during signed pre key migration")
 			}
 
