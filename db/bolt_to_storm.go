@@ -146,7 +146,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			return nil
 		}
 
-		oneTimePreKeyStorage := NewBoltOneTimePreKeyStorage(db, m.Km)
+		oneTimePreKeyStorage := NewBoltOneTimePreKeyStorage(db.WithTransaction(tx), m.Km)
 
 		err := b.ForEach(func(pubKey, privKeyCT []byte) error {
 
@@ -168,7 +168,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 			}
 
 			if len(plainPrivKey) != 32 {
-				return errors.New("got invalid private key during signed pre key migration")
+				return errors.New("got invalid private key during one time key migration")
 			}
 
 			copy(xPub[:], pubKey)
@@ -204,11 +204,14 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 
 		signedPreKeyStorage := NewBoltSignedPreKeyStorage(db.WithTransaction(tx), m.Km)
 
+		type OldSignedPreKey struct {
+			ValidTill  int64           `json:"valid_till"`
+			PrivateKey x3dh.PrivateKey `json:"private_key"`
+			PublicKey  x3dh.PublicKey  `json:"public_key"`
+			Version    uint            `json:"version"`
+		}
+
 		err := b.ForEach(func(pubKey, privKeyCT []byte) error {
-
-			xPub := x3dh.PublicKey{}
-			xPriv := x3dh.PrivateKey{}
-
 			if len(pubKey) != 32 {
 				return errors.New("got invalid public key during signed pre key migration")
 			}
@@ -218,21 +221,29 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 				return err
 			}
 
-			plainPrivKey, err := m.Km.AESDecrypt(ct)
+			rawSignedPrivKey, err := m.Km.AESDecrypt(ct)
 			if err != nil {
 				return err
 			}
 
-			if len(plainPrivKey) != 32 {
+			signedPreKey := OldSignedPreKey{}
+			if err := json.Unmarshal(rawSignedPrivKey, &signedPreKey); err != nil {
+				return err
+			}
+
+			privKey := signedPreKey.PrivateKey
+
+			if len(privKey) != 32 {
+				logger.Debugf("Private key len: %d...", len(privKey));
 				return errors.New("got invalid private key during signed pre key migration")
 			}
 
+			xPub := x3dh.PublicKey{}
 			copy(xPub[:], pubKey)
-			copy(xPriv[:], plainPrivKey)
 
 			return signedPreKeyStorage.Put(x3dh.KeyPair{
 				PublicKey:  xPub,
-				PrivateKey: xPriv,
+				PrivateKey: privKey,
 			})
 
 			return b.Delete(pubKey)

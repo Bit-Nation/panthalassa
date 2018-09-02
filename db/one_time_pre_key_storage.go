@@ -23,11 +23,11 @@ type OneTimePreKeyStorage interface {
 }
 
 type BoltOneTimePreKeyStorage struct {
-	db *storm.DB
+	db storm.Node
 	km *km.KeyManager
 }
 
-func NewBoltOneTimePreKeyStorage(db *storm.DB, km *km.KeyManager) *BoltOneTimePreKeyStorage {
+func NewBoltOneTimePreKeyStorage(db storm.Node, km *km.KeyManager) *BoltOneTimePreKeyStorage {
 	return &BoltOneTimePreKeyStorage{
 		db: db,
 		km: km,
