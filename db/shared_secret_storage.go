@@ -44,7 +44,7 @@ type SharedSecretStorage interface {
 	Put(ss SharedSecret) error
 	// accept will mark the given shared secret as accepted
 	// and will set a destroy date for all other shared secrets
-	Accept(sharedSec SharedSecret) error
+	Accept(sharedSec *SharedSecret) error
 	// get sender public key and shared secret id
 	Get(key ed25519.PublicKey, sharedSecretID []byte) (*SharedSecret, error)
 }
@@ -137,20 +137,9 @@ func (b *BoltSharedSecretStorage) Put(ss SharedSecret) error {
 
 }
 
-func (b *BoltSharedSecretStorage) Accept(sharedSec SharedSecret) error {
-	q := b.db.Select(sq.And(
-		sq.Eq("Partner", sharedSec.Partner),
-		sq.Eq("ID", sharedSec.ID),
-	))
-
-	var ss SharedSecret
-	if err := q.First(&ss); err != nil {
-		return err
-	}
-
-	ss.Accepted = true
-
-	return b.db.Update(&ss)
+func (b *BoltSharedSecretStorage) Accept(sharedSec *SharedSecret) error {
+	sharedSec.Accepted = true
+	return b.db.Update(sharedSec)
 }
 
 func (b *BoltSharedSecretStorage) Get(partner ed25519.PublicKey, id []byte) (*SharedSecret, error) {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"fmt"
 	db "github.com/Bit-Nation/panthalassa/db"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
@@ -336,7 +337,8 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	// if the decryption didn't fail we want to mark
 	// the shared secret as accepted
 	if !sharedSec.Accepted {
-		return c.sharedSecStorage.Accept(*sharedSec)
+		fmt.Println("going to accept shared secret")
+		return c.sharedSecStorage.Accept(sharedSec)
 	}
 
 	return nil

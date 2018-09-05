@@ -33,7 +33,7 @@ type testSharedSecretStorage struct {
 	hasAny      func(key ed25519.PublicKey) (bool, error)
 	getYoungest func(key ed25519.PublicKey) (*db.SharedSecret, error)
 	put         func(sharedSecret db.SharedSecret) error
-	accept      func(sharedSec db.SharedSecret) error
+	accept      func(sharedSec *db.SharedSecret) error
 	get         func(key ed25519.PublicKey, sharedSecretID []byte) (*db.SharedSecret, error)
 }
 
@@ -122,7 +122,7 @@ func (s *testSharedSecretStorage) Put(sharedSecret db.SharedSecret) error {
 	return s.put(sharedSecret)
 }
 
-func (s *testSharedSecretStorage) Accept(sharedSec db.SharedSecret) error {
+func (s *testSharedSecretStorage) Accept(sharedSec *db.SharedSecret) error {
 	return s.accept(sharedSec)
 }
 

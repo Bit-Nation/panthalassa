@@ -73,14 +73,14 @@ func TestBoltSharedSecretStorage_Accept(t *testing.T) {
 	}))
 
 	// accept shared secret that doesn't exist
-	err = storage.Accept(SharedSecret{
+	err = storage.Accept(&SharedSecret{
 		Partner: make([]byte, 32),
 		ID:      make([]byte, 32),
 	})
 	require.EqualError(t, err, "not found")
 
 	// accept shared secret
-	require.Nil(t, storage.Accept(SharedSecret{
+	require.Nil(t, storage.Accept(&SharedSecret{
 		x3dhSS:  [32]byte{1, 2},
 		ID:      ID,
 		Partner: pub,

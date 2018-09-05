@@ -260,8 +260,14 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 				require.Equal(t, uint(1), msg.Version)
 				require.Equal(t, db.StatusPersisted, msg.Status)
 
+				// we need to wait a bit since this is called async
+				// before the receive handling logic has the chance to update
+				// the shared secret
+				time.Sleep(time.Second)
+
 				// make sure shared secret got accepted
 				shSec, err := alice.sharedSecStorage.GetYoungest(bobIDKey)
+				fmt.Println(shSec.ID)
 				require.Nil(t, err)
 				require.NotNil(t, shSec)
 				require.True(t, shSec.Accepted)
