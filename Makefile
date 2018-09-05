@@ -5,14 +5,14 @@ list:
 proto:
 	protoc --go_out=. api/pb/*.proto
 deps:
-	go get -a github.com/whyrusleeping/gx
-	go get -a github.com/whyrusleeping/gx-go
+	go get github.com/whyrusleeping/gx
+	go get github.com/whyrusleeping/gx-go
+	cd ${GOPATH}/src/github.com/whyrusleeping/gx-go/;git checkout c45da214e510e25e0f3caf11d35dcdb7a463a8dc;go build -a;go install;gx-go -v
 	go get github.com/mattn/goveralls
 	go get -u github.com/kardianos/govendor
 	go get github.com/stretchr/testify
 	go get -u github.com/golang/dep/cmd/dep
 install:
-	rm -rf ${GOPATH}/src/gx
 	gx install
 	dep ensure
 	gx-go rw
