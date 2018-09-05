@@ -6,34 +6,34 @@ import (
 	"sort"
 	"sync"
 
-	otto "github.com/robertkrimen/otto"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
-type Validator = func(call otto.FunctionCall, position int) error
+type Validator = func(context *duktape.Context, position int) error
 
-var TypeFunction = func(call otto.FunctionCall, position int) error {
-	if !call.Argument(position).IsFunction() {
+var TypeFunction = func(context *duktape.Context, position int) error {
+	if !context.IsFunction(position) {
 		return errors.New(fmt.Sprintf("expected parameter %d to be of type function", position))
 	}
 	return nil
 }
 
-var TypeNumber = func(call otto.FunctionCall, position int) error {
-	if !call.Argument(position).IsNumber() {
+var TypeNumber = func(context *duktape.Context, position int) error {
+	if !context.IsNumber(position) {
 		return errors.New(fmt.Sprintf("expected parameter %d to be of type number", position))
 	}
 	return nil
 }
 
-var TypeString = func(call otto.FunctionCall, position int) error {
-	if !call.Argument(position).IsString() {
+var TypeString = func(context *duktape.Context, position int) error {
+	if !context.IsString(position) {
 		return errors.New(fmt.Sprintf("expected parameter %d to be of type string", position))
 	}
 	return nil
 }
 
-var TypeObject = func(call otto.FunctionCall, position int) error {
-	if !call.Argument(position).IsObject() {
+var TypeObject = func(context *duktape.Context, position int) error {
+	if !context.IsObject(position) {
 		return errors.New(fmt.Sprintf("expected parameter %d to be of type object", position))
 	}
 	return nil
@@ -51,7 +51,7 @@ func (v *CallValidator) Set(index int, validator *Validator) {
 	v.rules[index] = validator
 }
 
-func (v *CallValidator) Validate(vm *otto.Otto, call otto.FunctionCall) *otto.Value {
+func (v *CallValidator) Validate(vm *duktape.Context) error {
 
 	v.lock.Lock()
 	defer v.lock.Unlock()
@@ -66,14 +66,14 @@ func (v *CallValidator) Validate(vm *otto.Otto, call otto.FunctionCall) *otto.Va
 
 		validator, exist := v.rules[k]
 		if !exist {
-			ve := vm.MakeCustomError("ValidationError", fmt.Sprintf("couldn't find validator for type: %d", k))
-			return &ve
+			ve := fmt.Errorf("ValidationError: couldn't find validator for type: %d", k)
+			return ve
 		}
 
 		v := *validator
-		if err := v(call, k); err != nil {
-			ve := vm.MakeCustomError("ValidationError", err.Error())
-			return &ve
+		if err := v(vm, k); err != nil {
+			ve := fmt.Errorf("ValidationError: %s", err.Error())
+			return ve
 		}
 
 	}

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	log "github.com/op/go-logging"
-	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 func TestCreateRandomBytes(t *testing.T) {
@@ -15,28 +15,23 @@ func TestCreateRandomBytes(t *testing.T) {
 
 	mod := New(log.MustGetLogger(""))
 
-	vm := otto.New()
+	vm := duktape.New()
 
 	require.Nil(t, mod.Register(vm))
 
-	_, err := vm.Call("randomBytes", vm, 3, func(call otto.FunctionCall) otto.Value {
-
-		if !call.Argument(0).IsUndefined() {
+	vm.PushGlobalGoFunction("callbackRandomBytes", func(context *duktape.Context) int {
+		if !context.IsUndefined(0) {
 			panic("expected error to be undefined")
 		}
 
-		generatedBytes, err := call.Argument(1).ToString()
-		if err != nil {
-			panic(err)
-		}
-
+		generatedBytes := (context.ToString(-1))
 		if generatedBytes != "1, 4, 6" {
-			panic(err)
+			panic("it's not the same bytes")
 		}
 
-		return otto.Value{}
-
+		return 0
 	})
+	err := vm.PevalString(`randomBytes(3,callbackRandomBytes)`)
 	require.Nil(t, err)
 
 }

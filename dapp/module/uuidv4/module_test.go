@@ -6,9 +6,9 @@ import (
 	"time"
 
 	log "github.com/op/go-logging"
-	otto "github.com/robertkrimen/otto"
 	uuid "github.com/satori/go.uuid"
 	require "github.com/stretchr/testify/require"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 func TestUUIDV4ModelSuccess(t *testing.T) {
@@ -20,16 +20,19 @@ func TestUUIDV4ModelSuccess(t *testing.T) {
 		return uuid.FromString("9b781c39-2bd3-41c6-a246-150a9f4421a3")
 	}
 
-	vm := otto.New()
-	vm.Set("test", func(call otto.FunctionCall) otto.Value {
-		require.True(t, call.Argument(0).IsUndefined())
-		require.Equal(t, "9b781c39-2bd3-41c6-a246-150a9f4421a3", call.Argument(1).String())
-		return otto.Value{}
-	})
+	vm := duktape.New()
 
 	require.Nil(t, m.Register(vm))
 
-	vm.Run(`uuidV4(test)`)
+	_, err := vm.PushGlobalGoFunction("test", func(context *duktape.Context) int {
+		require.True(t, context.IsUndefined(0))
+		require.Equal(t, "9b781c39-2bd3-41c6-a246-150a9f4421a3", context.ToString(1))
+		return 0
+	})
+	require.Nil(t, err)
+	require.Nil(t, m.Register(vm))
+
+	vm.PevalString(`uuidV4(test)`)
 
 }
 
@@ -42,28 +45,28 @@ func TestUUIDV4ModelError(t *testing.T) {
 		return uuid.UUID{}, errors.New("I am a nice error message")
 	}
 
-	vm := otto.New()
+	vm := duktape.New()
 
 	require.Nil(t, m.Register(vm))
 
 	wait := make(chan bool, 1)
 
-	vm.Call("uuidV4", vm, func(call otto.FunctionCall) otto.Value {
-
-		if call.Argument(0).String() != "I am a nice error message" {
+	_, err := vm.PushGlobalGoFunction("callbackUuidV4", func(context *duktape.Context) int {
+		if context.ToString(0) != "I am a nice error message" {
 			panic("expected error message: I am a nice error message")
 		}
 
-		if !call.Argument(1).IsUndefined() {
+		if !context.IsUndefined(1) {
 			panic("id should be undefined")
 		}
 
 		wait <- true
 
-		return otto.Value{}
-
+		return 0
 	})
+	require.Nil(t, err)
 
+	vm.PevalString("uuidV4(callbackUuidV4)")
 	select {
 	case <-wait:
 	case <-time.After(time.Second):

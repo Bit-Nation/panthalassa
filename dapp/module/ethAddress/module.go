@@ -3,7 +3,7 @@ package ethAddress
 import (
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	log "github.com/ipfs/go-log"
-	otto "github.com/robertkrimen/otto"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 var logger = log.Logger("eth address")
@@ -22,7 +22,7 @@ func (m *Module) Close() error {
 	return nil
 }
 
-func (m *Module) Register(vm *otto.Otto) error {
+func (m *Module) Register(context *duktape.Context) error {
 
 	logger.Debug("get ethereum address")
 
@@ -30,7 +30,7 @@ func (m *Module) Register(vm *otto.Otto) error {
 	if err != nil {
 		return err
 	}
-
-	return vm.Set("ethereumAddress", addr)
+	context.PushString(addr)
+	return err
 
 }

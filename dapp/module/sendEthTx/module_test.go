@@ -5,8 +5,8 @@ import (
 	"time"
 
 	log "github.com/op/go-logging"
-	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
+	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 type testApi struct {
@@ -21,7 +21,7 @@ func TestSuccessCall(t *testing.T) {
 
 	logger := log.MustGetLogger("")
 
-	vm := otto.New()
+	vm := duktape.New()
 
 	m := New(&testApi{
 		send: func(value, to, data string) (string, error) {
@@ -40,35 +40,33 @@ func TestSuccessCall(t *testing.T) {
 
 	require.Nil(t, m.Register(vm))
 
-	txReq, err := vm.Object(`({
-		"value": "10000"
+	txReq := `({
+		"value": "10000",
 		"to": "0xee60a19d0850b51b8598ca2ceb9acae3f452943d",
 		"data": "0xf3..."
-	})`)
-	require.Nil(t, err)
+	})`
 
 	wait := make(chan bool)
 
-	_, err = vm.Call(
-		"sendETHTransaction",
-		vm,
-		txReq,
-		func(error, transaction string) otto.Value {
+	_, err := vm.PushGlobalGoFunction("callbackSendETHTransaction", func(context *duktape.Context) int {
 
-			if error != "undefined" {
-				panic("expected error to be undefined")
-			}
+		if !context.IsUndefined(0) {
+			panic("expected error to be undefined")
+		}
 
-			if transaction != "{}" {
-				// it's ok to assert {}
-				// this is just a mock
-				panic("expected transaction to be {}")
-			}
+		transaction := (context.ToString(-1))
+		if transaction != "{}" {
+			// it's ok to assert {}
+			// this is just a mock
+			panic("expected transaction to be {}")
+		}
 
-			wait <- true
-			return otto.Value{}
-		},
-	)
+		wait <- true
+		return 0
+	})
+	require.Nil(t, err)
+
+	go vm.PevalString(`sendETHTransaction(` + txReq + `,callbackSendETHTransaction)`)
 	require.Nil(t, err)
 
 	select {
