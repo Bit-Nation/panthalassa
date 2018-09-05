@@ -6,16 +6,13 @@ import (
 	"testing"
 
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
-	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	bolt "github.com/coreos/bbolt"
-	proto "github.com/gogo/protobuf/proto"
 	require "github.com/stretchr/testify/require"
 )
 
-func TestBoltUserStorage_PutSignedPreKey(t *testing.T) {
+func TestBoltUserStorage_PuSignedPreKey(t *testing.T) {
 
-	b := createDB()
+	b := createStorm()
 	km := createKeyManager()
 	userStorage := BoltUserStorage{
 		db: b,
@@ -40,40 +37,20 @@ func TestBoltUserStorage_PutSignedPreKey(t *testing.T) {
 	// persist signed pre key
 	require.Nil(t, userStorage.PutSignedPreKey(idPubKey, signedPreKey))
 
-	err = b.View(func(tx *bolt.Tx) error {
-
-		// user storage bucket
-		userStorageBucket := tx.Bucket(userStorageBucketName)
-		require.NotNil(t, userStorageBucketName)
-
-		// user bucket based on pub key
-		userBucket := userStorageBucket.Bucket(idPubKey)
-		require.NotNil(t, userBucket)
-
-		// raw signed pre key
-		rawSignedPreKey := userBucket.Get(signedPreKeyName)
-		require.NotNil(t, rawSignedPreKey)
-
-		// unmarshal signed  pre key
-		fetchedSignedPreKey := bpb.PreKey{}
-		require.Nil(t, proto.Unmarshal(rawSignedPreKey, &fetchedSignedPreKey))
-
-		// do assertions on the pre key
-		require.Equal(t, signedPreKey.PublicKey[:], fetchedSignedPreKey.Key)
-
-		return nil
-
-	})
+	// fetch signed pre key
+	pk, err := userStorage.GetSignedPreKey(idPubKey)
 	require.Nil(t, err)
+
+	require.Equal(t, signedPreKey.PublicKey, pk.PublicKey)
 
 }
 
 func TestBoltUserStorage_GetSignedPreKey(t *testing.T) {
 
-	b := createDB()
+	db := createStorm()
 	km := createKeyManager()
 	userStorage := BoltUserStorage{
-		db: b,
+		db: db,
 	}
 
 	curve := x3dh.NewCurve25519(rand.Reader)

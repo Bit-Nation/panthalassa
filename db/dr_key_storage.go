@@ -2,15 +2,21 @@ package db
 
 import (
 	"encoding/binary"
-	"errors"
-	"fmt"
 
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
-	bolt "github.com/coreos/bbolt"
+	storm "github.com/asdine/storm"
+	sq "github.com/asdine/storm/q"
 	log "github.com/ipfs/go-log"
 	dr "github.com/tiabc/doubleratchet"
 )
+
+type DRKey struct {
+	ID     int            `storm:"id,increment"`
+	Key    dr.Key         `storm:"index"`
+	MsgNum uint           `storm:"index"`
+	MsgKey aes.CipherText `storm:"index"`
+}
 
 type DRKeyStorage interface {
 	Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool)
@@ -22,22 +28,18 @@ type DRKeyStorage interface {
 }
 
 type BoltDRKeyStorage struct {
-	db *bolt.DB
 	km *km.KeyManager
+	db storm.Node
 }
 
-func NewBoltDRKeyStorage(db *bolt.DB, km *km.KeyManager) *BoltDRKeyStorage {
+func NewBoltDRKeyStorage(db storm.Node, km *km.KeyManager) *BoltDRKeyStorage {
 	return &BoltDRKeyStorage{
-		db: db,
 		km: km,
+		db: db,
 	}
 }
 
 var logger = log.Logger("database")
-
-var (
-	doubleRatchetKeyStoreBucket = []byte("double_ratchet_key_store")
-)
 
 func uintToBytes(uint uint) []byte {
 	num := make([]byte, 8)
@@ -51,74 +53,57 @@ func bytesToUint(uint []byte) uint64 {
 
 func (s *BoltDRKeyStorage) Get(k dr.Key, msgNum uint) (mk dr.Key, ok bool) {
 
-	exist := false
-	key := dr.Key{}
+	// fetch dr key
+	q := s.db.Select(sq.And(
+		sq.Eq("Key", k),
+		sq.Eq("MsgNum", msgNum),
+	))
 
-	err := s.db.View(func(tx *bolt.Tx) error {
-		// double ratchet key store
-		preKeyStore := tx.Bucket(doubleRatchetKeyStoreBucket)
-		if preKeyStore == nil {
-			return nil
-		}
-		// message key store
-		messageKeyStore := preKeyStore.Bucket(k[:])
-		if messageKeyStore == nil {
-			return nil
-		}
-		// encrypted message key
-		encryptedRawDRKey := messageKeyStore.Get(uintToBytes(msgNum))
-		if encryptedRawDRKey == nil {
-			return nil
-		}
-		encryptedMessageKey, err := aes.Unmarshal(encryptedRawDRKey)
-		if err != nil {
-			return err
-		}
-		// decrypted message key
-		plainText, err := s.km.AESDecrypt(encryptedMessageKey)
-		if err != nil {
-			return err
-		}
-		if len(plainText) != 32 {
-			return errors.New(fmt.Sprintf("message key is invalid (length: %d)", len(plainText)))
-		}
-		copy(key[:], plainText)
-		exist = true
-		return nil
-	})
-
-	// @todo we need to change the dr package to use a better interface
-	if err != nil {
-		logger.Error(err)
+	// count
+	amount, err := q.Count(&DRKey{})
+	if amount <= 0 {
+		return dr.Key{}, false
 	}
 
-	return key, exist
+	drKey := &DRKey{}
+	if err := q.First(drKey); err != nil {
+		logger.Error(err)
+		return dr.Key{}, false
+	}
+
+	mk = dr.Key{}
+	plainMK, err := s.km.AESDecrypt(drKey.MsgKey)
+	if err != nil {
+		logger.Error(err)
+		return dr.Key{}, false
+	}
+	if err := q.First(drKey); err != nil {
+		logger.Error(err)
+		return dr.Key{}, false
+	}
+	if len(plainMK) != 32 {
+		logger.Errorf("got invalid message key with len != 32")
+		return dr.Key{}, false
+	}
+	copy(mk[:], plainMK)
+
+	return mk, true
 
 }
 
 func (s *BoltDRKeyStorage) Put(k dr.Key, msgNum uint, mk dr.Key) {
 
-	err := s.db.Update(func(tx *bolt.Tx) error {
-		// get double ratchet key store
-		drKeyStore, err := tx.CreateBucketIfNotExists(doubleRatchetKeyStoreBucket)
-		if err != nil {
-			return err
-		}
-		// message keys
-		messageKeys, err := drKeyStore.CreateBucketIfNotExists(k[:])
-		if err != nil {
-			return err
-		}
-		// encrypt the message key
-		ctStruct, err := s.km.AESEncrypt(mk[:])
-		if err != nil {
-			return err
-		}
-		ct, err := ctStruct.Marshal()
-		if err != nil {
-			return err
-		}
-		return messageKeys.Put(uintToBytes(msgNum), ct)
+	ct, err := s.km.AESEncrypt(mk[:])
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	// persist double ratchet key
+	err = s.db.Save(&DRKey{
+		Key:    k,
+		MsgNum: msgNum,
+		MsgKey: ct,
 	})
 
 	// @todo we need to change the dr package to use a better interface
@@ -128,39 +113,36 @@ func (s *BoltDRKeyStorage) Put(k dr.Key, msgNum uint, mk dr.Key) {
 
 }
 
+// @todo we need to change the dr package to use a better interface (error handling)
 func (s *BoltDRKeyStorage) DeleteMk(k dr.Key, msgNum uint) {
 
-	err := s.db.Update(func(tx *bolt.Tx) error {
-		drKeyStore := tx.Bucket(doubleRatchetKeyStoreBucket)
-		if drKeyStore == nil {
-			return nil
-		}
-		messageStore := drKeyStore.Bucket(k[:])
-		if messageStore == nil {
-			return nil
-		}
-		return messageStore.Delete(uintToBytes(msgNum))
-	})
-
-	// @todo we need to change the dr package to use a better interface
-	if err != nil {
+	// fetch double ratchet key
+	q := s.db.Select(sq.And(
+		sq.Eq("Key", k),
+		sq.Eq("MsgNum", msgNum),
+	))
+	var drKey DRKey
+	if err := q.First(&drKey); err != nil {
 		logger.Error(err)
+		return
+	}
+
+	// delete it
+	if err := s.db.DeleteStruct(&drKey); err != nil {
+		logger.Error(err)
+		return
 	}
 
 }
 
 func (s *BoltDRKeyStorage) DeletePk(k dr.Key) {
 
-	err := s.db.Update(func(tx *bolt.Tx) error {
-		drKeyStore := tx.Bucket(doubleRatchetKeyStoreBucket)
-		if drKeyStore == nil {
-			return nil
-		}
-		return drKeyStore.DeleteBucket(k[:])
-	})
+	// delete all DR keys under the given key
+	q := s.db.Select(sq.Eq("Key", k))
 
+	var drKey DRKey
 	// @todo we need to change the dr package to use a better interface
-	if err != nil {
+	if err := q.Delete(&drKey); err != nil {
 		logger.Error(err)
 	}
 
@@ -168,25 +150,11 @@ func (s *BoltDRKeyStorage) DeletePk(k dr.Key) {
 
 func (s *BoltDRKeyStorage) Count(k dr.Key) uint {
 
-	count := 0
-
-	err := s.db.Update(func(tx *bolt.Tx) error {
-		drKeyStore := tx.Bucket(doubleRatchetKeyStoreBucket)
-		if drKeyStore == nil {
-			return nil
-		}
-		messageStore := drKeyStore.Bucket(k[:])
-		if messageStore == nil {
-			return nil
-		}
-		return messageStore.ForEach(func(k, v []byte) error {
-			count++
-			return nil
-		})
-	})
-
+	q := s.db.Select(sq.Eq("Key", k))
+	count, err := q.Count(&DRKey{})
 	if err != nil {
 		logger.Error(err)
+		return 0
 	}
 
 	return uint(count)
@@ -197,42 +165,30 @@ func (s *BoltDRKeyStorage) All() map[dr.Key]map[uint]dr.Key {
 
 	keys := map[dr.Key]map[uint]dr.Key{}
 
-	err := s.db.View(func(tx *bolt.Tx) error {
-		// get double ratchet key store
-		drKeyStore := tx.Bucket(doubleRatchetKeyStoreBucket)
-		if drKeyStore == nil {
-			return nil
-		}
-		return drKeyStore.ForEach(func(k, v []byte) error {
-			// get message key store
-			messageKeyStore := drKeyStore.Bucket(k)
-			if messageKeyStore == nil {
-				return errors.New("we MUST get a bucket here since all keys should have a bucket which is a mapping between a uint and a key")
-			}
-			if len(k) != 32 {
-				return errors.New("invalid key size. must be exactly 32 bytes long")
-			}
-			var drKey dr.Key
-			copy(drKey[:], k)
-			messageKeys := map[uint]dr.Key{}
-			err := messageKeyStore.ForEach(func(k, v []byte) error {
-				key, exist := s.Get(drKey, uint(bytesToUint(k)))
-				if !exist {
-					return nil
-				}
-				messageKeys[uint(bytesToUint(k))] = key
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-			keys[drKey] = messageKeys
-			return nil
-		})
-	})
-
-	if err != nil {
+	allDRKeys := []DRKey{}
+	if err := s.db.All(&allDRKeys); err != nil {
 		logger.Error(err)
+		return map[dr.Key]map[uint]dr.Key{}
+	}
+
+	for _, drKey := range allDRKeys {
+		drk := dr.Key{}
+		plainDRKey, err := s.km.AESDecrypt(drKey.MsgKey)
+		if err != nil {
+			logger.Error(err)
+			return map[dr.Key]map[uint]dr.Key{}
+		}
+		if len(plainDRKey) != 32 {
+			logger.Error("got invalid plain key (invalid len)")
+			return map[dr.Key]map[uint]dr.Key{}
+		}
+		copy(drk[:], plainDRKey)
+
+		if _, exist := keys[drKey.Key]; !exist {
+			keys[drKey.Key] = map[uint]dr.Key{}
+		}
+
+		keys[drKey.Key][drKey.MsgNum] = drk
 	}
 
 	return keys

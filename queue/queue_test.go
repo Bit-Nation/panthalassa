@@ -9,11 +9,9 @@ import (
 
 func TestRegisterProcessorError(t *testing.T) {
 
-	s := testStorage{
-		mapFunc: func(queue chan Job) {},
-	}
-
-	queue := New(&s, 10, 3)
+	st := createStorm()
+	s := NewStorage(st)
+	queue := New(s, 10, 3)
 
 	// register the first time should be valid
 	err := queue.RegisterProcessor(&testProcessor{
@@ -43,10 +41,8 @@ func TestRegisterProcessorError(t *testing.T) {
 
 func TestFetchProcessor(t *testing.T) {
 
-	s := &testStorage{
-		mapFunc: func(queue chan Job) {},
-	}
-
+	st := createStorm()
+	s := NewStorage(st)
 	queue := New(s, 10, 3)
 
 	_, err := queue.fetchProcessor("I_DO_NOT_EXIST")
@@ -73,11 +69,10 @@ func TestFetchProcessor(t *testing.T) {
 
 func TestQueue_AddJobError(t *testing.T) {
 
-	s := testStorage{
-		mapFunc: func(queue chan Job) {},
-	}
+	st := createStorm()
+	s := NewStorage(st)
 
-	queue := New(&s, 10, 3)
+	queue := New(s, 10, 3)
 
 	// add job
 	err := queue.AddJob(Job{
@@ -92,11 +87,9 @@ func TestQueue_AddJobError(t *testing.T) {
 
 func TestQueue_AddInvalidJob(t *testing.T) {
 
-	s := testStorage{
-		mapFunc: func(queue chan Job) {},
-	}
-
-	queue := New(&s, 10, 3)
+	st := createStorm()
+	s := NewStorage(st)
+	queue := New(s, 10, 3)
 
 	// register processor
 	err := queue.RegisterProcessor(&testProcessor{
@@ -123,18 +116,9 @@ func TestQueue_AddInvalidJob(t *testing.T) {
 
 func TestQueue_AddJob(t *testing.T) {
 
-	calledPersistJob := false
-	s := testStorage{
-		persistJob: func(j Job) error {
-			require.Equal(t, "MY_JOB", j.Type)
-			require.Equal(t, map[string]interface{}{"key": "value"}, j.Data)
-			calledPersistJob = true
-			return nil
-		},
-		mapFunc: func(queue chan Job) {},
-	}
+	db := &BoltQueueStorage{db: createStorm()}
 
-	queue := New(&s, 10, 3)
+	queue := New(db, 10, 3)
 
 	// register processor
 	err := queue.RegisterProcessor(&testProcessor{
@@ -156,16 +140,19 @@ func TestQueue_AddJob(t *testing.T) {
 		},
 	})
 	require.Nil(t, err)
-	require.True(t, calledPersistJob)
+
+	amount, err := db.db.Count(&Job{})
+	require.Nil(t, err)
+	require.Equal(t, 1, amount)
 
 }
 
 //
 func TestQueue_ProcessJob(t *testing.T) {
 
-	queue := New(&testStorage{
-		mapFunc: func(queue chan Job) {},
-	}, 10, 3)
+	db := &BoltQueueStorage{db: createStorm()}
+
+	queue := New(db, 10, 3)
 
 	// channel
 	wait := make(chan struct{}, 1)
@@ -177,8 +164,9 @@ func TestQueue_ProcessJob(t *testing.T) {
 			return nil
 		},
 		process: func(j Job) error {
-			require.Equal(t, "<job-id>", j.ID)
-			require.Equal(t, "SEND_MONEY", j.Type)
+			if j.Type != "SEND_MONEY" {
+				panic("got invalid type")
+			}
 			wait <- struct{}{}
 			return nil
 		},
@@ -188,7 +176,6 @@ func TestQueue_ProcessJob(t *testing.T) {
 
 	// add job to stack
 	queue.jobStack <- Job{
-		ID:   "<job-id>",
 		Type: "SEND_MONEY",
 	}
 

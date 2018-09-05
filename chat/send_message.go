@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -50,39 +49,31 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		plainMessage.Message = nil
 	}
 
-	var handleSendError = func(err error) error {
-		updateError := c.messageDB.UpdateStatus(receiver, dbMessage.DatabaseID, db.StatusFailedToSend)
-		if updateError != nil {
-			return errors.New(fmt.Sprintf("failed to update status with error: %s - original error: %s", updateError, err))
-		}
-		return err
-	}
-
-	var fetchSignedPreKey = func(userIDPubKey ed25519.PublicKey) (prekey.PreKey, error) {
+	var fetchSignedPreKey = func(userIDPubKey ed25519.PublicKey) (*prekey.PreKey, error) {
 		signedPreKey, err := c.userStorage.GetSignedPreKey(receiver)
 		if err != nil {
-			return prekey.PreKey{}, handleSendError(err)
+			return nil, err
 		}
 
 		// validate signature of signed pre key
 		validSignature, err := signedPreKey.VerifySignature(userIDPubKey)
 		if err != nil {
-			return prekey.PreKey{}, handleSendError(err)
+			return nil, err
 		}
 		if !validSignature {
-			return prekey.PreKey{}, handleSendError(errors.New("received invalid signature for pre key bundle"))
+			return nil, errors.New("received invalid signature for signed pre key")
 		}
-		return *signedPreKey, nil
+		return signedPreKey, nil
 	}
 
 	// fetch sender public key
 	senderIdPubStr, err := c.km.IdentityPublicKey()
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 	sender, err := hex.DecodeString(senderIdPubStr)
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 
 	// @todo we should validate the plain message
@@ -90,20 +81,22 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	// check if there is a shared secret for the receiver
 	exist, err := c.sharedSecStorage.HasAny(receiver)
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 
 	// if we don't have a shared secret we create one
 	if !exist {
+
 		// fetch pre key bundle
 		preKeyBundle, err := c.backend.FetchPreKeyBundle(receiver)
 		if err != nil {
-			return handleSendError(err)
+			return err
 		}
+
 		// run key agreement
 		initializedProtocol, err := c.x3dh.CalculateSecret(preKeyBundle)
 		if err != nil {
-			return handleSendError(err)
+			return err
 		}
 
 		// ephemeral key signature
@@ -113,61 +106,56 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		}
 
 		// shared secret base ID
-		ssBaseID := make([]byte, 32)
-		if _, err := rand.Read(ssBaseID); err != nil {
-			return err
-		}
-
-		ssID, err := sharedSecretID(sender, receiver, ssBaseID)
-		if err != nil {
+		id := make([]byte, 32)
+		if _, err := rand.Read(id); err != nil {
 			return err
 		}
 
 		// construct shared secret
 		ss := db.SharedSecret{
-			ID:                    ssID,
-			X3dhSS:                initializedProtocol.SharedSecret,
+			ID:                    id,
 			Accepted:              false,
 			CreatedAt:             time.Now(),
 			UsedOneTimePreKey:     initializedProtocol.UsedOneTimePreKey,
 			UsedSignedPreKey:      initializedProtocol.UsedSignedPreKey,
 			EphemeralKey:          initializedProtocol.EphemeralKey,
 			EphemeralKeySignature: eks,
-			BaseID:                ssBaseID,
+			Partner:               receiver,
 		}
+		ss.SetX3dhSecret(initializedProtocol.SharedSecret)
 
 		// persist shared secret
-		if err := c.sharedSecStorage.Put(receiver, ss); err != nil {
-			return handleSendError(err)
+		if err := c.sharedSecStorage.Put(ss); err != nil {
+			return err
 		}
 	}
 
 	// fetch shared secret
 	ss, err := c.sharedSecStorage.GetYoungest(receiver)
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 	if ss == nil {
 		return errors.New("failed to fetch youngest secret")
 	}
 
-	hasSignedPreKey, err := c.userStorage.GetSignedPreKey(receiver)
+	signedPreKey, err := c.userStorage.GetSignedPreKey(receiver)
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 
 	// fetch signed pre key of chat partner if we don't have it locally
-	if hasSignedPreKey == nil {
+	if signedPreKey == nil {
 		err = c.refreshSignedPreKey(receiver)
 		if err != nil {
-			return handleSendError(err)
+			return err
 		}
 	}
 
 	// fetch signed pre key from storage
-	signedPreKey, err := fetchSignedPreKey(receiver)
+	signedPreKey, err = fetchSignedPreKey(receiver)
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 
 	// check if signed pre key expired
@@ -175,46 +163,47 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	if expired {
 		err = c.refreshSignedPreKey(receiver)
 		if err != nil {
-			return handleSendError(err)
+			return err
 		}
 		// fetch signed pre key from storage
 		signedPreKey, err = fetchSignedPreKey(receiver)
 		if err != nil {
-			return handleSendError(err)
+			return err
 		}
 	}
 
 	// in the case the shared secret has not been accepted
 	// we need to attach the shared secret base id
 	if !ss.Accepted {
-		if len(ss.BaseID) != 32 {
-			return handleSendError(errors.New("base it is invalid - must have 32 bytes"))
+		if len(ss.ID) != 32 {
+			return errors.New("base it is invalid - must have 32 bytes")
 		}
-		plainMessage.SharedSecretBaseID = ss.BaseID
+		plainMessage.SharedSecretBaseID = ss.ID
 		plainMessage.SharedSecretCreationDate = ss.CreatedAt.Unix()
 	}
 
 	// create double ratchet session
 	var drSS dr.Key
-	copy(drSS[:], ss.X3dhSS[:])
+	x3dhSS := ss.GetX3dhSecret()
+	copy(drSS[:], x3dhSS[:])
 	var drRK dr.Key
 	copy(drRK[:], signedPreKey.PublicKey[:])
 
 	drSession, err := dr.NewWithRemoteKey(drSS, drRK)
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 
 	// marshal message
 	rawPlainMessage, err := proto.Marshal(&plainMessage)
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 
 	// encrypt message
 	drMessage := drSession.RatchetEncrypt(rawPlainMessage, nil)
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 
 	// construct chat message
@@ -272,19 +261,19 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	}
 
 	// make sure the base id is OK
-	if len(ss.BaseID) != 32 {
+	if len(ss.ID) != 32 {
 		return errors.New("invalid base id - expected to be 32 bytes long")
 	}
 
 	// attach shared secret id to message
-	// @todo change this back to -> msgToSend.UsedSharedSecret, err = sharedSecretID(sender, receiver, ss.BaseID)
-	msgToSend.UsedSharedSecret = ss.BaseID
+	msgToSend.UsedSharedSecret = ss.ID
 
 	// send message to the backend
 	err = c.backend.SubmitMessages([]*bpb.ChatMessage{&msgToSend})
 	if err != nil {
-		return handleSendError(err)
+		return err
 	}
 
-	return c.messageDB.UpdateStatus(receiver, dbMessage.DatabaseID, db.StatusSent)
+	return nil
+	// return c.messageDB.UpdateStatus(receiver, dbMessage.DatabaseID, db.StatusSent)
 }

@@ -9,9 +9,10 @@ import (
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	db "github.com/Bit-Nation/panthalassa/db"
+	dyncall "github.com/Bit-Nation/panthalassa/dyncall"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	p2p "github.com/Bit-Nation/panthalassa/p2p"
-	bolt "github.com/coreos/bbolt"
+	storm "github.com/asdine/storm"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
@@ -23,9 +24,10 @@ type Panthalassa struct {
 	p2p         *p2p.Network
 	dAppReg     *dAppReg.Registry
 	chat        *chat.Chat
-	msgDB       *db.BoltChatMessageStorage
-	db          *bolt.DB
+	chatDB      db.ChatStorage
+	db          *storm.DB
 	dAppStorage dapp.Storage
+	dyncall     *dyncall.Registry
 }
 
 //Stop the panthalassa instance

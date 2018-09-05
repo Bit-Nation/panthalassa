@@ -32,7 +32,7 @@ type testSignedPreKeyStore struct {
 	getActive func() (*x3dh.KeyPair, error)
 	put       func(signedPreKey x3dh.KeyPair) error
 	get       func(publicKey x3dh.PublicKey) (*x3dh.PrivateKey, error)
-	all       func() []*x3dh.KeyPair
+	all       func() ([]*x3dh.KeyPair, error)
 }
 
 func (s *testSignedPreKeyStore) GetActive() (*x3dh.KeyPair, error) {
@@ -47,6 +47,6 @@ func (s *testSignedPreKeyStore) Get(publicKey x3dh.PublicKey) (*x3dh.PrivateKey,
 	return s.get(publicKey)
 }
 
-func (s *testSignedPreKeyStore) All() []*x3dh.KeyPair {
+func (s *testSignedPreKeyStore) All() ([]*x3dh.KeyPair, error) {
 	return s.all()
 }

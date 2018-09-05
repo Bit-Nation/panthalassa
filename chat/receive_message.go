@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"fmt"
 	db "github.com/Bit-Nation/panthalassa/db"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
@@ -59,10 +60,14 @@ func (c *Chat) decryptMessage(msg dr.Message, sharedSecret x3dh.SharedSecret, si
 	// we fetch all our pre keys and try to decrypt.
 	// trying all of them should be fine since we will only have
 	// around 6 - 8 signed pre keys
-	for _, signedPreKey := range c.signedPreKeyStorage.All() {
+	signedPreKeys, err := c.signedPreKeyStorage.All()
+	if err != nil {
+		return bpb.PlainChatMessage{}, err
+	}
+	for _, signedPreKey := range signedPreKeys {
 		plainChatMessage, err := decrypt(*signedPreKey)
 		if err != nil {
-			return bpb.PlainChatMessage{}, err
+			logger.Warning("failed to decrypt message with signed pre key - this might be ok since we don't know which one was used")
 		}
 		return plainChatMessage, nil
 	}
@@ -96,16 +101,6 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		return errors.New("got invalid double ratchet public key - must have a length of 32")
 	}
 
-	// decode our id key
-	ourRawIDPubKey, err := c.km.IdentityPublicKey()
-	if err != nil {
-		return err
-	}
-	ourIDPubKey, err := hex.DecodeString(ourRawIDPubKey)
-	if err != nil {
-		return err
-	}
-
 	drMessage := dr.Message{
 		Header: dr.MessageHeader{
 			DH: func() dr.Key {
@@ -120,6 +115,24 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	}
 
 	logger.Debugf("double ratchet message %s", drMessage)
+
+	// make sure chat exist
+	chat, err := c.chatStorage.GetChat(msg.Sender)
+	if err != nil {
+		return err
+	}
+	if chat == nil {
+		if err := c.chatStorage.CreateChat(msg.Sender); err != nil {
+			return err
+		}
+	}
+	chat, err = c.chatStorage.GetChat(msg.Sender)
+	if err != nil {
+		return err
+	}
+	if chat == nil {
+		return errors.New("chat must exist at this point")
+	}
 
 	// handle chat init message
 	if isChatInitMessage(msg) {
@@ -156,10 +169,10 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		if err != nil {
 			return err
 		}
-		signedPreKey.PrivateKey = *signedPreKeyPriv
 		if signedPreKeyPriv == nil {
 			return errors.New("chat init - failed to fetch signed pre key")
 		}
+		signedPreKey.PrivateKey = *signedPreKeyPriv
 
 		// fetch shared secret based on chat init params
 		sharedSecret, err := c.sharedSecStorage.Get(msg.Sender, msg.UsedSharedSecret)
@@ -172,23 +185,19 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 			logger.Debug("found shared secret for chat init params - decrypting")
 
-			decryptedMsg, err := c.decryptMessage(drMessage, sharedSecret.X3dhSS, &signedPreKey)
+			decryptedMsg, err := c.decryptMessage(drMessage, sharedSecret.GetX3dhSecret(), &signedPreKey)
 			if err != nil {
 				return err
 			}
 			// convert proto plain message to decrypted message
 			dbMessage, err := protoPlainMsgToMessage(&decryptedMsg)
+			dbMessage.Status = db.StatusPersisted
 			dbMessage.Sender = sender
+			dbMessage.Received = true
 			if err != nil {
 				return err
 			}
-			return c.messageDB.PersistReceivedMessage(msg.Sender, dbMessage)
-		}
-
-		// fetch used one time pre key
-		oneTimePreKeyPriv, err := c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
-		if err != nil {
-			return err
+			return chat.PersistMessage(dbMessage)
 		}
 
 		x3dhEphemeralKey, err := byteSliceTox3dhPub(msg.EphemeralKey)
@@ -208,12 +217,21 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		}
 
 		// derive shared x3dh secret
-		sharedX3dhSec, err := c.x3dh.SecretFromRemote(x3dh.ProtocolInitialisation{
+		x3dhInit := x3dh.ProtocolInitialisation{
 			RemoteIdKey:        remoteChatIdKey,
 			RemoteEphemeralKey: x3dhEphemeralKey,
-			MyOneTimePreKey:    oneTimePreKeyPriv,
 			MySignedPreKey:     signedPreKey.PrivateKey,
-		})
+		}
+
+		// fetch used one time pre key if we sent one
+		if len(msg.OneTimePreKey) != 0 {
+			x3dhInit.MyOneTimePreKey, err = c.oneTimePreKeyStorage.Cut(msg.OneTimePreKey)
+			if err != nil {
+				return err
+			}
+		}
+
+		sharedX3dhSec, err := c.x3dh.SecretFromRemote(x3dhInit)
 		if err != nil {
 			return err
 		}
@@ -246,27 +264,20 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return errors.New("invalid used shared secret id")
 		}
 
-		// generate shared secret id
-		ssID, err := sharedSecretID(sender, ourIDPubKey, plainMsg.SharedSecretBaseID)
-		if err != nil {
-			return err
-		}
-
 		// make sure creation date is valid
 		if plainMsg.SharedSecretCreationDate == 0 {
 			return errors.New("abort chat initialization - invalid shared secret creation date")
 		}
-
 		// persist shared secret in accepted mode
-		err = c.sharedSecStorage.Put(sender, db.SharedSecret{
-			X3dhSS: sharedX3dhSec,
+		ss := db.SharedSecret{
 			// safe as accepted since the sender initialized the chat
 			Accepted:  true,
 			CreatedAt: time.Unix(plainMsg.SharedSecretCreationDate, 0),
-			ID:        ssID,
-			// IDInitParams: idInitParams,
-			BaseID: plainMsg.SharedSecretBaseID,
-		})
+			ID:        plainMsg.SharedSecretBaseID,
+			Partner:   sender,
+		}
+		ss.SetX3dhSecret(sharedX3dhSec)
+		err = c.sharedSecStorage.Put(ss)
 		if err != nil {
 			return err
 		}
@@ -274,11 +285,13 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		// convert plain protobuf message to database message
 		dbMessage, err := protoPlainMsgToMessage(&plainMsg)
 		dbMessage.Sender = sender
+		dbMessage.Status = db.StatusPersisted
+		dbMessage.Received = true
 		if err != nil {
 			return err
 		}
 
-		return c.messageDB.PersistReceivedMessage(sender, dbMessage)
+		return chat.PersistMessage(dbMessage)
 
 	}
 
@@ -302,27 +315,30 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	}
 
 	// decrypt message with fetched x3dh shared secret
-	plainMsg, err := c.decryptMessage(drMessage, sharedSec.X3dhSS, nil)
+	plainMsg, err := c.decryptMessage(drMessage, sharedSec.GetX3dhSecret(), nil)
 	if err != nil {
 		return err
 	}
 
 	// convert proto message to database message
 	dbMessage, err := protoPlainMsgToMessage(&plainMsg)
+	dbMessage.Status = db.StatusPersisted
 	dbMessage.Sender = sender
+	dbMessage.Received = true
 	if err != nil {
 		return err
 	}
 
 	// persist message
-	if err := c.messageDB.PersistReceivedMessage(msg.Sender, dbMessage); err != nil {
+	if err := chat.PersistMessage(dbMessage); err != nil {
 		return err
 	}
 
 	// if the decryption didn't fail we want to mark
 	// the shared secret as accepted
 	if !sharedSec.Accepted {
-		return c.sharedSecStorage.Accept(msg.Sender, sharedSec)
+		fmt.Println("going to accept shared secret")
+		return c.sharedSecStorage.Accept(sharedSec)
 	}
 
 	return nil

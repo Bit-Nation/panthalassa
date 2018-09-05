@@ -19,7 +19,7 @@ func TestHashInvalidIdPublicKey(t *testing.T) {
 
 func TestHashInvalidPublicKey(t *testing.T) {
 	k := PreKey{}
-	k.identityPublicKey = [32]byte{1}
+	k.IdentityPublicKey = [32]byte{1}
 	_, err := k.hash()
 	require.EqualError(t, err, "got invalid pre key public key")
 }
@@ -39,7 +39,7 @@ func TestSign(t *testing.T) {
 
 	require.Nil(t, k.Sign(*km))
 
-	valid, err := k.VerifySignature(k.identityPublicKey[:])
+	valid, err := k.VerifySignature(k.IdentityPublicKey[:])
 	require.Nil(t, err)
 	require.True(t, valid)
 
@@ -50,33 +50,33 @@ func TestPreKey_ToProtobufAndBack(t *testing.T) {
 	now := time.Now()
 
 	k := PreKey{
-		identityPublicKey: [32]byte{1},
-		signature:         []byte{2},
-		time:              now,
+		IdentityPublicKey: [32]byte{1},
+		Signature:         []byte{2},
+		Time:              now.Unix(),
 	}
 	k.PublicKey = [32]byte{3}
 
 	pp, err := k.ToProtobuf()
 	require.Nil(t, err)
 
-	require.Equal(t, hex.EncodeToString(k.identityPublicKey[:]), hex.EncodeToString(pp.IdentityKey))
-	require.Equal(t, k.signature, pp.IdentityKeySignature)
-	require.Equal(t, k.time.Unix(), pp.TimeStamp)
+	require.Equal(t, hex.EncodeToString(k.IdentityPublicKey[:]), hex.EncodeToString(pp.IdentityKey))
+	require.Equal(t, k.Signature, pp.IdentityKeySignature)
+	require.Equal(t, k.Time, pp.TimeStamp)
 	require.Equal(t, hex.EncodeToString(k.PublicKey[:]), hex.EncodeToString(pp.Key))
 
 	k, err = FromProtoBuf(pp)
 	require.Nil(t, err)
 
-	require.Equal(t, hex.EncodeToString(pp.IdentityKey), hex.EncodeToString(k.identityPublicKey[:]))
-	require.Equal(t, pp.IdentityKeySignature, k.signature)
-	require.Equal(t, pp.TimeStamp, k.time.Unix())
+	require.Equal(t, hex.EncodeToString(pp.IdentityKey), hex.EncodeToString(k.IdentityPublicKey[:]))
+	require.Equal(t, pp.IdentityKeySignature, k.Signature)
+	require.Equal(t, pp.TimeStamp, k.Time)
 	require.Equal(t, hex.EncodeToString(pp.Key), hex.EncodeToString(k.PublicKey[:]))
 
 }
 
 func TestPreKey_OlderThan(t *testing.T) {
 	k := PreKey{
-		time: time.Now().Truncate(time.Second * 10),
+		Time: time.Now().Truncate(time.Second * 10).Unix(),
 	}
 	require.False(t, k.OlderThan(time.Second*5))
 }

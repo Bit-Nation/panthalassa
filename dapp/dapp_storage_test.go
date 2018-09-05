@@ -2,14 +2,15 @@ package dapp
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
 	uiApi "github.com/Bit-Nation/panthalassa/uiapi"
+	storm "github.com/asdine/storm"
 	bolt "github.com/coreos/bbolt"
 	require "github.com/stretchr/testify/require"
 	ed25519 "golang.org/x/crypto/ed25519"
@@ -23,9 +24,21 @@ func (u testUpstream) Send(data string) {
 	u.send(data)
 }
 
+func createStorm() *storm.DB {
+	dbPath, err := filepath.Abs(os.TempDir() + "/" + strconv.Itoa(int(time.Now().UnixNano())))
+	if err != nil {
+		panic(err)
+	}
+	db, err := storm.Open(dbPath)
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
 func TestBoltStorage_SaveDApp(t *testing.T) {
 
-	db := createDB()
+	db := createStorm()
 
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
@@ -63,25 +76,9 @@ func TestBoltStorage_SaveDApp(t *testing.T) {
 	// persist dApp
 	require.Nil(t, dAppStorage.SaveDApp(dAppJson))
 
-	err = db.View(func(tx *bolt.Tx) error {
-
-		// dApp storage
-		dAppStorage := tx.Bucket(dAppStoreBucketName)
-		require.NotNil(t, dAppStorage)
-
-		// raw DApp
-		rawDApp := dAppStorage.Get(pub)
-		require.NotNil(t, rawDApp)
-
-		// make sure that the dApps are the same
-		// since we persisted the whole Dapp
-		dApp := Data{}
-		require.Nil(t, json.Unmarshal(rawDApp, &dApp))
-		require.Equal(t, dAppJson, dApp)
-
-		return nil
-
-	})
+	var dApps []Data
+	require.Nil(t, db.All(&dApps))
+	require.Equal(t, 1, len(dApps))
 	require.Nil(t, err)
 	select {
 	case <-called:
@@ -94,7 +91,7 @@ func TestBoltStorage_SaveDApp(t *testing.T) {
 func TestBoltStorage_SaveDAppInvalidSignature(t *testing.T) {
 
 	dAppStorage := BoltDAppStorage{
-		db: createDB(),
+		db: createStorm(),
 	}
 
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
@@ -129,7 +126,7 @@ func TestBoltStorage_SaveDAppInvalidSignature(t *testing.T) {
 
 func TestBoltStorage_All(t *testing.T) {
 
-	db := createDB()
+	db := createStorm()
 
 	dAppStorage := BoltDAppStorage{
 		db: db,
@@ -173,7 +170,7 @@ func TestBoltStorage_All(t *testing.T) {
 
 func TestBoltDAppStorage_Get(t *testing.T) {
 
-	db := createDB()
+	db := createStorm()
 
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.Nil(t, err)
@@ -209,6 +206,7 @@ func TestBoltDAppStorage_Get(t *testing.T) {
 
 	fetchedDAppData, err := dAppStorage.Get(pub)
 	require.Nil(t, err)
+	require.NotNil(t, fetchedDAppData)
 
 	// make sure the persisted and the fetched DApp's are the same
 	require.Equal(t, dAppJson, *fetchedDAppData)

@@ -29,13 +29,13 @@ func (v *SV) String() string {
 
 // JSON Representation of published DApp
 type Data struct {
-	Name           map[string]string `json:"name"`
-	UsedSigningKey ed25519.PublicKey `json:"used_signing_key"`
-	Code           []byte            `json:"code"`
-	Image          []byte            `json:"image"`
-	Signature      []byte            `json:"signature"`
-	Engine         SV                `json:"engine"`
-	Version        int               `json:"version"`
+	Name           map[string]string
+	UsedSigningKey ed25519.PublicKey `storm:"id"`
+	Code           []byte
+	Image          []byte
+	Signature      []byte
+	Engine         SV
+	Version        int
 }
 
 // hash the published DApp

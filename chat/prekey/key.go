@@ -20,15 +20,15 @@ var (
 
 type PreKey struct {
 	x3dh.KeyPair
-	identityPublicKey [32]byte
-	signature         []byte
-	time              time.Time
+	IdentityPublicKey [32]byte
+	Signature         []byte
+	// unix timestamp in second
+	Time int64
 }
 
 func (p *PreKey) hash() (mh.Multihash, error) {
-
 	// make sure it has the right size
-	if p.identityPublicKey == [32]byte{} {
+	if p.IdentityPublicKey == [32]byte{} {
 		return nil, errors.New("got invalid identity key public key")
 	}
 
@@ -37,10 +37,10 @@ func (p *PreKey) hash() (mh.Multihash, error) {
 	}
 
 	b := bytes.NewBuffer(p.PublicKey[:])
-	b.Write(p.identityPublicKey[:])
+	b.Write(p.IdentityPublicKey[:])
 
-	timeStamp := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(timeStamp, p.time.Unix())
+	timeStamp := make([]byte, 8)
+	n := binary.PutVarint(timeStamp, p.Time)
 
 	b.Write(timeStamp[:n])
 	return mh.Sum(b.Bytes(), mh.SHA3_256, -1)
@@ -67,7 +67,7 @@ func (p *PreKey) Sign(km km.KeyManager) error {
 		return errors.New("got invalid pre key public key")
 	}
 
-	copy(p.identityPublicKey[:], rawIdPubKey[:32])
+	copy(p.IdentityPublicKey[:], rawIdPubKey[:32])
 
 	hash, err := p.hash()
 	if err != nil {
@@ -75,7 +75,7 @@ func (p *PreKey) Sign(km km.KeyManager) error {
 	}
 
 	// attach the signature to the pre key
-	p.signature, err = km.IdentitySign(hash)
+	p.Signature, err = km.IdentitySign(hash)
 	if err != nil {
 		return err
 	}
@@ -89,18 +89,18 @@ func (p PreKey) VerifySignature(publicKey ed25519.PublicKey) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if len(p.identityPublicKey) != 32 {
+	if len(p.IdentityPublicKey) != 32 {
 		return false, InvalidIdentityKey
 	}
-	return ed25519.Verify(publicKey, hash, p.signature), nil
+	return ed25519.Verify(publicKey, hash, p.Signature), nil
 }
 
 func (p PreKey) ToProtobuf() (pb.PreKey, error) {
 	return pb.PreKey{
 		Key:                  p.PublicKey[:],
-		IdentityKey:          p.identityPublicKey[:],
-		IdentityKeySignature: p.signature,
-		TimeStamp:            p.time.Unix(),
+		IdentityKey:          p.IdentityPublicKey[:],
+		IdentityKeySignature: p.Signature,
+		TimeStamp:            p.Time,
 	}, nil
 }
 
@@ -112,15 +112,16 @@ func FromProtoBuf(preKey pb.PreKey) (PreKey, error) {
 		return PreKey{}, InvalidIdentityKey
 	}
 	p := PreKey{
-		signature: preKey.IdentityKeySignature,
-		time:      time.Unix(preKey.TimeStamp, 0),
+		Signature: preKey.IdentityKeySignature,
+		Time:      preKey.TimeStamp,
 	}
 	copy(p.PublicKey[:], preKey.Key[:32])
-	copy(p.identityPublicKey[:], preKey.IdentityKey[:32])
+	copy(p.IdentityPublicKey[:], preKey.IdentityKey[:32])
 	return p, nil
 }
 
 // check if pre key is older than given date
 func (p PreKey) OlderThan(past time.Duration) bool {
-	return p.time.After(time.Now().Truncate(past))
+	t := time.Unix(p.Time, 0)
+	return t.After(time.Now().Truncate(past))
 }
