@@ -1,10 +1,9 @@
-dist: precise
-sudo: required
+os: osx
 
 language: go
 
 go:
-  - "1.11.x"
+  - "1.10.x"
 
 script:
   - make deps
