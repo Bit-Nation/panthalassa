@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -24,7 +25,7 @@ func (u testUpstream) Send(data string) {
 }
 
 func createStorm() *storm.DB {
-	dbPath, err := filepath.Abs(os.TempDir() + "/" + time.Now().String())
+	dbPath, err := filepath.Abs(os.TempDir() + "/" + strconv.Itoa(int(time.Now().UnixNano())))
 	if err != nil {
 		panic(err)
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 )
 
 func createStorm() *storm.DB {
-	dbPath, err := filepath.Abs(os.TempDir() + "/" + time.Now().String())
+	dbPath, err := filepath.Abs(os.TempDir() + "/" + strconv.Itoa(int(time.Now().UnixNano())))
 	if err != nil {
 		panic(err)
 	}

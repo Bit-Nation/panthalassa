@@ -1,6 +1,11 @@
 package chat
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
+	"time"
+
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
@@ -9,11 +14,8 @@ import (
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	"github.com/asdine/storm"
+	storm "github.com/asdine/storm"
 	ed25519 "golang.org/x/crypto/ed25519"
-	"os"
-	"path/filepath"
-	"time"
 )
 
 type testMessageStorage struct {
@@ -189,7 +191,7 @@ func (s *testMessageStorage) PersistDAppMessage(partner ed25519.PublicKey, msg d
 }
 
 func createStorm() *storm.DB {
-	dbPath, err := filepath.Abs(os.TempDir() + "/" + time.Now().String())
+	dbPath, err := filepath.Abs(os.TempDir() + "/" + strconv.Itoa(int(time.Now().UnixNano())))
 	if err != nil {
 		panic(err)
 	}
