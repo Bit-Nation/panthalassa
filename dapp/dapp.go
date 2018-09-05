@@ -11,7 +11,7 @@ import (
 	dbModule "github.com/Bit-Nation/panthalassa/dapp/module/db"
 	dAppRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/dapp"
 	msgRenderer "github.com/Bit-Nation/panthalassa/dapp/module/renderer/message"
-	bolt "github.com/coreos/bbolt"
+	storm "github.com/asdine/storm"
 	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
 	duktape "gopkg.in/olebedev/go-duktape.v3"
@@ -61,7 +61,7 @@ func (d *DApp) CallFunction(id uint, args string) error {
 }
 
 // will start a DApp based on the given config file
-func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *Data, timeOut time.Duration, db *bolt.DB) (*DApp, error) {
+func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *Data, timeOut time.Duration, db *storm.DB) (*DApp, error) {
 
 	// check if app is valid
 	valid, err := app.VerifySignature()

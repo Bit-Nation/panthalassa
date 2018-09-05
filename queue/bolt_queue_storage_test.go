@@ -1,22 +1,34 @@
 package queue
 
 import (
-	"encoding/json"
-	"errors"
-
-	"github.com/coreos/bbolt"
-	"github.com/stretchr/testify/require"
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
+	"time"
+
+	storm "github.com/asdine/storm"
+	require "github.com/stretchr/testify/require"
 )
+
+func createStorm() *storm.DB {
+	dbPath, err := filepath.Abs(os.TempDir() + "/" + strconv.Itoa(int(time.Now().UnixNano())))
+	if err != nil {
+		panic(err)
+	}
+	db, err := storm.Open(dbPath)
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
 
 func TestBoltQueueStorage_PersistAndDeleteJob(t *testing.T) {
 
-	boltDB := createDB()
-
+	boltDB := createStorm()
 	s := NewStorage(boltDB)
 
 	jobToPersist := Job{
-		ID:   "my_id",
 		Type: "SEND_MONEY",
 		Data: map[string]interface{}{
 			"key": "value",
@@ -24,79 +36,44 @@ func TestBoltQueueStorage_PersistAndDeleteJob(t *testing.T) {
 	}
 
 	// persist job
-	err := s.PersistJob(jobToPersist)
+	err := s.PersistJob(&jobToPersist)
 	require.Nil(t, err)
-
-	// check if job exist
-	err = s.db.View(func(tx *bolt.Tx) error {
-
-		// queue bucket
-		jobBucket := tx.Bucket(queueStorageBucketName)
-		if err != nil {
-			return err
-		}
-
-		rawJob := jobBucket.Get([]byte("my_id"))
-		if rawJob == nil {
-			return errors.New("failed to fetch job")
-		}
-
-		job := Job{}
-		require.Nil(t, json.Unmarshal(rawJob, &job))
-
-		require.Equal(t, jobToPersist, job)
-
-		return nil
-
-	})
-	require.Nil(t, err)
+	var jobs []Job
+	require.Nil(t, s.db.All(&jobs))
+	require.Equal(t, 1, len(jobs))
 
 	// delete job
-	require.Nil(t, s.DeleteJob("my_id"))
-	err = s.db.View(func(tx *bolt.Tx) error {
-
-		// queue bucket
-		jobBucket := tx.Bucket(queueStorageBucketName)
-		if err != nil {
-			return err
-		}
-
-		rawJob := jobBucket.Get([]byte("my_id"))
-		require.Nil(t, rawJob)
-
-		return nil
-
-	})
-	require.Nil(t, err)
+	require.Nil(t, s.DeleteJob(jobs[0]))
+	require.Nil(t, s.db.All(&jobs))
+	require.Equal(t, 0, len(jobs))
 
 }
 
 func TestBoltQueueStorage_Map(t *testing.T) {
 
-	boltDB := createDB()
-
-	s := NewStorage(boltDB)
+	st := createStorm()
+	s := NewStorage(st)
 
 	// persist first job
 	firstJob := Job{
-		ID:   "job_id_first",
+		ID:   1,
 		Type: "SEND_MONEY",
 		Data: map[string]interface{}{
 			"key": "value",
 		},
 	}
-	err := s.PersistJob(firstJob)
+	err := s.PersistJob(&firstJob)
 	require.Nil(t, err)
 
 	// persist second job
 	secondJob := Job{
-		ID:   "job_id_second",
+		ID:   2,
 		Type: "SEND_MONEY",
 		Data: map[string]interface{}{
 			"key": "value",
 		},
 	}
-	err = s.PersistJob(secondJob)
+	err = s.PersistJob(&secondJob)
 	require.Nil(t, err)
 
 	stack := make(chan Job, 2)

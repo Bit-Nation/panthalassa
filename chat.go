@@ -42,12 +42,15 @@ func AllChats() (string, error) {
 		return "", err
 	}
 
-	chatsStr := []string{}
+	chatsRep := []map[string]interface{}{}
 	for _, chat := range chats {
-		chatsStr = append(chatsStr, hex.EncodeToString(chat))
+		chatsRep = append(chatsRep, map[string]interface{}{
+			"chat":            chat.Partner,
+			"unread_messages": chat.UnreadMessages,
+		})
 	}
 
-	chatList, err := json.Marshal(chatsStr)
+	chatList, err := json.Marshal(chatsRep)
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +103,7 @@ func Messages(partner string, startStr string, amount int) (string, error) {
 			}
 		}
 		plainMessages = append(plainMessages, map[string]interface{}{
-			"db_id":      strconv.FormatInt(msg.DatabaseID, 10),
+			"db_id":      strconv.FormatInt(msg.UniqueMsgID, 10),
 			"content":    string(msg.Message),
 			"created_at": msg.CreatedAt,
 			"received":   msg.Received,
@@ -115,5 +118,24 @@ func Messages(partner string, startStr string, amount int) (string, error) {
 	}
 
 	return string(messages), nil
+
+}
+
+func MarkMessagesAsRead(partner string) error {
+
+	// make sure panthalassa has been started
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+
+	partnerByte, err := hex.DecodeString(partner)
+	if err != nil {
+		return err
+	}
+	if len(partnerByte) != 32 {
+		return errors.New("partner must have length of 32 bytes")
+	}
+
+	return panthalassaInstance.chat.MarkMessagesAsRead(partnerByte)
 
 }

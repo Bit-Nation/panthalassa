@@ -1,13 +1,17 @@
 package db
 
 import (
-	"errors"
-
-	bolt "github.com/coreos/bbolt"
+	storm "github.com/asdine/storm"
+	sq "github.com/asdine/storm/q"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-var dAppDBBucketName = []byte("dapp_db_bucket")
+type Record struct {
+	ID             int               `storm:"id,increment"`
+	DAppSigningKey ed25519.PublicKey `storm:"index"`
+	Key            []byte            `storm:"index"`
+	Value          []byte
+}
 
 type Storage interface {
 	Put(key, value []byte) error
@@ -17,114 +21,59 @@ type Storage interface {
 }
 
 type BoltStorage struct {
-	db             *bolt.DB
+	db             *storm.DB
 	dAppSigningKey ed25519.PublicKey
 }
 
-func NewBoltStorage(db *bolt.DB, signingKey ed25519.PublicKey) (*BoltStorage, error) {
+func NewBoltStorage(db *storm.DB, signingKey ed25519.PublicKey) (*BoltStorage, error) {
 	return &BoltStorage{
 		db:             db,
 		dAppSigningKey: signingKey,
 	}, nil
 }
 
-func fetchDAppDB(tx *bolt.Tx, dAppSigningKey ed25519.PublicKey) (*bolt.Bucket, error) {
-
-	// make sure dAppSigningKey
-	if len(dAppSigningKey) != 32 {
-		return nil, errors.New("dApp signing key is too short")
-	}
-
-	// dApp bucket
-	dAppDB, err := tx.CreateBucketIfNotExists(dAppDBBucketName)
-	if err != nil {
-		return nil, err
-	}
-
-	return dAppDB.CreateBucketIfNotExists(dAppSigningKey)
-
-}
-
-func fetchDAppDBView(tx *bolt.Tx, dAppSigningKey ed25519.PublicKey) (*bolt.Bucket, error) {
-
-	// make sure dAppSigningKey
-	if len(dAppSigningKey) != 32 {
-		return nil, errors.New("dApp signing key is too short")
-	}
-
-	// dApp bucket
-	dAppDB := tx.Bucket(dAppDBBucketName)
-	if dAppDB == nil {
-		return nil, nil
-	}
-
-	return dAppDB.Bucket(dAppSigningKey), nil
-
-}
-
 func (s *BoltStorage) Put(key, value []byte) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-
-		// dApp bucket
-		dAppDB, err := fetchDAppDB(tx, s.dAppSigningKey)
-		if err != nil {
-			return err
-		}
-
-		return dAppDB.Put(key, value)
-
+	return s.db.Save(&Record{
+		DAppSigningKey: s.dAppSigningKey,
+		Key:            key,
+		Value:          value,
 	})
 }
 
 func (s *BoltStorage) Get(key []byte) ([]byte, error) {
-	var value []byte
-	err := s.db.View(func(tx *bolt.Tx) error {
+	q := s.db.Select(sq.And(
+		sq.Eq("Key", key),
+		sq.Eq("DAppSigningKey", s.dAppSigningKey),
+	))
 
-		// dApp bucket
-		dAppDB, err := fetchDAppDBView(tx, s.dAppSigningKey)
-		if err != nil {
-			return err
-		}
-		if dAppDB == nil {
-			return nil
-		}
-
-		value = dAppDB.Get(key)
-		return nil
-
-	})
-	return value, err
+	var r Record
+	return r.Value, q.First(&r)
 }
 
 func (s *BoltStorage) Has(key []byte) (bool, error) {
-	exist := false
-	err := s.db.View(func(tx *bolt.Tx) error {
 
-		// dApp bucket
-		dAppDB, err := fetchDAppDBView(tx, s.dAppSigningKey)
-		if err != nil {
-			return err
-		}
-		if dAppDB == nil {
-			return nil
-		}
+	q := s.db.Select(sq.And(
+		sq.Eq("Key", key),
+		sq.Eq("DAppSigningKey", s.dAppSigningKey),
+	))
 
-		if dAppDB.Get(key) != nil {
-			exist = true
-		}
-		return nil
+	amount, err := q.Count(&Record{})
+	if err != nil {
+		return false, err
+	}
 
-	})
-	return exist, err
+	if amount > 0 {
+		return true, nil
+	}
+
+	return false, nil
+
 }
 
 func (s *BoltStorage) Delete(key []byte) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		// dApp bucket
-		dAppDB, err := fetchDAppDB(tx, s.dAppSigningKey)
-		if err != nil {
-			return err
-		}
-		return dAppDB.Delete(key)
-	})
+	q := s.db.Select(sq.And(
+		sq.Eq("Key", key),
+		sq.Eq("DAppSigningKey", s.dAppSigningKey),
+	))
+	return q.Delete(&Record{})
 }

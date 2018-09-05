@@ -14,11 +14,14 @@ import (
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	db "github.com/Bit-Nation/panthalassa/db"
+	documents "github.com/Bit-Nation/panthalassa/documents"
+	dyncall "github.com/Bit-Nation/panthalassa/dyncall"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	p2p "github.com/Bit-Nation/panthalassa/p2p"
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
+	"github.com/asdine/storm"
 	bolt "github.com/coreos/bbolt"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
@@ -67,7 +70,18 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	if err != nil {
 		return err
 	}
-	dbInstance, err := db.Open(dbPath, 0644, &bolt.Options{Timeout: time.Second})
+
+	// migrate
+	migrations := []db.Migration{
+		&db.BoltToStormMigration{
+			Km: km,
+		},
+	}
+	if err := db.Migrate(dbPath, migrations); err != nil {
+		return err
+	}
+
+	dbInstance, err := storm.Open(dbPath, storm.BoltOptions(0644, &bolt.Options{Timeout: time.Second}))
 	if err != nil {
 		return err
 	}
@@ -87,7 +101,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	uiApi := uiapi.New(uiUpstream)
 
 	// open message storage
-	messageStorage := db.NewChatMessageStorage(dbInstance, []func(db.MessagePersistedEvent){}, km)
+	chatStorage := db.NewChatStorage(dbInstance, []func(db.MessagePersistedEvent){}, km)
 
 	// queue instance
 	jobStorage := queue.NewStorage(dbInstance)
@@ -95,7 +109,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// chat
 	chatInstance, err := chat.NewChat(chat.Config{
-		MessageDB:            messageStorage,
+		ChatStorage:          chatStorage,
 		Backend:              backend,
 		SharedSecretDB:       db.NewBoltSharedSecretStorage(dbInstance, km),
 		KM:                   km,
@@ -116,8 +130,37 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// dApp registry
 	dAppRegistry, err := dAppReg.NewDAppRegistry(p2pNetwork.Host, dAppReg.Config{
 		EthWSEndpoint: config.EthWsEndpoint,
-	}, deviceApi, km, dAppStorage, messageStorage, dbInstance)
+	}, deviceApi, km, dAppStorage, chatStorage)
 	if err != nil {
+		return err
+	}
+
+	// dyncall registry
+	dcr := dyncall.New()
+
+	docStorage := documents.NewStorage(dbInstance, km)
+
+	// register document all call
+	docAllCall := documents.NewDocumentAllCall(docStorage)
+	if err := dcr.Register(docAllCall); err != nil {
+		return err
+	}
+
+	// create document all call
+	docCreateCall := documents.NewDocumentCreateCall(docStorage)
+	if err := dcr.Register(docCreateCall); err != nil {
+		return err
+	}
+
+	// create document update call
+	docUpdateCall := documents.NewDocumentUpdateCall(docStorage)
+	if err := dcr.Register(docUpdateCall); err != nil {
+		return err
+	}
+
+	// create document delete call
+	docDeleteCall := documents.NewDocumentDeleteCall(docStorage)
+	if err := dcr.Register(docDeleteCall); err != nil {
 		return err
 	}
 
@@ -131,6 +174,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		chat:        chatInstance,
 		db:          dbInstance,
 		dAppStorage: dAppStorage,
+		dyncall:     dcr,
 	}
 
 	return nil
@@ -458,5 +502,28 @@ func DApps() (string, error) {
 	// marshal dapps
 	rawDApps, err := json.Marshal(dApps)
 	return string(rawDApps), err
+
+}
+
+func Call(command, payload string) (string, error) {
+
+	var goPayload map[string]interface{}
+
+	if err := json.Unmarshal([]byte(payload), &goPayload); err != nil {
+		return "", err
+	}
+
+	if panthalassaInstance == nil {
+		return "", errors.New("you have to start panthalassa first")
+	}
+
+	res, err := panthalassaInstance.dyncall.Call(command, goPayload)
+	if err != nil {
+		return "", err
+	}
+
+	response, err := json.Marshal(res)
+
+	return string(response), err
 
 }

@@ -13,9 +13,9 @@ import (
 
 // processor that submits messages from the queue to the backend
 type SubmitMessagesProcessor struct {
-	chat  *Chat
-	msgDB db.ChatMessageStorage
-	queue *queue.Queue
+	chat   *Chat
+	chatDB db.ChatStorage
+	queue  *queue.Queue
 }
 
 func (p *SubmitMessagesProcessor) Type() string {
@@ -98,8 +98,13 @@ func (p *SubmitMessagesProcessor) Process(j queue.Job) error {
 		return err
 	}
 
+	chat, err := p.chatDB.GetChat(partner)
+	if err != nil {
+		return err
+	}
+
 	// fetch message
-	msg, err := p.msgDB.GetMessage(partner, messageID)
+	msg, err := chat.GetMessage(messageID)
 	if err != nil {
 		return err
 	}

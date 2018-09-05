@@ -5,9 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sync"
-	"time"
 
 	"strconv"
 
@@ -16,7 +14,6 @@ import (
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	bpb "github.com/Bit-Nation/protobuffers"
 	x3dh "github.com/Bit-Nation/x3dh"
-	uuid "github.com/satori/go.uuid"
 )
 
 // handles a set of protobuf messages
@@ -102,24 +99,27 @@ func (c *Chat) oneTimePreKeysHandler(req *bpb.BackendMessage_Request) (*bpb.Back
 
 func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 
+	// if the message was received we want to
+	// to switch the chat boolean flag (UnreadMessages) to true
+	// and tell the client that we got new unread messages
+	if e.Message.Received {
+		if err := c.chatStorage.UnreadMessages(e.Chat); err != nil {
+			logger.Error(err)
+			return
+		}
+		c.uiApi.Send("CHAT:UNREAD", map[string]interface{}{
+			"chat": e.Chat.Partner,
+		})
+	}
+
 	// when the handled message was not received we would like to send it
 	if !e.Message.Received {
-		// Generate a unique id string for the job
-		var idStr string
-		id, err := uuid.NewV4()
-		if err != nil {
-			logger.Error(err)
-			idStr = fmt.Sprint(time.Now().UnixNano())
-		} else {
-			idStr = id.String()
-		}
 		// add to queue
-		err = c.queue.AddJob(queue.Job{
-			ID:   idStr,
+		err := c.queue.AddJob(queue.Job{
 			Type: "MESSAGE:SUBMIT",
 			Data: map[string]interface{}{
-				"partner":       e.Partner,
-				"db_message_id": e.DBMessageID,
+				"partner":       e.Chat.Partner,
+				"db_message_id": e.Message.UniqueMsgID,
 			},
 		})
 		if err != nil {
@@ -139,10 +139,10 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 
 	if e.Message.Status == db.StatusPersisted {
 		c.uiApi.Send("MESSAGE:PERSISTED", map[string]interface{}{
-			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
+			"db_id":      strconv.FormatInt(e.Message.UniqueMsgID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"chat":       hex.EncodeToString(e.Partner),
+			"chat":       hex.EncodeToString(e.Chat.Partner),
 			"received":   e.Message.Received,
 			"dapp":       dapp,
 		})
@@ -150,10 +150,10 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 
 	if e.Message.Status == db.StatusDelivered {
 		c.uiApi.Send("MESSAGE:DELIVERED", map[string]interface{}{
-			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
+			"db_id":      strconv.FormatInt(e.Message.UniqueMsgID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"chat":       hex.EncodeToString(e.Partner),
+			"chat":       hex.EncodeToString(e.Chat.Partner),
 			"received":   e.Message.Received,
 			"dapp":       dapp,
 		})
@@ -161,10 +161,10 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 
 	if e.Message.Received {
 		c.uiApi.Send("MESSAGE:RECEIVED", map[string]interface{}{
-			"db_id":      strconv.FormatInt(e.DBMessageID, 10),
+			"db_id":      strconv.FormatInt(e.Message.UniqueMsgID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"chat":       hex.EncodeToString(e.Partner),
+			"chat":       hex.EncodeToString(e.Chat.Partner),
 			"received":   e.Message.Received,
 			"dapp":       dapp,
 		})

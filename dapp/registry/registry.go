@@ -23,7 +23,7 @@ import (
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	db "github.com/Bit-Nation/panthalassa/db"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
-	bolt "github.com/coreos/bbolt"
+	storm "github.com/asdine/storm"
 	log "github.com/ipfs/go-log"
 	host "github.com/libp2p/go-libp2p-host"
 	net "github.com/libp2p/go-libp2p-net"
@@ -58,8 +58,8 @@ type Registry struct {
 	api                *api.API
 	km                 *keyManager.KeyManager
 	dAppDB             dapp.Storage
-	msgDB              db.ChatMessageStorage
-	db                 *bolt.DB
+	msgDB              db.ChatStorage
+	db                 *storm.DB
 	addDAppChan        chan *dapp.DApp
 	fetchDAppChan      chan fetchDAppChanStr
 	addDevStreamChan   chan addDevStreamChanStr
@@ -71,7 +71,7 @@ type Config struct {
 }
 
 // create new dApp registry
-func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage, msgDB db.ChatMessageStorage, db *bolt.DB) (*Registry, error) {
+func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyManager, dAppDB dapp.Storage, msgDB db.ChatStorage) (*Registry, error) {
 
 	r := &Registry{
 		host:               h,
@@ -81,7 +81,6 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 		km:                 km,
 		dAppDB:             dAppDB,
 		msgDB:              msgDB,
-		db:                 db,
 		addDAppChan:        make(chan *dapp.DApp),
 		fetchDAppChan:      make(chan fetchDAppChanStr),
 		addDevStreamChan:   make(chan addDevStreamChanStr),

@@ -59,7 +59,7 @@ func TestRegistry_StartDApp(t *testing.T) {
 		},
 	}
 
-	reg, err := NewDAppRegistry(nil, Config{}, nil, km, &dAppStorage, nil, nil)
+	reg, err := NewDAppRegistry(nil, Config{}, nil, km, &dAppStorage, nil)
 	require.Nil(t, err)
 	require.Nil(t, reg.StartDApp(signingKey, time.Second*2))
 

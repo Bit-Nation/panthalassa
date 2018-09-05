@@ -7,6 +7,7 @@ proto:
 deps:
 	go get github.com/whyrusleeping/gx
 	go get github.com/whyrusleeping/gx-go
+	cd ${GOPATH}/src/github.com/whyrusleeping/gx-go/;git checkout c45da214e510e25e0f3caf11d35dcdb7a463a8dc;go build -a;go install;gx-go -v
 	go get github.com/mattn/goveralls
 	go get -u github.com/kardianos/govendor
 	go get github.com/stretchr/testify

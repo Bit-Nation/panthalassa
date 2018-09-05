@@ -14,6 +14,10 @@ import (
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
+func (c *Chat) MarkMessagesAsRead(partner ed25519.PublicKey) error {
+	return c.chatStorage.ReadMessages(partner)
+}
+
 type drDhPair struct {
 	x3dhPair x3dh.KeyPair
 }
@@ -166,6 +170,7 @@ func protoPlainMsgToMessage(msg *bpb.PlainChatMessage) (db.Message, error) {
 		ID:        msg.MessageID,
 		Message:   msg.Message,
 		CreatedAt: msg.CreatedAt,
+		Version:   uint(msg.Version),
 	}
 
 	if isDAppMessage(msg) {
