@@ -5,8 +5,8 @@ list:
 proto:
 	protoc --go_out=. api/pb/*.proto
 deps:
-	go get github.com/whyrusleeping/gx
-	go get github.com/whyrusleeping/gx-go
+	go get -a github.com/whyrusleeping/gx
+	go get -a github.com/whyrusleeping/gx-go
 	go get github.com/mattn/goveralls
 	go get -u github.com/kardianos/govendor
 	go get github.com/stretchr/testify
