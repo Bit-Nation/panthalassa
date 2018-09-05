@@ -12,6 +12,7 @@ deps:
 	go get github.com/stretchr/testify
 	go get -u github.com/golang/dep/cmd/dep
 install:
+	rm -rf ${GOPATH}/src/gx
 	gx install
 	dep ensure
 	gx-go rw
