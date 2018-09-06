@@ -129,9 +129,9 @@ func (m *Module) Register(vm *duktape.Context) error {
 			return
 
 		}
-		throttlingFunc()
+		//throttlingFunc()
 		//@TODO Find a way to fix throttling
-		//m.throttling.Exec(throttlingFunc)
+		m.throttling.Exec(throttlingFunc)
 
 		return 0
 

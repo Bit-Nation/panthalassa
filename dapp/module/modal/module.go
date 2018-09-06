@@ -209,9 +209,9 @@ func (m *Module) Register(vm *duktape.Context) error {
 			//	m.logger.Error(err.Error())
 			//}
 		}
-		dec := make(chan struct{}, 1)
-		throttlingFunc(dec)
-		//m.modalIDsReqLim.Exec(throttlingFunc)
+		//dec := make(chan struct{}, 1)
+		//throttlingFunc(dec)
+		m.modalIDsReqLim.Exec(throttlingFunc)
 		return 0
 
 	})

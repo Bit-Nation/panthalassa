@@ -183,10 +183,10 @@ func (m *Module) Register(vm *duktape.Context) error {
 			context.Call(1)
 			return
 		}
-		dec := make(chan struct{}, 1)
-		throttlingFunc(dec)
+		//dec := make(chan struct{}, 1)
+		//throttlingFunc(dec)
 		//@TODO Find a way to fix throttling
-		//m.reqLim.Exec(throttlingFunc)
+		m.reqLim.Exec(throttlingFunc)
 		return 0
 
 	})
