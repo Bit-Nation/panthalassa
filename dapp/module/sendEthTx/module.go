@@ -129,9 +129,11 @@ func (m *Module) Register(vm *duktape.Context) error {
 			return
 
 		}
-		//throttlingFunc()
-		//@TODO Find a way to fix throttling
 		m.throttling.Exec(throttlingFunc)
+		// @TODO find a more reliable way to wait for reqLim.Exec to finish execution rather than time.Sleep(1 * time.Second)
+		// If we don't sleep here, the context is no longer available to the throttling module which tries to execute throttlingFunc,
+		// throttlingFunc depends on the context provied from this current function, so if we exit too soon, we cause a panic
+		time.Sleep(1 * time.Second)
 
 		return 0
 
