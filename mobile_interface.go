@@ -138,29 +138,10 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// dyncall registry
 	dcr := dyncall.New()
 
-	docStorage := documents.NewStorage(dbInstance, km)
-
-	// register document all call
-	docAllCall := documents.NewDocumentAllCall(docStorage)
-	if err := dcr.Register(docAllCall); err != nil {
+	if err := RegisterDocumentCalls(dcr, dbInstance, km); err != nil {
 		return err
 	}
 
-	// create document all call
-	docCreateCall := documents.NewDocumentCreateCall(docStorage)
-	if err := dcr.Register(docCreateCall); err != nil {
-		return err
-	}
-
-	// create document update call
-	docUpdateCall := documents.NewDocumentUpdateCall(docStorage)
-	if err := dcr.Register(docUpdateCall); err != nil {
-		return err
-	}
-
-	// create document delete call
-	docDeleteCall := documents.NewDocumentDeleteCall(docStorage)
-	if err := dcr.Register(docDeleteCall); err != nil {
 		return err
 	}
 
@@ -175,6 +156,36 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		db:          dbInstance,
 		dAppStorage: dAppStorage,
 		dyncall:     dcr,
+	}
+
+	return nil
+}
+
+func RegisterDocumentCalls(dcr *dyncall.Registry, dbInstance *storm.DB, km *keyManager.KeyManager) error {
+	docStorage := documents.NewStorage(dbInstance, km)
+
+	// register document all call
+	allCall := documents.NewDocumentAllCall(docStorage)
+	if err := dcr.Register(allCall); err != nil {
+		return err
+	}
+
+	// register create document call
+	createCall := documents.NewDocumentCreateCall(docStorage)
+	if err := dcr.Register(createCall); err != nil {
+		return err
+	}
+
+	// register document update call
+	updateCall := documents.NewDocumentUpdateCall(docStorage)
+	if err := dcr.Register(updateCall); err != nil {
+		return err
+	}
+
+	// register document delete call
+	deleteCall := documents.NewDocumentDeleteCall(docStorage)
+	if err := dcr.Register(deleteCall); err != nil {
+		return err
 	}
 
 	return nil
