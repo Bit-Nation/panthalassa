@@ -11,6 +11,7 @@ import (
 	apiPB "github.com/Bit-Nation/panthalassa/api/pb"
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	chat "github.com/Bit-Nation/panthalassa/chat"
+	contacts "github.com/Bit-Nation/panthalassa/contacts"
 	dapp "github.com/Bit-Nation/panthalassa/dapp"
 	dAppReg "github.com/Bit-Nation/panthalassa/dapp/registry"
 	db "github.com/Bit-Nation/panthalassa/db"
@@ -142,6 +143,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		return err
 	}
 
+	if err := RegisterContactCalls(dcr, dbInstance); err != nil {
 		return err
 	}
 
@@ -185,6 +187,24 @@ func RegisterDocumentCalls(dcr *dyncall.Registry, dbInstance *storm.DB, km *keyM
 	// register document delete call
 	deleteCall := documents.NewDocumentDeleteCall(docStorage)
 	if err := dcr.Register(deleteCall); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RegisterContactCalls(dcr *dyncall.Registry, dbInstance *storm.DB) error {
+	contactStorage := contacts.NewStorage(dbInstance)
+
+	// register contacts all call
+	allCall := contacts.NewContactAllCall(contactStorage)
+	if err := dcr.Register(allCall); err != nil {
+		return err
+	}
+
+	// register contact create call
+	createCall := contacts.NewContactCreateCall(contactStorage)
+	if err := dcr.Register(createCall); err != nil {
 		return err
 	}
 
