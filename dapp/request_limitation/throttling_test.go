@@ -10,10 +10,10 @@ import (
 
 func TestThrottling_Exec(t *testing.T) {
 
-	throttling := NewThrottling(0, time.Second, 1, errors.New("queue is full"))
+	throttling := NewThrottling(1, time.Second, 1, errors.New("queue is full"))
 
-	require.Nil(t, throttling.Exec(func() {}))
-	require.EqualError(t, throttling.Exec(func() {}), "queue is full")
+	require.Nil(t, throttling.Exec(func(vmDone chan struct{}) { <-vmDone }))
+	require.Nil(t, throttling.Exec(func(vmDone chan struct{}) { <-vmDone }))
 
 }
 

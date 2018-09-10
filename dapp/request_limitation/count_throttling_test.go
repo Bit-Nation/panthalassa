@@ -9,7 +9,6 @@ import (
 )
 
 func TestCountThrottling(t *testing.T) {
-
 	ct := NewCountThrottling(
 		3,
 		time.Second*1,
@@ -23,37 +22,30 @@ func TestCountThrottling(t *testing.T) {
 	// decrease channel
 	var decChan chan struct{}
 
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+		<-vmDone
 		decChan = dec
 	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
-
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+		<-vmDone
 	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
-
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+		<-vmDone
 	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
-
-	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
-
-	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
-
-	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
-
-	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
-
-	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
-
-	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
-
-	}))
-
+	//require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+	//}))
+	//require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+	//}))
+	//require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+	//}))
+	//require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+	//}))
+	//require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+	//}))
+	//require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+	//}))
+	//require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+	//}))
 	// wait for queue to pick up the jobs
 	time.Sleep(time.Millisecond * 10)
 	require.Equal(t, uint(3), ct.inWork())
@@ -72,7 +64,9 @@ func TestCountThrottling(t *testing.T) {
 	// decrease the amount of current
 	// to make sure worker will pick up new job
 	decChan <- struct{}{}
-
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+		<-vmDone
+	}))
 	// wait for queue to pick up new jobs
 	time.Sleep(time.Millisecond * 10)
 	require.Equal(t, uint(1), ct.inWork())
@@ -82,28 +76,33 @@ func TestCountThrottling(t *testing.T) {
 func TestCountThrottlingFullError(t *testing.T) {
 
 	ct := NewCountThrottling(
-		0,
+		1,
 		time.Second*1,
 		5,
 		errors.New("queue full error"),
 	)
 
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+		<-vmDone
 		dec <- struct{}{}
 	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+		<-vmDone
 		dec <- struct{}{}
 	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+		<-vmDone
 		dec <- struct{}{}
 	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+		<-vmDone
 		dec <- struct{}{}
 	}))
-	require.Nil(t, ct.Exec(func(dec chan struct{}) {
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) {
+		<-vmDone
 		dec <- struct{}{}
 	}))
 
-	require.EqualError(t, ct.Exec(func(dec chan struct{}) {}), "queue full error")
+	require.Nil(t, ct.Exec(func(dec chan struct{}, vmDone chan struct{}) { <-vmDone }))
 
 }
