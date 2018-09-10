@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/ipfs/go-log"
+	ed25519 "golang.org/x/crypto/ed25519"
+
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
 	uuid "github.com/satori/go.uuid"
-	ed25519 "golang.org/x/crypto/ed25519"
 	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
@@ -188,7 +189,10 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 
 		// increase request limitation counter
-		throttlingFunc := func(dec chan struct{}) {
+		throttlingFunc := func(dec chan struct{}, vmDone chan struct{}) {
+			defer func() {
+				<-vmDone
+			}()
 			// add ui id & closer to stack
 			m.addModalIDChan <- addModalID{
 				id:     id.String(),
@@ -210,10 +214,6 @@ func (m *Module) Register(vm *duktape.Context) error {
 			//}
 		}
 		m.modalIDsReqLim.Exec(throttlingFunc)
-		// @TODO find a more reliable way to wait for reqLim.Exec to finish execution rather than time.Sleep(1 * time.Second)
-		// If we don't sleep here, the context is no longer available to the throttling module which tries to execute throttlingFunc,
-		// throttlingFunc depends on the context provied from this current function, so if we exit too soon, we cause a panic
-		time.Sleep(1 * time.Second)
 		return 0
 
 	})
