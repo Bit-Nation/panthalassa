@@ -5,7 +5,7 @@ import (
 )
 
 type Contact struct {
-	IdentityKey string
+	IdentityKey string `storm:"id"`
 }
 
 type Storage struct {
