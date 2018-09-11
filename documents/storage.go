@@ -1,9 +1,9 @@
 package documents
 
 import (
-	"github.com/Bit-Nation/panthalassa/crypto/aes"
-	"github.com/Bit-Nation/panthalassa/keyManager"
-	"github.com/asdine/storm"
+	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	storm "github.com/asdine/storm"
 )
 
 type Document struct {
@@ -14,6 +14,9 @@ type Document struct {
 	Content          []byte `json:"-"`
 	EncryptedContent aes.CipherText
 	CreatedAt        int64
+	CID              []byte
+	Signature        []byte
+	TransactionHash  string
 }
 
 type Storage struct {

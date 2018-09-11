@@ -1,9 +1,16 @@
 package documents
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"net/http"
 	"time"
+
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	"github.com/ethereum/go-ethereum/common"
+	cid "github.com/ipfs/go-cid"
 )
 
 type DocumentCreateCall struct {
@@ -97,6 +104,9 @@ func (c *DocumentAllCall) Handle(data map[string]interface{}) (map[string]interf
 			"mime_type":   d.MimeType,
 			"description": d.Description,
 			"title":       d.Title,
+			"hash":        d.Hash,
+			"signature":   d.Signature,
+			"status":      d.Status,
 		})
 	}
 	return map[string]interface{}{
@@ -181,5 +191,116 @@ func (d *DocumentDeleteCall) Handle(data map[string]interface{}) (map[string]int
 	}
 
 	return map[string]interface{}{}, d.s.db.DeleteStruct(&doc)
+
+}
+
+type DocumentSubmitCall struct {
+	s          *Storage
+	km         *keyManager.KeyManager
+	n          *NotaryMulti
+	notaryAddr common.Address
+}
+
+func NewDocumentSubmitCall(s *Storage, km *keyManager.KeyManager, n *NotaryMulti, notaryAddr common.Address) *DocumentSubmitCall {
+	return &DocumentSubmitCall{
+		s:          s,
+		km:         km,
+		n:          n,
+		notaryAddr: notaryAddr,
+	}
+}
+
+func (d *DocumentSubmitCall) CallID() string {
+	return "DOCUMENT:NOTARISE"
+}
+
+func (d *DocumentSubmitCall) Validate(map[string]interface{}) error {
+	return nil
+}
+
+func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]interface{}, error) {
+
+	docID, k := data["doc_id"].(float64)
+	if !k {
+		return map[string]interface{}{}, errors.New("expect doc_id to be an integer")
+	}
+
+	var doc Document
+	if err := d.s.db.One("ID", int(docID), &doc); err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// prepare request data
+	reqData := map[string][]byte{
+		"file": doc.Content,
+	}
+	rawReqData, err := json.Marshal(reqData)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// upload to ipfs
+	req, err := http.NewRequest("POST", "https://ipfs.infura.io:5001", bytes.NewBuffer(rawReqData))
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// exec request
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// make sure we got a valid status code back
+	if resp.Status != "200" {
+		return map[string]interface{}{}, errors.New("invalid status: " + resp.Status)
+	}
+
+	// read response
+	var rawResp []byte
+	if _, err := resp.Body.Read(rawResp); err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// unmarshal response
+	respMap := map[string]string{}
+	if err := json.Unmarshal(rawResp, &respMap); err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// make sure hash exist in response
+	strCid, exist := respMap["Hash"]
+	if !exist {
+		return map[string]interface{}{}, errors.New("hash doesn't exist in response")
+	}
+
+	// cast string hash to CID
+	c, err := cid.Cast([]byte(strCid))
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// attach cid to document
+	doc.CID = c.Bytes()
+
+	// sign cid
+	cidSignature, err := d.km.IdentitySign(c.Bytes())
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// attach signature to doc
+	doc.Signature = cidSignature
+
+	// submit tx to chain
+	tx, err := d.n.NotarizeTwo(nil, d.notaryAddr, c.Bytes(), cidSignature)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	doc.TransactionHash = tx.Hash().Hex()
+
+	return map[string]interface{}{}, d.s.Save(&doc)
 
 }
