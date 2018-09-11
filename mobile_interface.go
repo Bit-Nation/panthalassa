@@ -1,6 +1,7 @@
 package panthalassa
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -24,6 +25,8 @@ import (
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	"github.com/asdine/storm"
 	bolt "github.com/coreos/bbolt"
+	common "github.com/ethereum/go-ethereum/common"
+	ethclient "github.com/ethereum/go-ethereum/ethclient"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
@@ -139,10 +142,44 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// dyncall registry
 	dcr := dyncall.New()
 
-	if err := RegisterDocumentCalls(dcr, dbInstance, km); err != nil {
+	// register document related calls
+	docStorage := documents.NewStorage(dbInstance, km)
+	if err := RegisterDocumentCalls(dcr, docStorage, km); err != nil {
 		return err
 	}
 
+	ethClient, err := ethclient.Dial(config.EthWsEndpoint)
+	if err != nil {
+		return err
+	}
+
+	var notaryMulti common.Address
+	var notary common.Address
+
+	networkID, err := ethClient.NetworkID(context.Background())
+	if err != nil {
+		return err
+	}
+
+	// make sure network is correct
+	if networkID.Int64() != int64(4) {
+		return errors.New("there is only a notary for the rinkeby testnet")
+	}
+
+	// rinkeby addresses
+	notary = common.HexToAddress("0xd75afa5c92cefded2862d2770f6a0929af74067d")
+	notaryMulti = common.HexToAddress("0x00d238247ae4324f952d2c9a297dd5f76ed0e7c0")
+
+	notaryContract, err := documents.NewNotaryMulti(notaryMulti, ethClient)
+	if err != nil {
+		return err
+	}
+	notariseCall := documents.NewDocumentNotariseCall(docStorage, km, notaryContract, notary)
+	if err := dcr.Register(notariseCall); err != nil {
+		return err
+	}
+
+	// register contract calls
 	if err := RegisterContactCalls(dcr, dbInstance); err != nil {
 		return err
 	}
@@ -163,8 +200,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	return nil
 }
 
-func RegisterDocumentCalls(dcr *dyncall.Registry, dbInstance *storm.DB, km *keyManager.KeyManager) error {
-	docStorage := documents.NewStorage(dbInstance, km)
+func RegisterDocumentCalls(dcr *dyncall.Registry, docStorage *documents.Storage, km *keyManager.KeyManager) error {
 
 	// register document all call
 	allCall := documents.NewDocumentAllCall(docStorage)

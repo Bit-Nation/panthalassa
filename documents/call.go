@@ -104,9 +104,9 @@ func (c *DocumentAllCall) Handle(data map[string]interface{}) (map[string]interf
 			"mime_type":   d.MimeType,
 			"description": d.Description,
 			"title":       d.Title,
-			"hash":        d.Hash,
+			"hash":        d.CID,
 			"signature":   d.Signature,
-			"status":      d.Status,
+			"tx_hash":     d.TransactionHash,
 		})
 	}
 	return map[string]interface{}{
@@ -201,7 +201,7 @@ type DocumentSubmitCall struct {
 	notaryAddr common.Address
 }
 
-func NewDocumentSubmitCall(s *Storage, km *keyManager.KeyManager, n *NotaryMulti, notaryAddr common.Address) *DocumentSubmitCall {
+func NewDocumentNotariseCall(s *Storage, km *keyManager.KeyManager, n *NotaryMulti, notaryAddr common.Address) *DocumentSubmitCall {
 	return &DocumentSubmitCall{
 		s:          s,
 		km:         km,
