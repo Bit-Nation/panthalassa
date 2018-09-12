@@ -22,6 +22,7 @@ import (
 	sendEthTxMod "github.com/Bit-Nation/panthalassa/dapp/module/sendEthTx"
 	uuidv4Mod "github.com/Bit-Nation/panthalassa/dapp/module/uuidv4"
 	db "github.com/Bit-Nation/panthalassa/db"
+	ethws "github.com/Bit-Nation/panthalassa/ethws"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	storm "github.com/asdine/storm"
 	log "github.com/ipfs/go-log"
@@ -55,6 +56,7 @@ type Registry struct {
 	host               host.Host
 	closeChan          chan *dapp.Data
 	conf               Config
+	ethWS              *ethws.EthereumWS
 	api                *api.API
 	km                 *keyManager.KeyManager
 	dAppDB             dapp.Storage
@@ -85,6 +87,10 @@ func NewDAppRegistry(h host.Host, conf Config, api *api.API, km *keyManager.KeyM
 		fetchDAppChan:      make(chan fetchDAppChanStr),
 		addDevStreamChan:   make(chan addDevStreamChanStr),
 		fetchDevStreamChan: make(chan fetchDAppStreamStr),
+		ethWS: ethws.New(ethws.Config{
+			Retry: time.Second,
+			WSUrl: conf.EthWSEndpoint,
+		}),
 	}
 
 	// load all default DApps
