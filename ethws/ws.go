@@ -3,7 +3,6 @@ package ethws
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
 	wsg "github.com/gorilla/websocket"
@@ -48,12 +47,52 @@ func (r *Response) Error() error {
 }
 
 type EthereumWS struct {
-	lock sync.Mutex
+	state State
 	// requests that need to be send
 	requestQueue chan Request
 	requests     map[int64]chan<- Response
 	conn         *wsg.Conn
 }
+
+type State struct {
+	addRequestIfNotExist chan StateObject
+	getRequest           chan StateObject
+	deleteRequest        chan StateObject
+	response             chan StateObject
+}
+
+type StateObject struct {
+	id int64
+	c  chan<- Response
+}
+
+// start state machine
+func (ws *EthereumWS) State() {
+	for {
+		select {
+		case getRequest := <-ws.state.getRequest:
+			// if the request exists, respond with the id and the response channel
+			if respChan, exist := ws.requests[getRequest.id]; exist {
+				ws.state.response <- StateObject{getRequest.id, respChan}
+				break
+			}
+			// if the request doesn't exist, respond with 0 and nil
+			ws.state.response <- StateObject{0, nil}
+		case addRequest := <-ws.state.addRequestIfNotExist:
+			// if the request exists, don't add it to the map, respond with the id and the response channel
+			if respChan, exist := ws.requests[addRequest.id]; exist {
+				ws.state.response <- StateObject{addRequest.id, respChan}
+				break
+			}
+			// if the request doesn't exist, add it to the map, respond with 0 and nil
+			ws.requests[addRequest.id] = addRequest.c
+			ws.state.response <- StateObject{0, nil}
+		case deleteRequest := <-ws.state.deleteRequest:
+			delete(ws.requests, deleteRequest.id)
+			ws.state.response <- StateObject{0, nil}
+		} // select
+	} // infinite for
+} // func (ws *EthereumWS) State()
 
 // send an request to ethereum network
 func (ws *EthereumWS) SendRequest(r Request) (<-chan Response, error) {
@@ -61,20 +100,19 @@ func (ws *EthereumWS) SendRequest(r Request) (<-chan Response, error) {
 	c := make(chan Response)
 
 	// add request to stack
-	ws.lock.Lock()
-	defer ws.lock.Unlock()
 	for {
 		id := time.Now().UnixNano()
-		if _, exist := ws.requests[id]; !exist {
+		ws.state.addRequestIfNotExist <- StateObject{id, c}
+		stateResponse := <-ws.state.response
+		// if the id didn't exist
+		if stateResponse.id == 0 {
 			r.ID = id
-			ws.requests[id] = c
 			break
 		}
 	}
 
 	// send request to queue
 	ws.requestQueue <- r
-
 	return c, nil
 
 }
@@ -86,17 +124,21 @@ func New(conf Config) *EthereumWS {
 	startReadWorker := make(chan bool)
 
 	etws := &EthereumWS{
-		lock:         sync.Mutex{},
+		state: State{
+			addRequestIfNotExist: make(chan StateObject),
+			getRequest:           make(chan StateObject),
+			deleteRequest:        make(chan StateObject),
+			response:             make(chan StateObject),
+		},
 		requestQueue: make(chan Request, 1000),
 		requests:     map[int64]chan<- Response{},
 	}
-
+	go etws.State()
 	// worker that sends the requests
 	go func() {
 
 		// wait for connection
 		<-startSendWorker
-
 		// send requests
 		for {
 			select {
@@ -106,9 +148,9 @@ func New(conf Config) *EthereumWS {
 				if err := etws.conn.WriteJSON(req); err != nil {
 					logger.Error(err)
 
-					etws.lock.Lock()
-					respChan := etws.requests[req.ID]
-					etws.lock.Unlock()
+					etws.state.getRequest <- StateObject{req.ID, nil}
+					stateResponse := <-etws.state.response
+					respChan := stateResponse.c
 
 					respChan <- Response{error: err}
 				}
@@ -122,7 +164,6 @@ func New(conf Config) *EthereumWS {
 
 		// wait to start worker
 		<-startReadWorker
-
 		for {
 
 			// read message
@@ -131,7 +172,6 @@ func New(conf Config) *EthereumWS {
 				logger.Error(err)
 				continue
 			}
-
 			// unmarshal
 			var resp Response
 			if err := json.Unmarshal(response, &resp); err != nil {
@@ -140,16 +180,16 @@ func New(conf Config) *EthereumWS {
 			}
 
 			// get response channel
-			etws.lock.Lock()
-			respChan, exist := etws.requests[resp.ID]
-			if !exist {
-				logger.Error(fmt.Sprintf("failed to get response channel for ID: %d", resp.ID))
+			etws.state.getRequest <- StateObject{resp.ID, nil}
+			stateResponse := <-etws.state.response
+			if stateResponse.id == 0 {
+				logger.Error(fmt.Sprintf("failed to get response channel for ID: %d", stateResponse.id))
 				continue
 			}
-			delete(etws.requests, resp.ID)
-			etws.lock.Unlock()
-
+			etws.state.deleteRequest <- StateObject{resp.ID, nil}
+			_ = <-etws.state.response
 			// send response
+			respChan := stateResponse.c
 			respChan <- resp
 
 		}
