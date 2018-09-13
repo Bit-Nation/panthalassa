@@ -184,11 +184,10 @@ func TestModal_RequestLimitation(t *testing.T) {
 	done := make(chan struct{}, 1)
 	_, err = vm.PushGlobalGoFunction("callbackTestModalRequestLimitation", func(context *duktape.Context) int {
 		// newModalUIID must register a new id
-		//@TODO Fix throttling and uncomment line below to check if throttling works correctly, connected to commented m.modalIDsReqLim.Exec(throttlingFunc)
-		//require.Equal(t, uint(1), m.modalIDsReqLim.Current())
+		require.Equal(t, uint(1), m.modalIDsReqLim.Current())
 
 		// close modal with UI ID
-		id := context.ToString(0)
+		id := context.ToString(1)
 		vm.PevalString(`callbackCloserRequestLimitation`)
 		m.CloseModal(id)
 

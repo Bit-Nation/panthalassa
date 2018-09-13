@@ -77,8 +77,10 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 		// execute in the context of the throttling
 		// request limitation
-		throttlingFunc := func() {
-
+		throttlingFunc := func(vmDone chan struct{}) {
+			defer func() {
+				<-vmDone
+			}()
 			if !context.GetPropString(0, "to") {
 				err := errors.New(`key "to" doesn't exist`)
 				handleError(err.Error())
@@ -129,9 +131,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 			return
 
 		}
-		throttlingFunc()
-		//@TODO Find a way to fix throttling
-		//m.throttling.Exec(throttlingFunc)
+		m.throttling.Exec(throttlingFunc)
 
 		return 0
 

@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/ipfs/go-log"
+	ed25519 "golang.org/x/crypto/ed25519"
+
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
 	uuid "github.com/satori/go.uuid"
-	ed25519 "golang.org/x/crypto/ed25519"
 	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
@@ -188,7 +189,10 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 
 		// increase request limitation counter
-		throttlingFunc := func(dec chan struct{}) {
+		throttlingFunc := func(dec chan struct{}, vmDone chan struct{}) {
+			defer func() {
+				<-vmDone
+			}()
 			// add ui id & closer to stack
 			m.addModalIDChan <- addModalID{
 				id:     id.String(),
@@ -209,9 +213,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 			//	m.logger.Error(err.Error())
 			//}
 		}
-		dec := make(chan struct{}, 1)
-		throttlingFunc(dec)
-		//m.modalIDsReqLim.Exec(throttlingFunc)
+		m.modalIDsReqLim.Exec(throttlingFunc)
 		return 0
 
 	})
