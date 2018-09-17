@@ -138,4 +138,4 @@
 
 [[constraint]]
   name = "github.com/Bit-Nation/protobuffers"
-  version = "1.1.0"
+  revision = "a71cefee1ec2dda6f720cacaa1b3217b1589e33c"

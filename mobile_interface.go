@@ -22,7 +22,7 @@ import (
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
-	"github.com/asdine/storm"
+	storm "github.com/asdine/storm"
 	bolt "github.com/coreos/bbolt"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
