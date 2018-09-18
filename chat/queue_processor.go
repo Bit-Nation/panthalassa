@@ -98,7 +98,7 @@ func (p *SubmitMessagesProcessor) Process(j queue.Job) error {
 		return err
 	}
 
-	chat, err := p.chatDB.GetChat(partner)
+	chat, err := p.chatDB.GetChatByPartner(partner)
 	if err != nil {
 		return err
 	}

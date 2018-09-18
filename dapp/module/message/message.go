@@ -147,7 +147,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 				dec <- struct{}{}
 			}()
 
-			chat, err := m.chatStorage.GetChat(chat)
+			chat, err := m.chatStorage.GetChatByPartner(chat)
 			if err != nil {
 				handleError(err.Error())
 				return

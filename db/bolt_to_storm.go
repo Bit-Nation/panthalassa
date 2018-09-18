@@ -20,7 +20,7 @@ type BoltToStormMigration struct {
 }
 
 func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
-	
+
 	// migrate queue jobs
 	err := db.Bolt.Update(func(tx *bolt.Tx) error {
 		queueStorage := queue.NewStorage(db.WithTransaction(tx))
@@ -293,7 +293,7 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 				return err
 			}
 
-			chat, err := chatDB.GetChat(partner)
+			chat, err := chatDB.GetChatByPartner(partner)
 			if err != nil {
 				return err
 			}

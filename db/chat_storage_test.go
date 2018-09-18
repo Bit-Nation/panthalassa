@@ -98,7 +98,7 @@ func TestChatMessages(t *testing.T) {
 
 	// create chat
 	require.Nil(t, chatStor.CreateChat(partner))
-	chat, err := chatStor.GetChat(partner)
+	chat, err := chatStor.GetChatByPartner(partner)
 	require.Nil(t, err)
 	require.NotNil(t, chat)
 

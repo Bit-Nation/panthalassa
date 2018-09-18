@@ -256,7 +256,7 @@ type ChatStorage interface {
 	GetChatByPartner(pubKey ed25519.PublicKey) (*Chat, error)
 	GetChat(chatID int) (*Chat, error)
 	// returned int is the chat ID
-	CreateChat(partner ed25519.PublicKey) (int, error)
+	CreateChat(partner ed25519.PublicKey) error
 	CreateGroupChat(partners []ed25519.PublicKey) (int, error)
 	AddListener(func(e MessagePersistedEvent))
 	AllChats() ([]Chat, error)
@@ -277,7 +277,27 @@ type BoltChatStorage struct {
 	km                  *km.KeyManager
 }
 
-func (s *BoltChatStorage) GetChat(partner ed25519.PublicKey) (*Chat, error) {
+func (s *BoltChatStorage) GetChat(chatID int) (*Chat, error) {
+
+	amountChats, err := s.db.Count(&Chat{})
+	if err != nil {
+		return nil, err
+	}
+
+	if amountChats == 0 {
+		return nil, nil
+	}
+
+	chat := &Chat{}
+	chat.km = s.km
+	chat.db = s.db
+	chat.postPersistListener = s.postPersistListener
+
+	return chat, s.db.One("ID", amountChats, chat)
+
+}
+
+func (s *BoltChatStorage) GetChatByPartner(partner ed25519.PublicKey) (*Chat, error) {
 
 	// check if partner chat exist
 	q := s.db.Select(sq.Eq("Partner", partner))

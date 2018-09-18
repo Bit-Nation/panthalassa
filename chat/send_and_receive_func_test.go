@@ -2,7 +2,6 @@ package chat
 
 import (
 	"encoding/hex"
-	"fmt"
 	"testing"
 	"time"
 
@@ -180,8 +179,6 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 						continue
 					}
 
-					fmt.Println(msg)
-
 				}
 				// alice
 			case msg := <-aliceTrans.sendChan:
@@ -241,7 +238,12 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 	require.Nil(t, err)
 
 	// persist private message for bob
-	require.Nil(t, alice.SavePrivateMessage(bobIDKey, []byte("hi bob")))
+	require.Nil(t, alice.chatStorage.CreateChat(bobIDKey))
+	bobChat, err := alice.chatStorage.GetChatByPartner(bobIDKey)
+	require.Nil(t, err)
+	require.NotNil(t, bobChat)
+
+	require.Nil(t, alice.SaveMessage(bobChat.ID, []byte("hi bob")))
 
 	// done signal
 	done := make(chan struct{}, 1)
@@ -267,7 +269,6 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 
 				// make sure shared secret got accepted
 				shSec, err := alice.sharedSecStorage.GetYoungest(bobIDKey)
-				fmt.Println(shSec.ID)
 				require.Nil(t, err)
 				require.NotNil(t, shSec)
 				require.True(t, shSec.Accepted)
@@ -295,7 +296,11 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 				require.Equal(t, hex.EncodeToString(aliceIDKey), hex.EncodeToString(shSec.Partner))
 				require.True(t, shSec.Accepted)
 
-				err = bob.SavePrivateMessage(aliceIDKey, []byte("hi alice"))
+				// fetch chat
+				chat, err := bob.chatStorage.GetChatByPartner(aliceIDKey)
+				require.Nil(t, err)
+
+				err = bob.SaveMessage(chat.ID, []byte("hi alice"))
 				require.Nil(t, err)
 			}
 

@@ -117,7 +117,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	logger.Debugf("double ratchet message %s", drMessage)
 
 	// make sure chat exist
-	chat, err := c.chatStorage.GetChat(msg.Sender)
+	chat, err := c.chatStorage.GetChatByPartner(msg.Sender)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 	}
-	chat, err = c.chatStorage.GetChat(msg.Sender)
+	chat, err = c.chatStorage.GetChatByPartner(msg.Sender)
 	if err != nil {
 		return err
 	}

@@ -65,7 +65,7 @@ func TestPersistMessageSuccessfully(t *testing.T) {
 	// storage mock
 	chatStorage := db.NewChatStorage(createStorm(), []func(e db.MessagePersistedEvent){}, createKeyManager())
 	chatStorage.AddListener(func(e db.MessagePersistedEvent) {
-		chat, _ := chatStorage.GetChat(chatPubKey)
+		chat, _ := chatStorage.GetChatByPartner(chatPubKey)
 		if err != nil {
 			panic(err)
 		}
