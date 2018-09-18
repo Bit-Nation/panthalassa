@@ -240,7 +240,8 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	}
 
 	// upload to ipfs
-	req, err := http.NewRequest("POST", "https://ipfs.infura.io:5001", bytes.NewBuffer(rawReqData))
+	req, err := http.NewRequest("POST", "https://ipfs.infura.io:5001/api/v0/add", bytes.NewBuffer(rawReqData))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
