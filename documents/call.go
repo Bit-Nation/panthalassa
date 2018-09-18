@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -255,7 +256,8 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 
 	// make sure we got a valid status code back
 	if resp.Status != "200" {
-		return map[string]interface{}{}, errors.New("invalid status: " + resp.Status)
+		b, _ := ioutil.ReadAll(resp.Body)
+		return map[string]interface{}{}, errors.New("invalid status: " + resp.Status + ", body: " + string(b))
 	}
 
 	// read response
