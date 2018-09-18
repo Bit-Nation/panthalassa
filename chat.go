@@ -5,28 +5,74 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-func SendMessage(partner, message string) error {
+func SendMessage(chatID int, message string) error {
 
 	// make sure panthalassa has been started
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa first")
 	}
 
-	// partner public key
-	partnerPub, err := hex.DecodeString(partner)
-	if err != nil {
+	// persist message
+	return panthalassaInstance.chat.SaveMessage(chatID, []byte(message))
+
+}
+
+func AddUsersToGroupChat(users string, chatID int) error {
+
+	// make sure panthalassa has been started
+	if panthalassaInstance == nil {
+		return errors.New("you have to start panthalassa first")
+	}
+
+	// json unmarshal partners
+	rawPartners := []string{}
+	if err := json.Unmarshal([]byte(users), &rawPartners); err != nil {
 		return err
 	}
 
-	// make sure public key has the right length
-	if len(partnerPub) != 32 {
-		return errors.New("partner must have a length of 32 bytes")
+	// unmarshal hex partners
+	partners := []ed25519.PublicKey{}
+	for _, hexPartner := range rawPartners {
+		rawPartner, err := hex.DecodeString(hexPartner)
+		if err != nil {
+			return err
+		}
+		partners = append(partners, rawPartner)
 	}
 
-	// persist private message
-	return panthalassaInstance.chat.SavePrivateMessage(partnerPub, []byte(message))
+	return panthalassaInstance.chat.AddUserToGroupChat(partners, chatID)
+
+}
+
+// return chatID
+func CreateGroupChat(users string) (int, error) {
+
+	// make sure panthalassa has been started
+	if panthalassaInstance == nil {
+		return 0, errors.New("you have to start panthalassa first")
+	}
+
+	// json unmarshal partners
+	rawPartners := []string{}
+	if err := json.Unmarshal([]byte(users), &rawPartners); err != nil {
+		return 0, err
+	}
+
+	// unmarshal hex partners
+	partners := []ed25519.PublicKey{}
+	for _, hexPartner := range rawPartners {
+		rawPartner, err := hex.DecodeString(hexPartner)
+		if err != nil {
+			return 0, err
+		}
+		partners = append(partners, rawPartner)
+	}
+
+	return panthalassaInstance.chat.CreateGroupChat(partners)
 
 }
 

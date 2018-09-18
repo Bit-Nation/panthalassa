@@ -33,6 +33,23 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		Version: 1,
 	}
 
+	// attach add user data
+	if dbMessage.AddUserToChat != nil {
+		addUserMsg := dbMessage.AddUserToChat
+		plainMessage.AddUserPrivChat = &bpb.PlainChatMessage_AddUserPrivGroupChat{
+			Users: func() [][]byte {
+				users := [][]byte{}
+				for _, u := range dbMessage.AddUserToChat.Users {
+					users = append(users, u)
+				}
+				return users
+			}(),
+			SharedSecret:   addUserMsg.SharedSecret[:],
+			SharedSecretID: addUserMsg.SharedSecretID,
+			ChatID:         addUserMsg.ChatID,
+		}
+	}
+
 	// in the case this is a DApp message,
 	// we have to add the props to the protobuf message
 	if dbMessage.DApp != nil {

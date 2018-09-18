@@ -6,13 +6,13 @@ import (
 	"errors"
 	"time"
 
-	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
-	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
-	queue "github.com/Bit-Nation/panthalassa/queue"
-	x3dh "github.com/Bit-Nation/x3dh"
-	storm "github.com/asdine/storm"
-	bolt "github.com/coreos/bbolt"
+	"github.com/Bit-Nation/panthalassa/crypto/aes"
+	"github.com/Bit-Nation/panthalassa/keyManager"
+	"github.com/Bit-Nation/panthalassa/queue"
+	"github.com/Bit-Nation/x3dh"
+	"github.com/asdine/storm"
 	dr "github.com/tiabc/doubleratchet"
+	bolt "go.etcd.io/bbolt"
 )
 
 type BoltToStormMigration struct {
@@ -20,7 +20,7 @@ type BoltToStormMigration struct {
 }
 
 func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
-
+	
 	// migrate queue jobs
 	err := db.Bolt.Update(func(tx *bolt.Tx) error {
 		queueStorage := queue.NewStorage(db.WithTransaction(tx))
