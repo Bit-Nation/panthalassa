@@ -1,16 +1,16 @@
 package documents
 
 import (
-	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
-	"net/http"
 	"time"
 
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
-	"github.com/ethereum/go-ethereum/common"
+	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
+	common "github.com/ethereum/go-ethereum/common"
+	types "github.com/ethereum/go-ethereum/core/types"
 	cid "github.com/ipfs/go-cid"
+	mh "github.com/multiformats/go-multihash"
 )
 
 type DocumentCreateCall struct {
@@ -230,63 +230,19 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 		return map[string]interface{}{}, err
 	}
 
-	// prepare request data
-	reqData := map[string][]byte{
-		"file": doc.Content,
-	}
-	rawReqData, err := json.Marshal(reqData)
+	// hash document
+	docHash, err := mh.Sum(doc.Content, mh.SHA2_256, -1)
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
 
-	// upload to ipfs
-	req, err := http.NewRequest("POST", "https://ipfs.infura.io:5001/api/v0/add", bytes.NewBuffer(rawReqData))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	if err != nil {
-		return map[string]interface{}{}, err
-	}
-
-	// exec request
-	client := http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return map[string]interface{}{}, err
-	}
-
-	// make sure we got a valid status code back
-	if resp.Status != "200" {
-		return map[string]interface{}{}, errors.New("invalid status: " + resp.Status)
-	}
-
-	// read response
-	var rawResp []byte
-	if _, err := resp.Body.Read(rawResp); err != nil {
-		return map[string]interface{}{}, err
-	}
-
-	// unmarshal response
-	respMap := map[string]string{}
-	if err := json.Unmarshal(rawResp, &respMap); err != nil {
-		return map[string]interface{}{}, err
-	}
-
-	// make sure hash exist in response
-	strCid, exist := respMap["Hash"]
-	if !exist {
-		return map[string]interface{}{}, errors.New("hash doesn't exist in response")
-	}
-
-	// cast string hash to CID
-	c, err := cid.Cast([]byte(strCid))
-	if err != nil {
-		return map[string]interface{}{}, err
-	}
+	docContentCID := cid.NewCidV1(cid.Raw, docHash).Bytes()
 
 	// attach cid to document
-	doc.CID = c.Bytes()
+	doc.CID = docContentCID
 
 	// sign cid
-	cidSignature, err := d.km.IdentitySign(c.Bytes())
+	cidSignature, err := d.km.IdentitySign(docContentCID)
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
@@ -295,7 +251,11 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	doc.Signature = cidSignature
 
 	// submit tx to chain
-	tx, err := d.n.NotarizeTwo(nil, d.notaryAddr, c.Bytes(), cidSignature)
+	tx, err := d.n.NotarizeTwo(&bind.TransactOpts{
+		Signer: func(signer types.Signer, addresses common.Address, transaction *types.Transaction) (*types.Transaction, error) {
+			return transaction, nil
+		},
+	}, d.notaryAddr, docContentCID, cidSignature)
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
