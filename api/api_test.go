@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"encoding/base64"
+
 	pb "github.com/Bit-Nation/panthalassa/api/pb"
 	proto "github.com/golang/protobuf/proto"
 	require "github.com/stretchr/testify/require"
@@ -55,8 +56,6 @@ func TestRequestResponse(t *testing.T) {
 
 	dataChan := make(chan string)
 
-	var receivedRequestID string
-
 	// api
 	api := New(&testUpStream{
 		sendFn: func(data string) {
@@ -71,7 +70,6 @@ func TestRequestResponse(t *testing.T) {
 			if err := proto.Unmarshal([]byte(data), req); err != nil {
 				panic(err)
 			}
-			receivedRequestID = req.RequestID
 			out := api.Respond(req.RequestID, &pb.Response{}, nil, time.Second)
 			if out != nil {
 				panic("expected nil but got: " + out.Error())

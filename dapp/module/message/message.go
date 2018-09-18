@@ -141,8 +141,9 @@ func (m *Module) Register(vm *duktape.Context) error {
 			return handleError(err.Error())
 		}
 
-		throttlingFunc := func(dec chan struct{}) {
+		throttlingFunc := func(dec chan struct{}, vmDone chan struct{}) {
 			defer func() {
+				<-vmDone
 				dec <- struct{}{}
 			}()
 
@@ -183,10 +184,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 			context.Call(1)
 			return
 		}
-		dec := make(chan struct{}, 1)
-		throttlingFunc(dec)
-		//@TODO Find a way to fix throttling
-		//m.reqLim.Exec(throttlingFunc)
+		m.reqLim.Exec(throttlingFunc)
 		return 0
 
 	})

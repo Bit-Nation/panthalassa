@@ -67,8 +67,10 @@ func (m *Module) Register(vm *duktape.Context) error {
 			return handleError(err.Error(), context, 2)
 		}
 
-		throttlingFunc := func(dec chan struct{}) {
-
+		throttlingFunc := func(dec chan struct{}, vmDone chan struct{}) {
+			defer func() {
+				<-vmDone
+			}()
 			// persist key and value
 			if err := m.dAppDB.Put([]byte(key), byteValue); err != nil {
 				dec <- struct{}{}
@@ -81,10 +83,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 			context.Call(1)
 
 		}
-		dec := make(chan struct{}, 1)
-		throttlingFunc(dec)
-		//m.reqLim.Exec(throttlingFunc)
-
+		m.reqLim.Exec(throttlingFunc)
 		return 0
 
 	})
