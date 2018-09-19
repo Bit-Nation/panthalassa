@@ -1,5 +1,7 @@
 package registry
 
+var rawDApps = "[]"
+/*
 // must be valid JSON!
 var rawDApps = `
 [
@@ -15,4 +17,4 @@ var rawDApps = `
   "signature": "0c46e7c423f5da9aa8e6d4bc81a5dcbc4c62e92dff564de699a03c30090e55780684dc6c04449df8059e6a14e3eac35809cf8e5bf646c24d727cdffa48a4630e"
 }
 ]
-`
+` */
