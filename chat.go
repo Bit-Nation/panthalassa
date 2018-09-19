@@ -91,7 +91,7 @@ func AllChats() (string, error) {
 	chatsRep := []map[string]interface{}{}
 	for _, chat := range chats {
 		chatsRep = append(chatsRep, map[string]interface{}{
-			"chat":            chat.Partner,
+			"chat_id":         chat.ID,
 			"unread_messages": chat.UnreadMessages,
 		})
 	}
@@ -104,7 +104,7 @@ func AllChats() (string, error) {
 	return string(chatList), nil
 }
 
-func Messages(partner string, startStr string, amount int) (string, error) {
+func Messages(chatID int, startStr string, amount int) (string, error) {
 
 	// unmarshal start
 	start, err := strconv.ParseInt(startStr, 10, 64)
@@ -117,19 +117,18 @@ func Messages(partner string, startStr string, amount int) (string, error) {
 		return "", errors.New("you have to start panthalassa first")
 	}
 
-	// partner public key
-	partnerPub, err := hex.DecodeString(partner)
+	// fetch chat
+	chat, err := panthalassaInstance.chatDB.GetChat(chatID)
 	if err != nil {
 		return "", err
 	}
 
-	// make sure public key has the right length
-	if len(partnerPub) != 32 {
-		return "", errors.New("partner must have a length of 32 bytes")
+	if chat == nil {
+		return "", errors.New("chat doesn't exit")
 	}
 
 	// database messages
-	databaseMessages, err := panthalassaInstance.chat.Messages(partnerPub, int64(start), uint(amount))
+	databaseMessages, err := chat.Messages(start, uint(amount))
 	if err != nil {
 		return "", err
 	}
@@ -167,21 +166,13 @@ func Messages(partner string, startStr string, amount int) (string, error) {
 
 }
 
-func MarkMessagesAsRead(partner string) error {
+func MarkMessagesAsRead(chatID int) error {
 
 	// make sure panthalassa has been started
 	if panthalassaInstance == nil {
 		return errors.New("you have to start panthalassa first")
 	}
 
-	partnerByte, err := hex.DecodeString(partner)
-	if err != nil {
-		return err
-	}
-	if len(partnerByte) != 32 {
-		return errors.New("partner must have length of 32 bytes")
-	}
-
-	return panthalassaInstance.chat.MarkMessagesAsRead(partnerByte)
+	return panthalassaInstance.chat.MarkMessagesAsRead(chatID)
 
 }

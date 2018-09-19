@@ -14,8 +14,8 @@ import (
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-func (c *Chat) MarkMessagesAsRead(partner ed25519.PublicKey) error {
-	return c.chatStorage.ReadMessages(partner)
+func (c *Chat) MarkMessagesAsRead(chatID int) error {
+	return c.chatStorage.ReadMessages(chatID)
 }
 
 type drDhPair struct {

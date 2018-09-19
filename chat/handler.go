@@ -2,7 +2,6 @@ package chat
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -141,7 +140,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"db_id":      strconv.FormatInt(e.Message.UniqueMsgID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"chat":       hex.EncodeToString(e.Chat.Partner),
+			"chat":       e.Chat.ID,
 			"received":   e.Message.Received,
 			"dapp":       dapp,
 		})
@@ -152,7 +151,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"db_id":      strconv.FormatInt(e.Message.UniqueMsgID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"chat":       hex.EncodeToString(e.Chat.Partner),
+			"chat":       e.Chat.ID,
 			"received":   e.Message.Received,
 			"dapp":       dapp,
 		})
@@ -163,7 +162,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"db_id":      strconv.FormatInt(e.Message.UniqueMsgID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"chat":       hex.EncodeToString(e.Chat.Partner),
+			"chat":       e.Chat.ID,
 			"received":   e.Message.Received,
 			"dapp":       dapp,
 		})
