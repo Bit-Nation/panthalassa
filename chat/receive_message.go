@@ -122,7 +122,8 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		return err
 	}
 	if chat == nil {
-		if err := c.chatStorage.CreateChat(msg.Sender); err != nil {
+		_, err = c.chatStorage.CreateChat(msg.Sender)
+		if err != nil {
 			return err
 		}
 	}

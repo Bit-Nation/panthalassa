@@ -48,6 +48,22 @@ func AddUsersToGroupChat(users string, chatID int) error {
 
 }
 
+func CreatePrivateChat(partnerStr string) (int, error) {
+
+	// make sure panthalassa has been started
+	if panthalassaInstance == nil {
+		return 0, errors.New("you have to start panthalassa first")
+	}
+
+	partner, err := hex.DecodeString(partnerStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return panthalassaInstance.chatDB.CreateChat(partner)
+
+}
+
 // return chatID
 func CreateGroupChat(users string) (int, error) {
 
