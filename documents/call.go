@@ -8,7 +8,6 @@ import (
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
 	common "github.com/ethereum/go-ethereum/common"
-	types "github.com/ethereum/go-ethereum/core/types"
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
 )
@@ -250,12 +249,17 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	// attach signature to doc
 	doc.Signature = cidSignature
 
+	idKey, err := d.km.IdentityPublicKey()
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
 	// submit tx to chain
 	tx, err := d.n.NotarizeTwo(&bind.TransactOpts{
-		Signer: func(signer types.Signer, addresses common.Address, transaction *types.Transaction) (*types.Transaction, error) {
-			return transaction, nil
-		},
+		From:   common.HexToAddress(idKey),
+		Signer: d.km.SignEthTx,
 	}, d.notaryAddr, docContentCID, cidSignature)
+	tx.Data()
 	if err != nil {
 		return map[string]interface{}{}, err
 	}

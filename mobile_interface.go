@@ -62,6 +62,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// device api
 	deviceApi := api.New(client)
+	km.Api = deviceApi
 
 	// create p2p network
 	p2pNetwork, err := p2p.New()
