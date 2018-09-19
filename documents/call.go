@@ -259,7 +259,6 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 		From:   common.HexToAddress(idKey),
 		Signer: d.km.SignEthTx,
 	}, d.notaryAddr, docContentCID, cidSignature)
-	tx.Data()
 	if err != nil {
 		return map[string]interface{}{}, err
 	}

@@ -283,7 +283,7 @@ func (km KeyManager) AESEncrypt(plainText aes.PlainText) (aes.CipherText, error)
 
 func (km KeyManager) SignEthTx(signer types.Signer, addresses common.Address, tx *types.Transaction) (*types.Transaction, error) {
 
-	submittedTx, err := km.api.SendEthereumTransaction(
+	submittedTx, err := km.Api.SendEthereumTransaction(
 		tx.Value().String(),
 		tx.To().String(),
 		hex.EncodeToString(tx.Data()),
