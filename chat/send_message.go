@@ -30,7 +30,8 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		Message:   dbMessage.Message,
 		MessageID: dbMessage.ID,
 		// this version is NOT the same as the version from the database message
-		Version: 1,
+		Version:     1,
+		GroupChatID: dbMessage.GroupChatID,
 	}
 
 	// attach add user data
@@ -44,9 +45,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 				}
 				return users
 			}(),
-			SharedSecret:   addUserMsg.SharedSecret[:],
-			SharedSecretID: addUserMsg.SharedSecretID,
-			ChatID:         addUserMsg.ChatID,
+			ChatID: addUserMsg.ChatID,
 		}
 	}
 

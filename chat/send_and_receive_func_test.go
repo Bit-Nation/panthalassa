@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	db "github.com/Bit-Nation/panthalassa/db"
 	profile "github.com/Bit-Nation/panthalassa/profile"
@@ -12,6 +13,7 @@ import (
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bpb "github.com/Bit-Nation/protobuffers"
 	require "github.com/stretchr/testify/require"
+	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 type chatTestBackendTransport struct {
@@ -302,6 +304,220 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 
 				err = bob.SaveMessage(chat.ID, []byte("hi alice"))
 				require.Nil(t, err)
+			}
+
+		case <-done:
+			return
+		}
+	}
+
+}
+
+func TestGroupChatBetweenAliceAndBob(t *testing.T) {
+
+	alice, aliceTrans, bob, bobTrans, err := createAliceAndBob()
+
+	// listen for bob's messages
+	bobReceivedMsgChan := make(chan db.MessagePersistedEvent, 10)
+	bob.chatStorage.AddListener(func(e db.MessagePersistedEvent) {
+		bobReceivedMsgChan <- e
+	})
+	bobIDKeyStr, err := bob.km.IdentityPublicKey()
+	require.Nil(t, err)
+	bobIDKey, err := hex.DecodeString(bobIDKeyStr)
+	require.Nil(t, err)
+
+	// listen for alice messages
+	aliceReceivedMsgChan := make(chan db.MessagePersistedEvent, 10)
+	alice.chatStorage.AddListener(func(e db.MessagePersistedEvent) {
+		aliceReceivedMsgChan <- e
+	})
+	aliceIDKeyStr, err := alice.km.IdentityPublicKey()
+	require.Nil(t, err)
+	aliceIDKey, err := hex.DecodeString(aliceIDKeyStr)
+	require.Nil(t, err)
+
+	// bob go
+	go func() {
+
+		bobSignedPreKey := new(bpb.PreKey)
+		bobSignedPreKey = nil
+
+		aliceSignedPreKey := new(bpb.PreKey)
+		aliceSignedPreKey = nil
+
+		for {
+			select {
+			case msg := <-bobTrans.sendChan:
+
+				if msg.Request != nil {
+
+					// handle uploaded pre key
+					if msg.Request.NewSignedPreKey != nil {
+						bobSignedPreKey = msg.Request.NewSignedPreKey
+						bobTrans.receiveChan <- &bpb.BackendMessage{
+							RequestID: msg.RequestID,
+						}
+						continue
+					}
+
+					if len(msg.Request.PreKeyBundle) != 0 {
+
+						aliceProfile, err := profile.SignProfile("bob", "", "", *bob.km)
+						if err != nil {
+							panic(err)
+						}
+						aliceProfileProto, err := aliceProfile.ToProtobuf()
+						if err != nil {
+							panic(err)
+						}
+
+						bobTrans.receiveChan <- &bpb.BackendMessage{
+							RequestID: msg.RequestID,
+							Response: &bpb.BackendMessage_Response{
+								PreKeyBundle: &bpb.BackendMessage_PreKeyBundle{
+									SignedPreKey: aliceSignedPreKey,
+									Profile:      aliceProfileProto,
+								},
+							},
+						}
+						continue
+					}
+
+					// handle message send to bob
+					// (the nice thing is that we can write it from alice to bob :))
+					if len(msg.Request.Messages) != 0 {
+						aliceTrans.receiveChan <- msg
+						bobTrans.receiveChan <- &bpb.BackendMessage{
+							RequestID: msg.RequestID,
+						}
+						continue
+					}
+
+				}
+				// alice
+			case msg := <-aliceTrans.sendChan:
+
+				if msg.Request != nil {
+					// handle the pre key bundle request for bob
+					if len(msg.Request.PreKeyBundle) != 0 {
+
+						bobProfile, err := profile.SignProfile("bob", "", "", *bob.km)
+						if err != nil {
+							panic(err)
+						}
+						bobProfileProto, err := bobProfile.ToProtobuf()
+						if err != nil {
+							panic(err)
+						}
+
+						<-time.After(time.Second)
+
+						aliceTrans.receiveChan <- &bpb.BackendMessage{
+							RequestID: msg.RequestID,
+							Response: &bpb.BackendMessage_Response{
+								PreKeyBundle: &bpb.BackendMessage_PreKeyBundle{
+									SignedPreKey: bobSignedPreKey,
+									Profile:      bobProfileProto,
+								},
+							},
+						}
+						continue
+					}
+
+					// handle upload of our new pre key bundle
+					if msg.Request.NewSignedPreKey != nil {
+						aliceSignedPreKey = msg.Request.NewSignedPreKey
+						aliceTrans.receiveChan <- &bpb.BackendMessage{
+							RequestID: msg.RequestID,
+						}
+						continue
+					}
+
+					// handle message send to bob
+					// (the nice thing is that we can write it from alice to bob :))
+					if len(msg.Request.Messages) != 0 {
+						bobTrans.receiveChan <- msg
+						aliceTrans.receiveChan <- &bpb.BackendMessage{
+							RequestID: msg.RequestID,
+						}
+						continue
+					}
+				}
+
+			}
+
+		}
+	}()
+
+	require.Nil(t, err)
+
+	groupChatID, err := alice.CreateGroupChat([]ed25519.PublicKey{bobIDKey})
+	require.Nil(t, err)
+	require.Nil(t, alice.SaveMessage(groupChatID, []byte("hi @all")))
+
+	// done signal
+	done := make(chan struct{}, 1)
+
+	for {
+
+		select {
+		case msgEv := <-aliceReceivedMsgChan:
+
+			msg := msgEv.Message
+
+			if msg.Received {
+
+				// make sure message is as we expect it to be
+				require.Equal(t, "Greeting @all", string(msg.Message))
+				require.Equal(t, hex.EncodeToString(bobIDKey), hex.EncodeToString(msg.Sender))
+				require.Equal(t, uint(1), msg.Version)
+				require.Equal(t, db.StatusPersisted, msg.Status)
+
+				// we need to wait a bit since this is called async
+				// before the receive handling logic has the chance to update
+				// the shared secret
+				time.Sleep(time.Second)
+
+				// make sure shared secret got accepted
+				shSec, err := alice.sharedSecStorage.GetYoungest(bobIDKey)
+				require.Nil(t, err)
+				require.NotNil(t, shSec)
+				require.True(t, shSec.Accepted)
+
+				done <- struct{}{}
+			}
+
+		case msgEv := <-bobReceivedMsgChan:
+
+			msg := msgEv.Message
+
+			// handle received messages
+			if msg.Received {
+				fmt.Println(msg.GroupChatID)
+				if string(msg.Message) == "" {
+					continue
+				}
+
+				// make sure the messages is as we expect it to be
+				require.Equal(t, "hi @all", string(msg.Message))
+				require.True(t, msg.Received)
+				require.Equal(t, db.StatusPersisted, msg.Status)
+				require.Equal(t, uint(1), msg.Version)
+
+				// make sure shared secret got persisted
+				shSec, err := bob.sharedSecStorage.GetYoungest(aliceIDKey)
+				require.Nil(t, err)
+				require.NotNil(t, shSec)
+				require.Equal(t, hex.EncodeToString(aliceIDKey), hex.EncodeToString(shSec.Partner))
+				require.True(t, shSec.Accepted)
+
+				// fetch chat
+				groupChat, err := bob.chatStorage.GetChatByPartner(aliceIDKey)
+				require.Nil(t, err)
+
+				groupChat.SaveMessage([]byte("Greeting @all"))
+
 			}
 
 		case <-done:

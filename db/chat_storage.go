@@ -1,16 +1,18 @@
 package db
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
-	"crypto/rand"
-	"encoding/hex"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
 	storm "github.com/asdine/storm"
 	sq "github.com/asdine/storm/q"
+	uuid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"
+	"time"
 )
 
 // message status
@@ -36,11 +38,6 @@ var statuses = map[Status]bool{
 // validate a given message
 var ValidMessage = func(m Message) error {
 
-	// validate id
-	if m.ID == "" {
-		return errors.New("invalid message id (empty string)")
-	}
-
 	// validate version
 	if m.Version == 0 {
 		return errors.New("invalid version - got 0")
@@ -52,7 +49,7 @@ var ValidMessage = func(m Message) error {
 	}
 
 	// validate "type" of message
-	if m.DApp == nil && len(m.Message) == 0 {
+	if m.DApp == nil && m.AddUserToChat == nil && len(m.Message) == 0 {
 		return errors.New("got invalid message - dapp and message are both nil")
 	}
 
@@ -90,11 +87,8 @@ type DAppMessage struct {
 }
 
 type AddUserToChat struct {
-	Users []ed25519.PublicKey
-	// @todo encrypt
-	SharedSecret   [32]byte
-	SharedSecretID []byte
-	ChatID         []byte
+	Users  []ed25519.PublicKey
+	ChatID []byte
 }
 
 type Message struct {
@@ -113,26 +107,58 @@ type Message struct {
 	UniqueMsgID   int64 `storm:"index"`
 	ChatID        int   `storm:"index"`
 	AddUserToChat *AddUserToChat
+	GroupChatID   []byte
 }
 
 type Chat struct {
 	ID int `storm:"id,increment"`
 	// partner will only be filled if this is a private chat
-	Partner  ed25519.PublicKey `storm:"index,unique"`
-	Partners []ed25519.PublicKey
-	// @todo encrypt this
-	GroupChatSharedSecret [32]byte
-	GroupSharedSecretID   []byte
-	UnreadMessages        bool
-	GroupChatRemoteID     []byte
-	db                    storm.Node
-	km                    *km.KeyManager
-	postPersistListener   []func(event MessagePersistedEvent)
+	Partner             ed25519.PublicKey `storm:"index,unique"`
+	Partners            []ed25519.PublicKey
+	UnreadMessages      bool
+	GroupChatRemoteID   []byte
+	db                  storm.Node
+	km                  *km.KeyManager
+	postPersistListener []func(event MessagePersistedEvent)
 }
 
 // @todo maybe more checks
 func (c *Chat) IsGroupChat() bool {
-	return len(c.GroupSharedSecretID) != 0
+	return len(c.GroupChatRemoteID) != 0
+}
+
+var nowAsUnix = func() int64 {
+	return time.Now().UnixNano()
+}
+
+// save a raw message
+func (c *Chat) SaveMessage(rawMessage []byte) error {
+
+	id, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+
+	senderStr, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return err
+	}
+	sender, err := hex.DecodeString(senderStr)
+	if err != nil {
+		return err
+	}
+
+	msg := Message{
+		ID:        id.String(),
+		Message:   rawMessage,
+		CreatedAt: nowAsUnix(),
+		Version:   1,
+		Status:    StatusPersisted,
+		Sender:    sender,
+	}
+
+	// fetch chat
+	return c.PersistMessage(msg)
 }
 
 func (c *Chat) GetMessage(msgID int64) (*Message, error) {
@@ -166,7 +192,7 @@ func (c *Chat) GetMessage(msgID int64) (*Message, error) {
 
 }
 
-// Persist Message
+// Persist Message struct
 func (c *Chat) PersistMessage(msg Message) error {
 	msg.ChatID = c.ID
 	ct, err := c.km.AESEncrypt(msg.Message)
@@ -255,9 +281,11 @@ func (c *Chat) Messages(start int64, amount uint) ([]*Message, error) {
 type ChatStorage interface {
 	GetChatByPartner(pubKey ed25519.PublicKey) (*Chat, error)
 	GetChat(chatID int) (*Chat, error)
+	GetGroupChatByRemoteID(id []byte) (*Chat, error)
 	// returned int is the chat ID
 	CreateChat(partner ed25519.PublicKey) error
 	CreateGroupChat(partners []ed25519.PublicKey) (int, error)
+	CreateGroupChatFromMsg(createMessage *AddUserToChat) error
 	AddListener(func(e MessagePersistedEvent))
 	AllChats() ([]Chat, error)
 	// set state of chat to unread messages
@@ -275,6 +303,33 @@ type BoltChatStorage struct {
 	db                  storm.Node
 	postPersistListener []func(event MessagePersistedEvent)
 	km                  *km.KeyManager
+}
+
+func (s *BoltChatStorage) CreateGroupChatFromMsg(createMessage *AddUserToChat) error {
+
+	c := Chat{
+		Partners:          createMessage.Users,
+		GroupChatRemoteID: createMessage.ChatID,
+	}
+
+	return s.db.Save(&c)
+
+}
+
+func (s *BoltChatStorage) GetGroupChatByRemoteID(id []byte) (*Chat, error) {
+
+	// make sure chats exist
+	amount, err := s.db.Count(&Chat{})
+	if err != nil {
+		return nil, err
+	}
+	if amount == 0 {
+		return nil, nil
+	}
+
+	c := &Chat{}
+	return c, s.db.One("GroupChatRemoteID", id, c)
+
 }
 
 func (s *BoltChatStorage) GetChat(chatID int) (*Chat, error) {
@@ -355,12 +410,6 @@ func (s *BoltChatStorage) AllChats() ([]Chat, error) {
 
 func (s *BoltChatStorage) CreateGroupChat(partners []ed25519.PublicKey) (int, error) {
 
-	// generate group chat shared secret
-	ss := [32]byte{}
-	if _, err := rand.Read(ss[:]); err != nil {
-		return 0, err
-	}
-
 	// remote id
 	ri := make([]byte, 200)
 	if _, err := rand.Read(ri); err != nil {
@@ -374,10 +423,8 @@ func (s *BoltChatStorage) CreateGroupChat(partners []ed25519.PublicKey) (int, er
 	}
 
 	c := &Chat{
-		Partners:              partners,
-		GroupChatSharedSecret: ss,
-		GroupChatRemoteID:     ri,
-		GroupSharedSecretID:   ssID,
+		Partners:          partners,
+		GroupChatRemoteID: ri,
 	}
 
 	if err := s.db.Save(c); err != nil {

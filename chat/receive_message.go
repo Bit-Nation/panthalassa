@@ -329,18 +329,61 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		return err
 	}
 
-	// persist message
-	if err := chat.PersistMessage(dbMessage); err != nil {
-		return err
-	}
-
 	// if the decryption didn't fail we want to mark
 	// the shared secret as accepted
 	if !sharedSec.Accepted {
-		fmt.Println("going to accept shared secret")
-		return c.sharedSecStorage.Accept(sharedSec)
+		if err := c.sharedSecStorage.Accept(sharedSec); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	// create group chat / add members
+	if dbMessage.AddUserToChat != nil {
+		fmt.Println("add user to chat")
+		// fetch group chat
+		groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.AddUserToChat.ChatID)
+		if err != nil {
+			return err
+		}
+
+		// when the group chat doesn't exist we need to create it
+		if groupChat == nil {
+			fmt.Println("create group chat")
+			return c.chatStorage.CreateGroupChatFromMsg(dbMessage.AddUserToChat)
+		}
+
+		// add new users
+		for _, newUser := range dbMessage.AddUserToChat.Users {
+			exist := false
+			for _, user := range groupChat.Partners {
+				if hex.EncodeToString(user) == hex.EncodeToString(newUser) {
+					exist = true
+				}
+			}
+			if exist == true {
+				groupChat.Partners = append(groupChat.Partners, newUser)
+			}
+		}
+
+		groupChat.GroupChatRemoteID = dbMessage.AddUserToChat.ChatID
+
+		// @todo update group chat
+
+		return nil
+	}
+
+	// persist group chat message in the correct chat
+	if len(dbMessage.GroupChatID) != 0 {
+		groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.GroupChatID)
+		if err != nil {
+			return err
+		}
+		if groupChat == nil {
+			return fmt.Errorf("couldn't find group chat for id: %x", dbMessage.GroupChatID)
+		}
+		return groupChat.PersistMessage(dbMessage)
+	}
+
+	return chat.PersistMessage(dbMessage)
 
 }

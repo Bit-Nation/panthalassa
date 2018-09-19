@@ -3,8 +3,10 @@ package chat
 import (
 	"errors"
 
+	"encoding/hex"
 	db "github.com/Bit-Nation/panthalassa/db"
 	ed25519 "golang.org/x/crypto/ed25519"
+	"time"
 )
 
 func (c *Chat) AddUserToGroupChat(partners []ed25519.PublicKey, chatID int) error {
@@ -51,10 +53,8 @@ func (c *Chat) AddUserToGroupChat(partners []ed25519.PublicKey, chatID int) erro
 		// persist message
 		msg := db.Message{
 			AddUserToChat: &db.AddUserToChat{
-				Users:          partners,
-				SharedSecret:   chat.GroupChatSharedSecret,
-				SharedSecretID: chat.GroupSharedSecretID,
-				ChatID:         chat.GroupChatRemoteID,
+				Users:  partners,
+				ChatID: chat.GroupChatRemoteID,
 			},
 		}
 		if err := partnerChat.PersistMessage(msg); err != nil {
@@ -81,7 +81,18 @@ func (c *Chat) CreateGroupChat(partners []ed25519.PublicKey) (int, error) {
 		return 0, err
 	}
 
-	// fetch chat
+	// sender
+	idKeyStr, err := c.km.IdentityPublicKey()
+	if err != nil {
+		return 0, err
+	}
+
+	idKey, err := hex.DecodeString(idKeyStr)
+	if err != nil {
+		return 0, err
+	}
+
+	// send message to our group chat partners
 	for _, partner := range partners {
 
 		// fetch chat
@@ -105,11 +116,14 @@ func (c *Chat) CreateGroupChat(partners []ed25519.PublicKey) (int, error) {
 		// persist message
 		msg := db.Message{
 			AddUserToChat: &db.AddUserToChat{
-				Users:          partners,
-				SharedSecret:   groupChat.GroupChatSharedSecret,
-				SharedSecretID: groupChat.GroupSharedSecretID,
-				ChatID:         groupChat.GroupChatRemoteID,
+				Users:  partners,
+				ChatID: groupChat.GroupChatRemoteID,
 			},
+			Version:     1,
+			CreatedAt:   time.Now().UnixNano(),
+			Status:      db.StatusPersisted,
+			Sender:      idKey,
+			GroupChatID: partnerChat.GroupChatRemoteID,
 		}
 		if err := partnerChat.PersistMessage(msg); err != nil {
 			return 0, err
