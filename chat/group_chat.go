@@ -1,12 +1,12 @@
 package chat
 
 import (
-	"errors"
-
 	"encoding/hex"
+	"errors"
+	"time"
+
 	db "github.com/Bit-Nation/panthalassa/db"
 	ed25519 "golang.org/x/crypto/ed25519"
-	"time"
 )
 
 func (c *Chat) AddUserToGroupChat(partners []ed25519.PublicKey, chatID int) error {
@@ -123,7 +123,7 @@ func (c *Chat) CreateGroupChat(partners []ed25519.PublicKey) (int, error) {
 			CreatedAt:   time.Now().UnixNano(),
 			Status:      db.StatusPersisted,
 			Sender:      idKey,
-			GroupChatID: partnerChat.GroupChatRemoteID,
+			GroupChatID: groupChat.GroupChatRemoteID,
 		}
 		if err := partnerChat.PersistMessage(msg); err != nil {
 			return 0, err

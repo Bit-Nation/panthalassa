@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"fmt"
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	db "github.com/Bit-Nation/panthalassa/db"
 	profile "github.com/Bit-Nation/panthalassa/profile"
@@ -459,6 +458,9 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 	// done signal
 	done := make(chan struct{}, 1)
 
+	// group chat id
+	var remoteGroupChatID []byte
+
 	for {
 
 		select {
@@ -494,10 +496,18 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 			// handle received messages
 			if msg.Received {
-				fmt.Println(msg.GroupChatID)
+
+				// the first message we get should be a message to init a group chat
+				if msg.AddUserToChat != nil {
+					remoteGroupChatID = msg.AddUserToChat.ChatID
+				}
+
 				if string(msg.Message) == "" {
 					continue
 				}
+
+				// make sure group ID has been set
+				require.Equal(t, 200, len(remoteGroupChatID))
 
 				// make sure the messages is as we expect it to be
 				require.Equal(t, "hi @all", string(msg.Message))

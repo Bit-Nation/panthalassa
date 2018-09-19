@@ -13,7 +13,6 @@ var nowAsUnix = func() int64 {
 	return time.Now().UnixNano()
 }
 
-// persist private message
 func (c *Chat) SaveMessage(chatID int, rawMessage []byte) error {
 	id, err := uuid.NewV4()
 	if err != nil {

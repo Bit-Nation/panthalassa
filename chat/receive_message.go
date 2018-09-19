@@ -339,7 +339,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 	// create group chat / add members
 	if dbMessage.AddUserToChat != nil {
-		fmt.Println("add user to chat")
+
 		// fetch group chat
 		groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.AddUserToChat.ChatID)
 		if err != nil {

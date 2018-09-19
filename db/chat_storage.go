@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
 
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	km "github.com/Bit-Nation/panthalassa/keyManager"
@@ -12,7 +13,6 @@ import (
 	sq "github.com/asdine/storm/q"
 	uuid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"
-	"time"
 )
 
 // message status
