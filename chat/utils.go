@@ -166,10 +166,11 @@ func hashChatMessage(msg bpb.ChatMessage) (mh.Multihash, error) {
 // turns a received plain protobuf message into a database message
 func protoPlainMsgToMessage(msg *bpb.PlainChatMessage) (db.Message, error) {
 	m := db.Message{
-		ID:        msg.MessageID,
-		Message:   msg.Message,
-		CreatedAt: msg.CreatedAt,
-		Version:   uint(msg.Version),
+		ID:          msg.MessageID,
+		Message:     msg.Message,
+		CreatedAt:   msg.CreatedAt,
+		Version:     uint(msg.Version),
+		GroupChatID: msg.GroupChatID,
 	}
 
 	if msg.AddUserPrivChat != nil {

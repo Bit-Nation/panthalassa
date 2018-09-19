@@ -116,7 +116,7 @@ type Chat struct {
 	Partner             ed25519.PublicKey `storm:"index,unique"`
 	Partners            []ed25519.PublicKey
 	UnreadMessages      bool
-	GroupChatRemoteID   []byte
+	GroupChatRemoteID   []byte `storm:"unique"`
 	db                  storm.Node
 	km                  *km.KeyManager
 	postPersistListener []func(event MessagePersistedEvent)
@@ -124,7 +124,7 @@ type Chat struct {
 
 // @todo maybe more checks
 func (c *Chat) IsGroupChat() bool {
-	return len(c.GroupChatRemoteID) != 0
+	return len(c.GroupChatRemoteID) == 200
 }
 
 var nowAsUnix = func() int64 {
@@ -307,6 +307,18 @@ type BoltChatStorage struct {
 
 func (s *BoltChatStorage) CreateGroupChatFromMsg(createMessage *AddUserToChat) error {
 
+	// add our self to the users
+	ourIDKeyStr, err := s.km.IdentityPublicKey()
+	if err != nil {
+		return err
+	}
+	ourIDKeyHex, err := hex.DecodeString(ourIDKeyStr)
+	if err != nil {
+		return err
+	}
+
+	createMessage.Users = append(createMessage.Users, ourIDKeyHex)
+
 	c := Chat{
 		Partners:          createMessage.Users,
 		GroupChatRemoteID: createMessage.ChatID,
@@ -319,16 +331,26 @@ func (s *BoltChatStorage) CreateGroupChatFromMsg(createMessage *AddUserToChat) e
 func (s *BoltChatStorage) GetGroupChatByRemoteID(id []byte) (*Chat, error) {
 
 	// make sure chats exist
-	amount, err := s.db.Count(&Chat{})
+	q := s.db.Select(sq.Eq("GroupChatRemoteID", id))
+	amount, err := q.Count(&Chat{})
 	if err != nil {
 		return nil, err
 	}
-	if amount == 0 {
+	if amount != 1 {
 		return nil, nil
 	}
 
-	c := &Chat{}
-	return c, s.db.One("GroupChatRemoteID", id, c)
+	c := &Chat{
+		km:                  s.km,
+		db:                  s.db,
+		postPersistListener: s.postPersistListener,
+	}
+
+	if err := s.db.One("GroupChatRemoteID", id, c); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 
 }
 
@@ -338,7 +360,6 @@ func (s *BoltChatStorage) GetChat(chatID int) (*Chat, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if amountChats == 0 {
 		return nil, nil
 	}
@@ -348,7 +369,11 @@ func (s *BoltChatStorage) GetChat(chatID int) (*Chat, error) {
 	chat.db = s.db
 	chat.postPersistListener = s.postPersistListener
 
-	return chat, s.db.One("ID", amountChats, chat)
+	if err := s.db.One("ID", chatID, chat); err != nil {
+		return nil, err
+	}
+
+	return chat, nil
 
 }
 

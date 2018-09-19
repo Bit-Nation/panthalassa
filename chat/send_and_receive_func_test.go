@@ -12,6 +12,8 @@ import (
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bpb "github.com/Bit-Nation/protobuffers"
 	require "github.com/stretchr/testify/require"
+	// log "gx/ipfs/QmTG23dvpBCBjqQwyDxV8CQT6jmS4PSftNr1VqHhE3MLy7/go-log"
+	"fmt"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
@@ -313,7 +315,7 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 }
 
 func TestGroupChatBetweenAliceAndBob(t *testing.T) {
-
+	// log.SetDebugLogging()
 	alice, aliceTrans, bob, bobTrans, err := createAliceAndBob()
 
 	// listen for bob's messages
@@ -458,9 +460,6 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 	// done signal
 	done := make(chan struct{}, 1)
 
-	// group chat id
-	var remoteGroupChatID []byte
-
 	for {
 
 		select {
@@ -470,6 +469,9 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 			if msg.Received {
 
+				// make sure group id is ok
+				// require.Equal(t, hex.EncodeToString(remoteGroupChatID), hex.EncodeToString(msgEv.Chat.GroupChatRemoteID))
+				fmt.Println("got message")
 				// make sure message is as we expect it to be
 				require.Equal(t, "Greeting @all", string(msg.Message))
 				require.Equal(t, hex.EncodeToString(bobIDKey), hex.EncodeToString(msg.Sender))
@@ -497,17 +499,8 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 			// handle received messages
 			if msg.Received {
 
-				// the first message we get should be a message to init a group chat
-				if msg.AddUserToChat != nil {
-					remoteGroupChatID = msg.AddUserToChat.ChatID
-				}
-
-				if string(msg.Message) == "" {
-					continue
-				}
-
 				// make sure group ID has been set
-				require.Equal(t, 200, len(remoteGroupChatID))
+				require.Equal(t, 200, len(msgEv.Chat.GroupChatRemoteID))
 
 				// make sure the messages is as we expect it to be
 				require.Equal(t, "hi @all", string(msg.Message))
@@ -522,11 +515,8 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 				require.Equal(t, hex.EncodeToString(aliceIDKey), hex.EncodeToString(shSec.Partner))
 				require.True(t, shSec.Accepted)
 
-				// fetch chat
-				groupChat, err := bob.chatStorage.GetChatByPartner(aliceIDKey)
-				require.Nil(t, err)
-
-				groupChat.SaveMessage([]byte("Greeting @all"))
+				// send message back
+				require.Nil(t, msgEv.Chat.SaveMessage([]byte("Greeting @all")))
 
 			}
 

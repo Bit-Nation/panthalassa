@@ -5,9 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"sync"
-
 	"strconv"
+	"sync"
 
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
@@ -118,7 +117,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 		err := c.queue.AddJob(queue.Job{
 			Type: "MESSAGE:SUBMIT",
 			Data: map[string]interface{}{
-				"partner":       e.Chat.Partner,
+				"chat_id":       e.Chat.ID,
 				"db_message_id": e.Message.UniqueMsgID,
 			},
 		})

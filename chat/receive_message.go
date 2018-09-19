@@ -189,14 +189,28 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			if err != nil {
 				return err
 			}
+
 			// convert proto plain message to decrypted message
 			dbMessage, err := protoPlainMsgToMessage(&decryptedMsg)
-			dbMessage.Status = db.StatusPersisted
-			dbMessage.Sender = sender
-			dbMessage.Received = true
 			if err != nil {
 				return err
 			}
+			dbMessage.Status = db.StatusPersisted
+			dbMessage.Sender = sender
+			dbMessage.Received = true
+
+			// persist group chat message in the correct chat
+			if len(dbMessage.GroupChatID) == 200 && dbMessage.AddUserToChat == nil {
+				groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.GroupChatID)
+				if err != nil {
+					return err
+				}
+				if groupChat == nil {
+					return fmt.Errorf("couldn't find group chat for id: %x", dbMessage.GroupChatID)
+				}
+				return groupChat.PersistMessage(dbMessage)
+			}
+
 			return chat.PersistMessage(dbMessage)
 		}
 
@@ -291,6 +305,36 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 
+		if dbMessage.AddUserToChat != nil {
+
+			// fetch group chat
+			groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.AddUserToChat.ChatID)
+			if err != nil {
+				return err
+			}
+
+			// when the group chat doesn't exist we need to create it
+			if groupChat == nil {
+				return c.chatStorage.CreateGroupChatFromMsg(dbMessage.AddUserToChat)
+			}
+
+			return nil
+
+		}
+
+		// persist group chat message in the correct chat
+		if len(dbMessage.GroupChatID) == 200 && dbMessage.AddUserToChat == nil {
+
+			groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.GroupChatID)
+			if err != nil {
+				return err
+			}
+			if groupChat == nil {
+				return fmt.Errorf("couldn't find group chat for id: %x", dbMessage.GroupChatID)
+			}
+			return groupChat.PersistMessage(dbMessage)
+		}
+
 		return chat.PersistMessage(dbMessage)
 
 	}
@@ -348,32 +392,15 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 		// when the group chat doesn't exist we need to create it
 		if groupChat == nil {
-			fmt.Println("create group chat")
 			return c.chatStorage.CreateGroupChatFromMsg(dbMessage.AddUserToChat)
 		}
 
-		// add new users
-		for _, newUser := range dbMessage.AddUserToChat.Users {
-			exist := false
-			for _, user := range groupChat.Partners {
-				if hex.EncodeToString(user) == hex.EncodeToString(newUser) {
-					exist = true
-				}
-			}
-			if exist == true {
-				groupChat.Partners = append(groupChat.Partners, newUser)
-			}
-		}
-
-		groupChat.GroupChatRemoteID = dbMessage.AddUserToChat.ChatID
-
-		// @todo update group chat
-
 		return nil
+
 	}
 
 	// persist group chat message in the correct chat
-	if len(dbMessage.GroupChatID) != 0 {
+	if len(dbMessage.GroupChatID) == 200 && dbMessage.AddUserToChat == nil {
 		groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.GroupChatID)
 		if err != nil {
 			return err
