@@ -283,7 +283,7 @@ type ChatStorage interface {
 	GetChat(chatID int) (*Chat, error)
 	GetGroupChatByRemoteID(id []byte) (*Chat, error)
 	// returned int is the chat ID
-	CreateChat(partner ed25519.PublicKey) error
+	CreateChat(partner ed25519.PublicKey) (int, error)
 	CreateGroupChat(partners []ed25519.PublicKey) (int, error)
 	CreateGroupChatFromMsg(createMessage *AddUserToChat) error
 	AddListener(func(e MessagePersistedEvent))
@@ -400,10 +400,17 @@ func (s *BoltChatStorage) GetChatByPartner(partner ed25519.PublicKey) (*Chat, er
 	return &c, nil
 }
 
-func (s *BoltChatStorage) CreateChat(partner ed25519.PublicKey) error {
-	return s.db.Save(&Chat{
+func (s *BoltChatStorage) CreateChat(partner ed25519.PublicKey) (int, error) {
+
+	c := &Chat{
 		Partner: partner,
-	})
+	}
+
+	if err := s.db.Save(c); err != nil {
+		return 0, err
+	}
+
+	return c.ID, nil
 }
 
 func (s *BoltChatStorage) UnreadMessages(c Chat) error {

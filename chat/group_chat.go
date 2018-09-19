@@ -38,7 +38,8 @@ func (c *Chat) AddUserToGroupChat(partners []ed25519.PublicKey, chatID int) erro
 			return err
 		}
 		if partnerChat == nil {
-			if err := c.chatStorage.CreateChat(partner); err != nil {
+			_, err = c.chatStorage.CreateChat(partner)
+			if err != nil {
 				return err
 			}
 		}
@@ -101,7 +102,8 @@ func (c *Chat) CreateGroupChat(partners []ed25519.PublicKey) (int, error) {
 			return 0, err
 		}
 		if partnerChat == nil {
-			if err := c.chatStorage.CreateChat(partner); err != nil {
+			_, err = c.chatStorage.CreateChat(partner)
+			if err != nil {
 				return 0, err
 			}
 		}
