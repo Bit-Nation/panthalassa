@@ -98,7 +98,7 @@ func TestFuncCallSuccess(t *testing.T) {
 			panic("callbackTestFuncCallSuccess : key missing")
 		}
 
-		valueFromObj := context.ToString(-1)
+		valueFromObj := context.SafeToString(-1)
 		context.Pop()
 		if valueFromObj != "value" {
 			panic("expected value of key to be: value")
@@ -147,7 +147,7 @@ func TestFuncCallError(t *testing.T) {
 			panic("callbackTestFuncCallSuccess : key missing")
 		}
 
-		valueFromObj := context.ToString(-1)
+		valueFromObj := context.SafeToString(-1)
 		if valueFromObj != "value" {
 			panic("expected value of key to be: value")
 		}
@@ -197,7 +197,7 @@ func TestFuncCallBackTwice(t *testing.T) {
 		if !context.IsString(0) {
 			panic("expected value to be string")
 		}
-		if context.ToString(0) != "Callback: Already called callback" {
+		if context.SafeToString(0) != "Callback: Already called callback" {
 			panic("Expected an error that tells me that I alrady called the callback")
 		}
 		return 0
@@ -213,7 +213,7 @@ func TestFuncCallBackTwice(t *testing.T) {
 			panic("callbackTestFuncCallSuccess : key missing")
 		}
 
-		valueFromObj := context.ToString(-1)
+		valueFromObj := context.SafeToString(-1)
 
 		if valueFromObj != "value" {
 			panic("expected value of key to be: value")

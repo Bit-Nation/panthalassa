@@ -111,7 +111,7 @@ func TestPersistMessageSuccessfully(t *testing.T) {
 
 	_, err = vm.PushGlobalGoFunction("callbackSendMessage", func(context *duktape.Context) int {
 		if !context.IsUndefined(0) {
-			require.Fail(t, context.ToString(0))
+			require.Fail(t, context.SafeToString(0))
 		}
 
 		return 0
@@ -145,7 +145,7 @@ func TestPersistInvalidFunctionCall(t *testing.T) {
 
 	_, err = vm.PushGlobalGoFunction("callbackSendMessage", func(context *duktape.Context) int {
 
-		err := context.ToString(0)
+		err := context.SafeToString(0)
 		require.Equal(t, "ValidationError: expected parameter 1 to be of type object", err)
 		closer <- struct{}{}
 		return 0
@@ -171,7 +171,7 @@ func TestPersistChatTooShort(t *testing.T) {
 	closer := make(chan struct{}, 1)
 
 	_, err := vm.PushGlobalGoFunction("callbackSendMessage", func(context *duktape.Context) int {
-		err := context.ToString(0)
+		err := context.SafeToString(0)
 		require.Equal(t, "chat must be 32 bytes long", err)
 
 		closer <- struct{}{}
@@ -200,7 +200,7 @@ func TestPersistWithoutShouldSend(t *testing.T) {
 	closer := make(chan struct{}, 1)
 
 	_, err := vm.PushGlobalGoFunction("callbackSendMessage", func(context *duktape.Context) int {
-		err := context.ToString(0)
+		err := context.SafeToString(0)
 		require.Equal(t, "ValidationError: Missing value for required key: shouldSend", err)
 		closer <- struct{}{}
 		return 0

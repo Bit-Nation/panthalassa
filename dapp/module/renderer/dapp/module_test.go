@@ -26,7 +26,7 @@ func TestModule_OpenDAppError(t *testing.T) {
 			panic("callbackTestFuncCallSuccess : key missing")
 		}
 
-		v := context.ToString(-1)
+		v := context.SafeToString(-1)
 
 		if v != "value" {
 			panic("Expected value of key to be: value")
@@ -65,7 +65,7 @@ func TestModule_OpenDAppSuccess(t *testing.T) {
 			panic("callbackTestFuncCallSuccess : key missing")
 		}
 
-		v := context.ToString(-1)
+		v := context.SafeToString(-1)
 
 		if v != "value" {
 			panic("Expected value of key to be: value")

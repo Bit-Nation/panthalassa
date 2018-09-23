@@ -132,10 +132,10 @@ func TestKeyDerivation(t *testing.T) {
 
 	//Test vector set one
 	testVectorErrorMapping := map[string]int{
-		"m/0H/1":                 1,
-		"m/0H/1/2H":              1,
-		"m/0H/1/2H/2":            1,
-		"m/0H/1/2H/2/1000000000": 1,
+		"m/0H/1":                          1,
+		"m/0H/1/2H":                       1,
+		"m/0H/1/2H/2":                     1,
+		"m/0H/1/2H/2/1000000000":          1,
 		"m/0":                             0,
 		"m/0/2147483647H":                 0,
 		"m/0/2147483647H/1":               0,

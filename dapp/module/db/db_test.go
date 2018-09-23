@@ -128,7 +128,7 @@ func TestModuleGet(t *testing.T) {
 		errBool := !context.IsUndefined(0)
 		require.False(t, errBool)
 
-		value := context.ToString(1)
+		value := context.SafeToString(1)
 		require.Equal(t, "value", value)
 
 		closer <- struct{}{}

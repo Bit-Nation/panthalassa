@@ -91,13 +91,13 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 
 			// if there is an error, set it in the response
 			if !context.IsUndefined(0) && !context.IsNull(0) {
-				callbackerr := context.ToString(0)
+				callbackerr := context.SafeToString(0)
 				r.error = errors.New(callbackerr)
 			}
 
 			// set the layout in the response
 			if context.IsString(1) {
-				layout := context.ToString(1)
+				layout := context.SafeToString(1)
 				r.layout = layout
 			}
 

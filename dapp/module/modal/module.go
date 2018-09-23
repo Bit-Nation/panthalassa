@@ -119,7 +119,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 
 		// modal ui id
-		uiID := context.ToString(0)
+		uiID := context.SafeToString(0)
 
 		// make sure ui id is registered
 		mIdChan := make(chan *duktape.Context)
@@ -139,7 +139,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 
 		// get layout
-		layout := context.ToString(1)
+		layout := context.SafeToString(1)
 
 		sysLog.Debugf("going to render: %s with UI id %s", layout, uiID)
 
