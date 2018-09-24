@@ -249,14 +249,14 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	// attach signature to doc
 	doc.Signature = cidSignature
 
-	idKey, err := d.km.IdentityPublicKey()
+	ethAddr, err := d.km.GetEthereumAddress()
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
 
 	// submit tx to chain
 	tx, err := d.n.NotarizeTwo(&bind.TransactOpts{
-		From:   common.HexToAddress(idKey),
+		From:   common.HexToAddress(ethAddr),
 		Signer: d.km.SignEthTx,
 	}, d.notaryAddr, docContentCID, cidSignature)
 	if err != nil {
