@@ -190,7 +190,7 @@ func (m *Module) CallFunction(id uint, payload string) error {
 		alreadyCalled = true
 
 		if !context.IsUndefined(0) {
-			firstParameter := context.ToString(0)
+			firstParameter := context.SafeToString(0)
 			if context.IsFunction(1) {
 				context.PushString(firstParameter)
 				context.Call(1)

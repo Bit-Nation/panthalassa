@@ -24,7 +24,7 @@ func TestCreateRandomBytes(t *testing.T) {
 			panic("expected error to be undefined")
 		}
 
-		generatedBytes := (context.ToString(-1))
+		generatedBytes := (context.SafeToString(-1))
 		if generatedBytes != "1, 4, 6" {
 			panic("it's not the same bytes")
 		}

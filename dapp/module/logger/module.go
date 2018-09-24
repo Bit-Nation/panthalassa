@@ -71,7 +71,7 @@ func (l *Logger) Register(vm *duktape.Context) error {
 				break
 			}
 			sysLog.Debug("log: ", toLog)
-			toLog = append(toLog, context.ToString(i))
+			toLog = append(toLog, context.SafeToString(i))
 			i++
 		}
 		l.Logger.Info(strings.Join(toLog, ","))

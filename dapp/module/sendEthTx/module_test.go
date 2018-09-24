@@ -54,7 +54,7 @@ func TestSuccessCall(t *testing.T) {
 			panic("expected error to be undefined")
 		}
 
-		transaction := (context.ToString(-1))
+		transaction := (context.SafeToString(-1))
 		if transaction != "{}" {
 			// it's ok to assert {}
 			// this is just a mock

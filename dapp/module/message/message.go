@@ -88,7 +88,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 
 		// chat in which the message should be persisted
-		chatStr := context.ToString(0)
+		chatStr := context.SafeToString(0)
 		itemsToPopBeforeCallback++
 		chat, err := hex.DecodeString(chatStr)
 		if err != nil {
@@ -108,7 +108,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 		if !context.GetPropString(1, "type") {
 			handleError(`key "type" doesn't exist`)
 		}
-		dAppMessage.Type = context.ToString(-1)
+		dAppMessage.Type = context.SafeToString(-1)
 		itemsToPopBeforeCallback++
 		itemsToPopBeforeCallback++
 		// set optional params
@@ -123,7 +123,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 			handleError(`key "key" doesn't exist`)
 		}
 
-		vmValue := context.ToString(-1)
+		vmValue := context.SafeToString(-1)
 		itemsToPopBeforeCallback++
 		itemsToPopBeforeCallback++
 		dAppMessage.Params["key"] = vmValue

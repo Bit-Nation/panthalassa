@@ -84,7 +84,7 @@ func (m *Module) OpenDApp(payload string) error {
 
 			// if there is an error, set it in the response
 			if !context.IsUndefined(0) && !context.IsNull(0) {
-				callbackerr := context.ToString(0)
+				callbackerr := context.SafeToString(0)
 				cbDone <- errors.New(callbackerr)
 				return 1
 			}

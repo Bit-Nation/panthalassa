@@ -13,11 +13,11 @@ type ObjValueValidator func(context *duktape.Context, position int) error
 
 // validate an address
 var ObjTypeAddress = func(context *duktape.Context, position int) error {
-	err := errors.New(fmt.Sprintf("Expected %s to be an ethereum address", context.ToString(position)))
+	err := errors.New(fmt.Sprintf("Expected %s to be an ethereum address", context.SafeToString(position)))
 	if !context.IsString(position) {
 		return err
 	}
-	if !eth.IsHexAddress(context.ToString(position)) {
+	if !eth.IsHexAddress(context.SafeToString(position)) {
 		return err
 	}
 	return nil
@@ -26,7 +26,7 @@ var ObjTypeAddress = func(context *duktape.Context, position int) error {
 // Validate if value is a string
 var ObjTypeString = func(context *duktape.Context, position int) error {
 	if !context.IsString(position) {
-		return errors.New(fmt.Sprintf("Expected %s to be a string", context.ToString(position)))
+		return errors.New(fmt.Sprintf("Expected %s to be a string", context.SafeToString(position)))
 	}
 	return nil
 }
@@ -34,14 +34,14 @@ var ObjTypeString = func(context *duktape.Context, position int) error {
 // validate if value is an object
 var ObjTypeObject = func(context *duktape.Context, position int) error {
 	if !context.IsObject(position) {
-		return fmt.Errorf("expected %s to be a object", context.ToString(position))
+		return fmt.Errorf("expected %s to be a object", context.SafeToString(position))
 	}
 	return nil
 }
 
 var ObjTypeBool = func(context *duktape.Context, position int) error {
 	if !context.IsBoolean(position) {
-		return fmt.Errorf("expected %s to be a bool", context.ToString(position))
+		return fmt.Errorf("expected %s to be a bool", context.SafeToString(position))
 	}
 	return nil
 }
@@ -105,7 +105,7 @@ func (v *ObjValidator) Validate(context *duktape.Context, position int) error {
 		// validate value
 		// @TODO find out why -1 works here and "position" doesnt
 		if err := rule.valueType(context, -1); err != nil {
-			//e := fmt.Errorf("ValidationError : Missing value for required key: %s", context.ToString(position))
+			//e := fmt.Errorf("ValidationError : Missing value for required key: %s", context.SafeToString(position))
 			return err
 		}
 

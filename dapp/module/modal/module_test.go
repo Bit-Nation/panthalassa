@@ -42,7 +42,7 @@ func TestModule_CloseModal(t *testing.T) {
 	_, err = vm.PushGlobalGoFunction("callbackTestModuleCloseModal", func(context *duktape.Context) int {
 		// fetch callback data
 		errBool := context.IsUndefined(0)
-		modalID := context.ToString(1)
+		modalID := context.SafeToString(1)
 
 		// error must be undefined
 		require.True(t, errBool)
@@ -147,7 +147,7 @@ func TestModal_RenderWithoutID(t *testing.T) {
 
 	done := make(chan struct{}, 1)
 	_, err := vm.PushGlobalGoFunction("callbackTestModalRenderWithoutID", func(context *duktape.Context) int {
-		err := context.ToString(0)
+		err := context.SafeToString(0)
 		require.Equal(t, "MissingModalID: modal UI ID: 'id_do_not_exist' does not exist", err)
 		done <- struct{}{}
 		return 0
@@ -188,7 +188,7 @@ func TestModal_RequestLimitation(t *testing.T) {
 		//require.Equal(t, uint(1), m.modalIDsReqLim.Current())
 
 		// close modal with UI ID
-		id := context.ToString(0)
+		id := context.SafeToString(0)
 		vm.PevalString(`callbackCloserRequestLimitation`)
 		m.CloseModal(id)
 

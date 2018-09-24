@@ -59,8 +59,8 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 
 		// fetch key and value
-		key := context.ToString(0)
-		value := context.ToString(1)
+		key := context.SafeToString(0)
+		value := context.SafeToString(1)
 		// marshal value into json
 		byteValue, err := json.Marshal(value)
 		if err != nil {
@@ -103,7 +103,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 
 		// key of database
-		key := context.ToString(0)
+		key := context.SafeToString(0)
 
 		// check if database has value
 		has, err := m.dAppDB.Has([]byte(key))
@@ -130,7 +130,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 
 		// key of database
-		key := context.ToString(0)
+		key := context.SafeToString(0)
 
 		// raw value of key
 		value, err := m.dAppDB.Get([]byte(key))
@@ -166,7 +166,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 		}
 
 		// delete value
-		key := context.ToString(0)
+		key := context.SafeToString(0)
 		if err := m.dAppDB.Delete([]byte(key)); err != nil {
 			return handleError(err.Error(), context, 1)
 		}

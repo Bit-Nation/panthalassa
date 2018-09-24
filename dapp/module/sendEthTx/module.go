@@ -84,7 +84,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 				handleError(err.Error())
 				return
 			}
-			to := context.ToString(-1)
+			to := context.SafeToString(-1)
 			itemsToPopBeforeCallback++
 			itemsToPopBeforeCallback++
 
@@ -93,7 +93,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 				handleError(err.Error())
 				return
 			}
-			value := context.ToString(-1)
+			value := context.SafeToString(-1)
 			itemsToPopBeforeCallback++
 			itemsToPopBeforeCallback++
 
@@ -102,7 +102,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 				handleError(err.Error())
 				return
 			}
-			data := context.ToString(-1)
+			data := context.SafeToString(-1)
 			itemsToPopBeforeCallback++
 			itemsToPopBeforeCallback++
 
