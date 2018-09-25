@@ -31,6 +31,7 @@ func (m *Module) Register(context *duktape.Context) error {
 		return err
 	}
 	context.PushString(addr)
+	context.PutGlobalString("ethereumAddress")
 	return err
 
 }

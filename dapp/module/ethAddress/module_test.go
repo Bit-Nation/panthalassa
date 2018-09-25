@@ -30,6 +30,7 @@ func TestModule_Register(t *testing.T) {
 
 	mod.Register(vm)
 
+	vm.GetGlobalString("ethereumAddress")
 	v := vm.SafeToString(0)
 	require.Equal(t, "0x748A6536dE0a8b1902f808233DD75ec4451cdFC6", v)
 
