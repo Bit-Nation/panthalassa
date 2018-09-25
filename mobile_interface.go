@@ -154,8 +154,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		return err
 	}
 
-	var notaryMulti common.Address
-	var notary common.Address
+	var notaryMultiAddr common.Address
 
 	networkID, err := ethClient.NetworkID(context.Background())
 	if err != nil {
@@ -168,14 +167,13 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	}
 
 	// rinkeby addresses
-	notary = common.HexToAddress("0xd75afa5c92cefded2862d2770f6a0929af74067d")
-	notaryMulti = common.HexToAddress("0x00d238247ae4324f952d2c9a297dd5f76ed0e7c0")
+	notaryMultiAddr = common.HexToAddress("0x5e04e983bb438d70471848d7f24416fa0a9a7de1")
 
-	notaryContract, err := documents.NewNotaryMulti(notaryMulti, ethClient)
+	notaryContract, err := documents.NewNotaryMulti(notaryMultiAddr, ethClient)
 	if err != nil {
 		return err
 	}
-	notariseCall := documents.NewDocumentNotariseCall(docStorage, km, notaryContract, notary)
+	notariseCall := documents.NewDocumentNotariseCall(docStorage, km, notaryContract)
 	if err := dcr.Register(notariseCall); err != nil {
 		return err
 	}

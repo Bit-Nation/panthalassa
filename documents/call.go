@@ -194,18 +194,16 @@ func (d *DocumentDeleteCall) Handle(data map[string]interface{}) (map[string]int
 }
 
 type DocumentSubmitCall struct {
-	s          *Storage
-	km         *keyManager.KeyManager
-	n          *NotaryMulti
-	notaryAddr common.Address
+	s  *Storage
+	km *keyManager.KeyManager
+	n  *NotaryMulti
 }
 
-func NewDocumentNotariseCall(s *Storage, km *keyManager.KeyManager, n *NotaryMulti, notaryAddr common.Address) *DocumentSubmitCall {
+func NewDocumentNotariseCall(s *Storage, km *keyManager.KeyManager, n *NotaryMulti) *DocumentSubmitCall {
 	return &DocumentSubmitCall{
-		s:          s,
-		km:         km,
-		n:          n,
-		notaryAddr: notaryAddr,
+		s:  s,
+		km: km,
+		n:  n,
 	}
 }
 
@@ -258,7 +256,7 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	tx, err := d.n.NotarizeTwo(&bind.TransactOpts{
 		From:   common.HexToAddress(ethAddr),
 		Signer: d.km.SignEthTx,
-	}, d.notaryAddr, docContentCID, cidSignature)
+	}, docContentCID, cidSignature)
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
