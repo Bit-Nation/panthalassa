@@ -16,10 +16,12 @@ import (
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	x3dh "github.com/Bit-Nation/x3dh"
 	common "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	types "github.com/ethereum/go-ethereum/core/types"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 	ed25519 "golang.org/x/crypto/ed25519"
+	"strconv"
 )
 
 type KeyManager struct {
@@ -291,6 +293,23 @@ func (km KeyManager) SignEthTx(signer types.Signer, addresses common.Address, tx
 	if err != nil {
 		return nil, err
 	}
+
+	// unmarshal tx
+	var txMap map[string]interface{}
+	if err := json.Unmarshal([]byte(submittedTx), &txMap); err != nil {
+		return nil, err
+	}
+
+	// turn gas price into hex
+	gasPriceStr, ok := txMap["gasPrice"].(string)
+	if ok {
+		return nil, errors.New("gas price must be a string")
+	}
+	gasPrice, err := strconv.Atoi(gasPriceStr)
+	if err != nil {
+		return nil, err
+	}
+	txMap["gasPrice"] = "0x" + strconv.FormatInt(int64(gasPrice), 16)
 
 	signedTx := &types.Transaction{}
 	if err := signedTx.UnmarshalJSON([]byte(submittedTx)); err != nil {
