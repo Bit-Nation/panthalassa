@@ -285,7 +285,7 @@ type ChatStorage interface {
 	// returned int is the chat ID
 	CreateChat(partner ed25519.PublicKey) (int, error)
 	CreateGroupChat(partners []ed25519.PublicKey) (int, error)
-	CreateGroupChatFromMsg(createMessage *AddUserToChat) error
+	CreateGroupChatFromMsg(createMessage Message) error
 	AddListener(func(e MessagePersistedEvent))
 	AllChats() ([]Chat, error)
 	// set state of chat to unread messages
@@ -305,23 +305,17 @@ type BoltChatStorage struct {
 	km                  *km.KeyManager
 }
 
-func (s *BoltChatStorage) CreateGroupChatFromMsg(createMessage *AddUserToChat) error {
+func (s *BoltChatStorage) CreateGroupChatFromMsg(msg Message) error {
 
-	// add our self to the users
-	ourIDKeyStr, err := s.km.IdentityPublicKey()
-	if err != nil {
-		return err
-	}
-	ourIDKeyHex, err := hex.DecodeString(ourIDKeyStr)
-	if err != nil {
-		return err
+	if msg.AddUserToChat == nil {
+		return errors.New("can't create a chat from a message without the information needed to create it")
 	}
 
-	createMessage.Users = append(createMessage.Users, ourIDKeyHex)
+	msg.AddUserToChat.Users = append(msg.AddUserToChat.Users, msg.Sender)
 
 	c := Chat{
-		Partners:          createMessage.Users,
-		GroupChatRemoteID: createMessage.ChatID,
+		Partners:          msg.AddUserToChat.Users,
+		GroupChatRemoteID: msg.AddUserToChat.ChatID,
 	}
 
 	return s.db.Save(&c)

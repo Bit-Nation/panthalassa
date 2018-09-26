@@ -299,12 +299,12 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 		// convert plain protobuf message to database message
 		dbMessage, err := protoPlainMsgToMessage(&plainMsg)
-		dbMessage.Sender = sender
-		dbMessage.Status = db.StatusPersisted
-		dbMessage.Received = true
 		if err != nil {
 			return err
 		}
+		dbMessage.Sender = sender
+		dbMessage.Status = db.StatusPersisted
+		dbMessage.Received = true
 
 		if dbMessage.AddUserToChat != nil {
 
@@ -316,7 +316,7 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 			// when the group chat doesn't exist we need to create it
 			if groupChat == nil {
-				return c.chatStorage.CreateGroupChatFromMsg(dbMessage.AddUserToChat)
+				return c.chatStorage.CreateGroupChatFromMsg(dbMessage)
 			}
 
 			return nil
@@ -391,9 +391,11 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			return err
 		}
 
+		// @todo add handle of new user
+
 		// when the group chat doesn't exist we need to create it
 		if groupChat == nil {
-			return c.chatStorage.CreateGroupChatFromMsg(dbMessage.AddUserToChat)
+			return c.chatStorage.CreateGroupChatFromMsg(dbMessage)
 		}
 
 		return nil

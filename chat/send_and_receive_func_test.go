@@ -12,8 +12,6 @@ import (
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bpb "github.com/Bit-Nation/protobuffers"
 	require "github.com/stretchr/testify/require"
-	// log "gx/ipfs/QmTG23dvpBCBjqQwyDxV8CQT6jmS4PSftNr1VqHhE3MLy7/go-log"
-	"fmt"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
@@ -470,9 +468,6 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 			if msg.Received {
 
-				// make sure group id is ok
-				// require.Equal(t, hex.EncodeToString(remoteGroupChatID), hex.EncodeToString(msgEv.Chat.GroupChatRemoteID))
-				fmt.Println("got message")
 				// make sure message is as we expect it to be
 				require.Equal(t, "Greeting @all", string(msg.Message))
 				require.Equal(t, hex.EncodeToString(bobIDKey), hex.EncodeToString(msg.Sender))
@@ -523,6 +518,8 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 		case <-done:
 			return
+		case <-time.After(time.Second * 6):
+			require.FailNow(t, "timed out")
 		}
 	}
 
