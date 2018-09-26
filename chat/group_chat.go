@@ -6,6 +6,7 @@ import (
 	"time"
 
 	db "github.com/Bit-Nation/panthalassa/db"
+	uid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
@@ -68,10 +69,10 @@ func (c *Chat) AddUserToGroupChat(partners []ed25519.PublicKey, chatID int) erro
 
 }
 
-func (c *Chat) CreateGroupChat(partners []ed25519.PublicKey) (int, error) {
+func (c *Chat) CreateGroupChat(partners []ed25519.PublicKey, name string) (int, error) {
 
 	// create chat
-	chatID, err := c.chatStorage.CreateGroupChat(partners)
+	chatID, err := c.chatStorage.CreateGroupChat(partners, name)
 	if err != nil {
 		return 0, err
 	}
@@ -115,6 +116,11 @@ func (c *Chat) CreateGroupChat(partners []ed25519.PublicKey) (int, error) {
 			return 0, errors.New("chat with partner should exist at this point in time")
 		}
 
+		msgID, err := uid.NewV4()
+		if err != nil {
+			return 0, err
+		}
+
 		// persist message
 		msg := db.Message{
 			AddUserToChat: &db.AddUserToChat{
@@ -126,6 +132,7 @@ func (c *Chat) CreateGroupChat(partners []ed25519.PublicKey) (int, error) {
 			Status:      db.StatusPersisted,
 			Sender:      idKey,
 			GroupChatID: groupChat.GroupChatRemoteID,
+			ID:          msgID.String(),
 		}
 		if err := partnerChat.PersistMessage(msg); err != nil {
 			return 0, err

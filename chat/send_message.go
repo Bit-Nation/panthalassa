@@ -37,6 +37,10 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 	// attach add user data
 	if dbMessage.AddUserToChat != nil {
 		addUserMsg := dbMessage.AddUserToChat
+		groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.GroupChatID)
+		if err != nil {
+			return err
+		}
 		plainMessage.AddUserPrivChat = &bpb.PlainChatMessage_AddUserPrivGroupChat{
 			Users: func() [][]byte {
 				users := [][]byte{}
@@ -45,7 +49,8 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 				}
 				return users
 			}(),
-			ChatID: addUserMsg.ChatID,
+			ChatID:    addUserMsg.ChatID,
+			GroupName: groupChat.Name,
 		}
 	}
 

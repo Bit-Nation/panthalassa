@@ -65,7 +65,7 @@ func CreatePrivateChat(partnerStr string) (int, error) {
 }
 
 // return chatID
-func CreateGroupChat(users string) (int, error) {
+func CreateGroupChat(users string, name string) (int, error) {
 
 	// make sure panthalassa has been started
 	if panthalassaInstance == nil {
@@ -88,7 +88,7 @@ func CreateGroupChat(users string) (int, error) {
 		partners = append(partners, rawPartner)
 	}
 
-	return panthalassaInstance.chat.CreateGroupChat(partners)
+	return panthalassaInstance.chat.CreateGroupChat(partners, name)
 
 }
 
@@ -108,7 +108,10 @@ func AllChats() (string, error) {
 	for _, chat := range chats {
 		chatsRep = append(chatsRep, map[string]interface{}{
 			"chat_id":         chat.ID,
+			"chat_partner":    chat.Partner,
 			"unread_messages": chat.UnreadMessages,
+			"group_chat_name": chat.GroupChatName,
+			"partners":        chat.Partners,
 		})
 	}
 

@@ -12,8 +12,6 @@ import (
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bpb "github.com/Bit-Nation/protobuffers"
 	require "github.com/stretchr/testify/require"
-	// log "gx/ipfs/QmTG23dvpBCBjqQwyDxV8CQT6jmS4PSftNr1VqHhE3MLy7/go-log"
-	"fmt"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
@@ -241,7 +239,8 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 	require.Nil(t, err)
 
 	// persist private message for bob
-	require.Nil(t, alice.chatStorage.CreateChat(bobIDKey))
+	_, err = alice.chatStorage.CreateChat(bobIDKey)
+	require.Nil(t, err)
 	bobChat, err := alice.chatStorage.GetChatByPartner(bobIDKey)
 	require.Nil(t, err)
 	require.NotNil(t, bobChat)
@@ -453,7 +452,7 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 	require.Nil(t, err)
 
-	groupChatID, err := alice.CreateGroupChat([]ed25519.PublicKey{bobIDKey})
+	groupChatID, err := alice.CreateGroupChat([]ed25519.PublicKey{bobIDKey}, "Group between alice and bob")
 	require.Nil(t, err)
 	require.Nil(t, alice.SaveMessage(groupChatID, []byte("hi @all")))
 
@@ -469,11 +468,9 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 			if msg.Received {
 
-				// make sure group id is ok
-				// require.Equal(t, hex.EncodeToString(remoteGroupChatID), hex.EncodeToString(msgEv.Chat.GroupChatRemoteID))
-				fmt.Println("got message")
 				// make sure message is as we expect it to be
 				require.Equal(t, "Greeting @all", string(msg.Message))
+				require.Equal(t, "Group between alice and bob", msgEv.Chat.Name)
 				require.Equal(t, hex.EncodeToString(bobIDKey), hex.EncodeToString(msg.Sender))
 				require.Equal(t, uint(1), msg.Version)
 				require.Equal(t, db.StatusPersisted, msg.Status)
@@ -504,6 +501,7 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 				// make sure the messages is as we expect it to be
 				require.Equal(t, "hi @all", string(msg.Message))
+				require.Equal(t, "Group between alice and bob", msgEv.Chat.Name)
 				require.True(t, msg.Received)
 				require.Equal(t, db.StatusPersisted, msg.Status)
 				require.Equal(t, uint(1), msg.Version)
@@ -522,6 +520,8 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 		case <-done:
 			return
+		case <-time.After(time.Second * 6):
+			require.FailNow(t, "timed out")
 		}
 	}
 

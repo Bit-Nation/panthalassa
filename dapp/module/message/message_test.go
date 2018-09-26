@@ -96,7 +96,8 @@ func TestPersistMessageSuccessfully(t *testing.T) {
 		closer <- struct{}{}
 	})
 	// create chat
-	require.Nil(t, chatStorage.CreateChat(chatPubKey))
+	_, err = chatStorage.CreateChat(chatPubKey)
+	require.Nil(t, err)
 
 	msgModule := New(chatStorage, dAppPubKey, nil)
 	require.Nil(t, msgModule.Register(vm))

@@ -179,6 +179,7 @@ func protoPlainMsgToMessage(msg *bpb.PlainChatMessage) (db.Message, error) {
 		for _, user := range msg.AddUserPrivChat.Users {
 			m.AddUserToChat.Users = append(m.AddUserToChat.Users, user)
 		}
+		m.AddUserToChat.ChatName = msg.AddUserPrivChat.GroupName
 	}
 
 	if isDAppMessage(msg) {
