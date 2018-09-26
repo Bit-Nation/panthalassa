@@ -2,9 +2,12 @@ package dapp
 
 import (
 	"errors"
+	"reflect"
+	"unsafe"
+
+	log "github.com/ipfs/go-log"
 
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
 	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
@@ -12,8 +15,8 @@ import (
 type Module struct {
 	logger             *logger.Logger
 	vm                 *duktape.Context
-	setOpenHandlerChan chan *duktape.Context
-	getOpenHandlerChan chan chan *duktape.Context
+	setOpenHandlerChan chan []byte
+	getOpenHandlerChan chan chan []byte
 	addCBChan          chan *chan error
 	rmCBChan           chan *chan error
 	// returns a cb chan from the stack
@@ -41,9 +44,16 @@ func (m *Module) Register(vm *duktape.Context) error {
 			m.logger.Error(err.Error())
 			return 1
 		}
-
-		// set renderer
-		m.setOpenHandlerChan <- context
+		context.DumpFunction()
+		context.DumpContextStdout()
+		rawmem, bufsize := context.GetBuffer(-1)
+		if uintptr(rawmem) == uintptr(0) {
+			panic("Can't interpret bytecode dump as a valid, non-empty buffer.")
+		}
+		rawmemslice := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data: uintptr(rawmem), Len: int(bufsize), Cap: int(bufsize)}))
+		bytecode := make([]byte, bufsize)
+		copy(bytecode, rawmemslice)
+		m.setOpenHandlerChan <- bytecode
 
 		return 0
 	})
@@ -52,9 +62,8 @@ func (m *Module) Register(vm *duktape.Context) error {
 
 // payload can be an arbitrary set of key value pairs (as a json string)
 func (m *Module) OpenDApp(payload string) error {
-
 	// fetch handler
-	handlerChan := make(chan *duktape.Context)
+	handlerChan := make(chan []byte)
 	m.getOpenHandlerChan <- handlerChan
 	handler := <-handlerChan
 
@@ -71,11 +80,27 @@ func (m *Module) OpenDApp(payload string) error {
 	// add cb chan to state
 	m.addCBChan <- &cbDone
 
+	bytecode := handler
+	ctxDeserialize := duktape.New()
+
+	//creating buffer on the context stack
+	rawmem := ctxDeserialize.PushBuffer(len(bytecode), false)
+	if uintptr(rawmem) == uintptr(0) {
+		panic("Can't push buffer to the context stack.")
+	}
+
+	//copying bytecode into the created buffer
+	rawmemslice := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{Data: uintptr(rawmem), Len: len(bytecode), Cap: len(bytecode)}))
+	copy(rawmemslice, bytecode)
+
+	// Transmute duktape bytecode into duktape function
+	ctxDeserialize.LoadFunction()
+
 	go func() {
 
 		// call the renderer
 		// we pass in data object and a callback
-		_, err := handler.PushGlobalGoFunction("callbackOpenDApp", func(context *duktape.Context) int {
+		_, err := ctxDeserialize.PushGlobalGoFunction("callbackOpenDApp", func(context *duktape.Context) int {
 
 			// remove cb chan from state
 			defer func() {
@@ -98,16 +123,16 @@ func (m *Module) OpenDApp(payload string) error {
 		if err != nil {
 			m.logger.Error(err.Error())
 		}
-		err = handler.PevalString(dataObj)
+		err = ctxDeserialize.PevalString(dataObj)
 		if err != nil {
 			m.logger.Error(err.Error())
 		}
-		err = handler.PevalString(`callbackOpenDApp`)
+		err = ctxDeserialize.PevalString(`callbackOpenDApp`)
 		if err != nil {
 			m.logger.Error(err.Error())
 		}
-
-		handler.Call(2)
+		ctxDeserialize.DumpContextStdout()
+		ctxDeserialize.Call(2)
 
 	}()
 
@@ -123,8 +148,8 @@ func New(l *logger.Logger) *Module {
 
 	m := &Module{
 		logger:             l,
-		setOpenHandlerChan: make(chan *duktape.Context),
-		getOpenHandlerChan: make(chan chan *duktape.Context),
+		setOpenHandlerChan: make(chan []byte),
+		getOpenHandlerChan: make(chan chan []byte),
 		addCBChan:          make(chan *chan error),
 		rmCBChan:           make(chan *chan error),
 		nextCBChan:         make(chan chan *chan error),
@@ -133,7 +158,7 @@ func New(l *logger.Logger) *Module {
 
 	go func() {
 
-		openHandler := new(duktape.Context)
+		openHandler := []byte{}
 		cbChans := map[*chan error]bool{}
 
 		for {
