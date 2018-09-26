@@ -50,7 +50,7 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 				return users
 			}(),
 			ChatID:    addUserMsg.ChatID,
-			GroupName: groupChat.Name,
+			GroupName: groupChat.GroupChatName,
 		}
 	}
 
