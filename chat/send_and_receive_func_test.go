@@ -452,7 +452,7 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 	require.Nil(t, err)
 
-	groupChatID, err := alice.CreateGroupChat([]ed25519.PublicKey{bobIDKey})
+	groupChatID, err := alice.CreateGroupChat([]ed25519.PublicKey{bobIDKey}, "Group between alice and bob")
 	require.Nil(t, err)
 	require.Nil(t, alice.SaveMessage(groupChatID, []byte("hi @all")))
 
@@ -470,6 +470,7 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 				// make sure message is as we expect it to be
 				require.Equal(t, "Greeting @all", string(msg.Message))
+				require.Equal(t, "Group between alice and bob", msgEv.Chat.Name)
 				require.Equal(t, hex.EncodeToString(bobIDKey), hex.EncodeToString(msg.Sender))
 				require.Equal(t, uint(1), msg.Version)
 				require.Equal(t, db.StatusPersisted, msg.Status)
@@ -500,6 +501,7 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 				// make sure the messages is as we expect it to be
 				require.Equal(t, "hi @all", string(msg.Message))
+				require.Equal(t, "Group between alice and bob", msgEv.Chat.Name)
 				require.True(t, msg.Received)
 				require.Equal(t, db.StatusPersisted, msg.Status)
 				require.Equal(t, uint(1), msg.Version)

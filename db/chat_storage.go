@@ -38,6 +38,10 @@ var statuses = map[Status]bool{
 // validate a given message
 var ValidMessage = func(m Message) error {
 
+	if m.ID == "" {
+		return errors.New("invalid message id (empty string)")
+	}
+
 	// validate version
 	if m.Version == 0 {
 		return errors.New("invalid version - got 0")
@@ -87,8 +91,9 @@ type DAppMessage struct {
 }
 
 type AddUserToChat struct {
-	Users  []ed25519.PublicKey
-	ChatID []byte
+	Users    []ed25519.PublicKey
+	ChatName string
+	ChatID   []byte
 }
 
 type Message struct {
@@ -111,7 +116,8 @@ type Message struct {
 }
 
 type Chat struct {
-	ID int `storm:"id,increment"`
+	ID   int `storm:"id,increment"`
+	Name string
 	// partner will only be filled if this is a private chat
 	Partner             ed25519.PublicKey `storm:"index,unique"`
 	Partners            []ed25519.PublicKey
@@ -284,7 +290,7 @@ type ChatStorage interface {
 	GetGroupChatByRemoteID(id []byte) (*Chat, error)
 	// returned int is the chat ID
 	CreateChat(partner ed25519.PublicKey) (int, error)
-	CreateGroupChat(partners []ed25519.PublicKey) (int, error)
+	CreateGroupChat(partners []ed25519.PublicKey, name string) (int, error)
 	CreateGroupChatFromMsg(createMessage Message) error
 	AddListener(func(e MessagePersistedEvent))
 	AllChats() ([]Chat, error)
@@ -314,6 +320,7 @@ func (s *BoltChatStorage) CreateGroupChatFromMsg(msg Message) error {
 	msg.AddUserToChat.Users = append(msg.AddUserToChat.Users, msg.Sender)
 
 	c := Chat{
+		Name:              msg.AddUserToChat.ChatName,
 		Partners:          msg.AddUserToChat.Users,
 		GroupChatRemoteID: msg.AddUserToChat.ChatID,
 	}
@@ -434,7 +441,7 @@ func (s *BoltChatStorage) AllChats() ([]Chat, error) {
 	return *chats, s.db.All(chats)
 }
 
-func (s *BoltChatStorage) CreateGroupChat(partners []ed25519.PublicKey) (int, error) {
+func (s *BoltChatStorage) CreateGroupChat(partners []ed25519.PublicKey, name string) (int, error) {
 
 	// remote id
 	ri := make([]byte, 200)
@@ -449,6 +456,7 @@ func (s *BoltChatStorage) CreateGroupChat(partners []ed25519.PublicKey) (int, er
 	}
 
 	c := &Chat{
+		Name:              name,
 		Partners:          partners,
 		GroupChatRemoteID: ri,
 	}

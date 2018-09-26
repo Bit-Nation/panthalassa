@@ -65,7 +65,7 @@ func CreatePrivateChat(partnerStr string) (int, error) {
 }
 
 // return chatID
-func CreateGroupChat(users string) (int, error) {
+func CreateGroupChat(users string, name string) (int, error) {
 
 	// make sure panthalassa has been started
 	if panthalassaInstance == nil {
@@ -88,7 +88,7 @@ func CreateGroupChat(users string) (int, error) {
 		partners = append(partners, rawPartner)
 	}
 
-	return panthalassaInstance.chat.CreateGroupChat(partners)
+	return panthalassaInstance.chat.CreateGroupChat(partners, name)
 
 }
 
