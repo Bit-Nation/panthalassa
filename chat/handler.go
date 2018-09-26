@@ -143,6 +143,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"chat":       e.Chat.ID,
 			"received":   e.Message.Received,
 			"dapp":       dapp,
+			"sender":     e.Message.Sender,
 		})
 	}
 
@@ -154,6 +155,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"chat":       e.Chat.ID,
 			"received":   e.Message.Received,
 			"dapp":       dapp,
+			"sender":     e.Message.Sender,
 		})
 	}
 
@@ -165,6 +167,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"chat":       e.Chat.ID,
 			"received":   e.Message.Received,
 			"dapp":       dapp,
+			"sender":     e.Message.Sender,
 		})
 	}
 
