@@ -116,8 +116,8 @@ type Message struct {
 }
 
 type Chat struct {
-	ID   int `storm:"id,increment"`
-	Name string
+	ID            int `storm:"id,increment"`
+	GroupChatName string
 	// partner will only be filled if this is a private chat
 	Partner             ed25519.PublicKey `storm:"index,unique"`
 	Partners            []ed25519.PublicKey
@@ -320,7 +320,7 @@ func (s *BoltChatStorage) CreateGroupChatFromMsg(msg Message) error {
 	msg.AddUserToChat.Users = append(msg.AddUserToChat.Users, msg.Sender)
 
 	c := Chat{
-		Name:              msg.AddUserToChat.ChatName,
+		GroupChatName:     msg.AddUserToChat.ChatName,
 		Partners:          msg.AddUserToChat.Users,
 		GroupChatRemoteID: msg.AddUserToChat.ChatID,
 	}
@@ -456,7 +456,7 @@ func (s *BoltChatStorage) CreateGroupChat(partners []ed25519.PublicKey, name str
 	}
 
 	c := &Chat{
-		Name:              name,
+		GroupChatName:     name,
 		Partners:          partners,
 		GroupChatRemoteID: ri,
 	}
