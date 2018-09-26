@@ -23,7 +23,8 @@ func TestChat_SavePrivateMessage(t *testing.T) {
 		km:          km,
 	}
 
-	require.Nil(t, chatStorage.CreateChat(pub))
+	_, err = chatStorage.CreateChat(pub)
+	require.Nil(t, err)
 
 	chat, err := chatStorage.GetChatByPartner(pub)
 	require.Nil(t, err)

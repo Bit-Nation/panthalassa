@@ -241,7 +241,8 @@ func TestChatBetweenAliceAndBob(t *testing.T) {
 	require.Nil(t, err)
 
 	// persist private message for bob
-	require.Nil(t, alice.chatStorage.CreateChat(bobIDKey))
+	_, err = alice.chatStorage.CreateChat(bobIDKey)
+	require.Nil(t, err)
 	bobChat, err := alice.chatStorage.GetChatByPartner(bobIDKey)
 	require.Nil(t, err)
 	require.NotNil(t, bobChat)
