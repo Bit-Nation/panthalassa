@@ -108,8 +108,10 @@ func AllChats() (string, error) {
 	for _, chat := range chats {
 		chatsRep = append(chatsRep, map[string]interface{}{
 			"chat_id":         chat.ID,
+			"chat_partner":    chat.Partner,
 			"unread_messages": chat.UnreadMessages,
 			"group_chat_name": chat.GroupChatName,
+			"partners":        chat.Partners,
 		})
 	}
 
