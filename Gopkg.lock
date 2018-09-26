@@ -4,7 +4,7 @@
 [[projects]]
   name = "github.com/Bit-Nation/protobuffers"
   packages = ["."]
-  revision = "a71cefee1ec2dda6f720cacaa1b3217b1589e33c"
+  revision = "b104bab4e16e94443febee60f003a2e5bacd6e03"
 
 [[projects]]
   branch = "master"
@@ -33,19 +33,6 @@
     "extra25519"
   ]
   revision = "5312a61534124124185d41f09206b9fef1d88403"
-
-[[projects]]
-  name = "github.com/asdine/storm"
-  packages = [
-    ".",
-    "codec",
-    "codec/json",
-    "index",
-    "internal",
-    "q"
-  ]
-  revision = "5a6fe65e3993f63951c8e3f64c812536c9e23595"
-  version = "v2.1.2"
 
 [[projects]]
   branch = "master"
@@ -782,6 +769,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "470d40dd4b96cf5aca7d1710b5dcf5bea1be9e20be5860b8530a9824997a99b9"
+  inputs-digest = "105a127428276ed3fe782aae284c0b9b32a3d3eaa9cbaeadb2194f3d5a71142c"
   solver-name = "gps-cdcl"
   solver-version = 1
