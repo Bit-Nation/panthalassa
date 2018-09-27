@@ -232,7 +232,16 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
-
+	
+	// decrypt document content
+	docContent, err := d.km.AESDecrypt(doc.EncryptedContent)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+	
+	// assign plain document content
+	doc.Content = docContent
+	
 	docContentCID := cid.NewCidV1(cid.Raw, docHash).Bytes()
 
 	// attach cid to document
