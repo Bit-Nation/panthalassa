@@ -6,14 +6,14 @@ import (
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
+	otto "github.com/robertkrimen/otto"
 )
 
 type Module struct {
 	logger          *logger.Logger
-	vm              *duktape.Context
-	setRendererChan chan *duktape.Context
-	getRendererChan chan chan *duktape.Context
+	vm              *otto.Otto
+	setRendererChan chan *otto.Value
+	getRendererChan chan chan *otto.Value
 	addCBChan       chan *chan resp
 	rmCBChan        chan *chan resp
 	closer          chan struct{}
@@ -30,25 +30,26 @@ var sysLog = log.Logger("renderer - message")
 // 2. The "callback" should be can be called with two parameters:
 // 		1. an error
 // 		2. the rendered layout
-func (m *Module) Register(vm *duktape.Context) error {
+func (m *Module) Register(vm *otto.Otto) error {
 	m.vm = vm
-	_, err := vm.PushGlobalGoFunction("setMessageRenderer", func(context *duktape.Context) int {
+	return vm.Set("setMessageRenderer", func(call otto.FunctionCall) otto.Value {
+
 		sysLog.Debug("set message renderer")
 
 		// validate function call
 		v := validator.New()
 		v.Set(0, &validator.TypeFunction)
-		if err := v.Validate(context); err != nil {
-			m.logger.Error(err.Error())
-			return 1
+		if err := v.Validate(vm, call); err != nil {
+			m.logger.Error(err.String())
+			return *err
 		}
 
 		// set renderer
-		m.setRendererChan <- context
+		fn := call.Argument(0)
+		m.setRendererChan <- &fn
 
-		return 0
+		return otto.Value{}
 	})
-	return err
 }
 
 type resp struct {
@@ -59,18 +60,22 @@ type resp struct {
 // payload can be an arbitrary set of key value pairs
 // should contain the "message" and the "context" tho
 func (m *Module) RenderMessage(payload string) (string, error) {
+
 	// fetch renderer
-	rendererChan := make(chan *duktape.Context)
+	rendererChan := make(chan *otto.Value)
 	m.getRendererChan <- rendererChan
 	renderer := <-rendererChan
 
 	// make sure an renderer has been set
-	if renderer == nil {
+	if renderer == nil || !renderer.IsDefined() {
 		return "", errors.New("failed to render message - no open handler set")
 	}
 
 	// convert context to otto js object
-	payloadObj := "(" + payload + ")"
+	payloadObj, err := m.vm.Object("(" + payload + ")")
+	if err != nil {
+		return "", err
+	}
 
 	cbChan := make(chan resp, 1)
 	m.addCBChan <- &cbChan
@@ -79,7 +84,7 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 
 		// call the message renderer
 		// @todo what happens if we call the callback twice?
-		_, err := renderer.PushGlobalGoFunction("callbackRenderMessage", func(context *duktape.Context) int {
+		_, err = renderer.Call(*renderer, payloadObj, func(call otto.FunctionCall) otto.Value {
 
 			// delete cb chan from stack when we are done
 			defer func() {
@@ -87,38 +92,31 @@ func (m *Module) RenderMessage(payload string) (string, error) {
 			}()
 
 			// fetch params from the callback call
+			err := call.Argument(0)
+			layout := call.Argument(1)
+
 			r := resp{}
 
 			// if there is an error, set it in the response
-			if !context.IsUndefined(0) && !context.IsNull(0) {
-				callbackerr := context.ToString(0)
-				r.error = errors.New(callbackerr)
+			if !err.IsUndefined() && !err.IsNull() {
+				r.error = errors.New(err.String())
 			}
 
 			// set the layout in the response
-			if context.IsString(1) {
-				layout := context.ToString(1)
-				r.layout = layout
+			if layout.IsString() {
+				r.layout = layout.String()
 			}
 
 			cbChan <- r
 
-			return 0
+			return otto.Value{}
 
 		})
-		if err != nil {
-			m.logger.Error(err.Error())
-		}
-		err = renderer.PevalString(payloadObj)
-		if err != nil {
-			m.logger.Error(err.Error())
-		}
-		err = renderer.PevalString(`callbackRenderMessage`)
+
 		if err != nil {
 			m.logger.Error(err.Error())
 		}
 
-		renderer.Call(2)
 	}()
 
 	r := <-cbChan
@@ -133,8 +131,8 @@ func (m *Module) Close() error {
 func New(l *logger.Logger) *Module {
 	m := &Module{
 		logger:          l,
-		setRendererChan: make(chan *duktape.Context),
-		getRendererChan: make(chan chan *duktape.Context),
+		setRendererChan: make(chan *otto.Value),
+		getRendererChan: make(chan chan *otto.Value),
 		addCBChan:       make(chan *chan resp),
 		rmCBChan:        make(chan *chan resp),
 		closer:          make(chan struct{}),
@@ -142,7 +140,7 @@ func New(l *logger.Logger) *Module {
 
 	go func() {
 
-		renderer := new(duktape.Context)
+		renderer := new(otto.Value)
 		cbChans := map[*chan resp]bool{}
 
 		for {

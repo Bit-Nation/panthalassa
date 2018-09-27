@@ -7,10 +7,9 @@ import (
 type Throttling struct {
 	concurrency    uint
 	coolDown       time.Duration
-	stack          chan func(chan struct{})
+	stack          chan func()
 	maxQueue       uint
 	queueFullError error
-	vmDone         chan struct{}
 }
 
 func (t *Throttling) Close() error {
@@ -24,10 +23,9 @@ func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint, queu
 	t := &Throttling{
 		concurrency:    concurrency,
 		coolDown:       coolDown,
-		stack:          make(chan func(chan struct{}), maxQueue),
+		stack:          make(chan func(), maxQueue),
 		maxQueue:       maxQueue,
 		queueFullError: queueFullError,
-		vmDone:         make(chan struct{}),
 	}
 
 	inWorkChan := make(chan chan uint)
@@ -81,7 +79,7 @@ func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint, queu
 			select {
 			case job := <-t.stack:
 				incInWork <- struct{}{}
-				go job(t.vmDone)
+				go job()
 				go func() {
 					<-time.After(t.coolDown)
 					decInWork <- struct{}{}
@@ -93,11 +91,10 @@ func NewThrottling(concurrency uint, coolDown time.Duration, maxQueue uint, queu
 	return t
 }
 
-func (t *Throttling) Exec(cb func(vmDone chan struct{})) error {
+func (t *Throttling) Exec(cb func()) error {
 	if len(t.stack) >= int(t.maxQueue) {
 		return t.queueFullError
 	}
 	t.stack <- cb
-	t.vmDone <- struct{}{}
 	return nil
 }

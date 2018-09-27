@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	logger "github.com/op/go-logging"
+	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 type testValue struct {
@@ -24,22 +24,21 @@ func (w testWriter) Write(b []byte) (int, error) {
 
 func TestLoggerModule(t *testing.T) {
 
-	//@TODO Find a way to overwrite method console.log if neccessary, so that we don't need to call consoleLog
 	testValues := []testValue{
 		testValue{
-			js: `consoleLog(1, 2, 3)`,
+			js: `console.log(1, 2, 3)`,
 			assertion: func(consoleOut string) {
 				require.Equal(t, "1,2,3\n", consoleOut)
 			},
 		},
 		testValue{
-			js: `consoleLog("hi","there")`,
+			js: `console.log("hi","there")`,
 			assertion: func(consoleOut string) {
 				require.Equal(t, "hi,there\n", consoleOut)
 			},
 		},
 		testValue{
-			js: `consoleLog({key: 4})`,
+			js: `console.log({key: 4})`,
 			assertion: func(consoleOut string) {
 				require.Equal(t, "[object Object]\n", consoleOut)
 			},
@@ -47,14 +46,14 @@ func TestLoggerModule(t *testing.T) {
 		testValue{
 			js: `
 				var cb = function(){};
-				consoleLog(cb)
+				console.log(cb)
 			`,
 			assertion: func(consoleOut string) {
-				require.Equal(t, "function () { [ecmascript code] }\n", consoleOut)
+				require.Equal(t, "function(){}\n", consoleOut)
 			},
 		},
 		testValue{
-			js: `consoleLog("hi",1)`,
+			js: `console.log("hi",1)`,
 			assertion: func(consoleOut string) {
 				require.Equal(t, "hi,1\n", consoleOut)
 			},
@@ -64,7 +63,7 @@ func TestLoggerModule(t *testing.T) {
 	for _, testValue := range testValues {
 
 		// create VM
-		vm := duktape.New()
+		vm := otto.New()
 
 		// create logger
 		b := logger.NewLogBackend(testWriter{
@@ -79,7 +78,7 @@ func TestLoggerModule(t *testing.T) {
 		loggerModule.Logger = l
 		loggerModule.Register(vm)
 
-		err = vm.PevalString((testValue.js))
+		_, err = vm.Run(testValue.js)
 		require.Nil(t, err)
 
 	}

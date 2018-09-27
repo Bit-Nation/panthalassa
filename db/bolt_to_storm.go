@@ -11,8 +11,8 @@ import (
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	x3dh "github.com/Bit-Nation/x3dh"
 	storm "github.com/asdine/storm"
-	bolt "github.com/coreos/bbolt"
 	dr "github.com/tiabc/doubleratchet"
+	bolt "go.etcd.io/bbolt"
 )
 
 type BoltToStormMigration struct {

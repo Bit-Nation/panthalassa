@@ -1,10 +1,10 @@
 package module
 
 import (
-	duktape "gopkg.in/olebedev/go-duktape.v3"
+	otto "github.com/robertkrimen/otto"
 )
 
 type Module interface {
-	Register(vm *duktape.Context) error
+	Register(vm *otto.Otto) error
 	Close() error
 }
