@@ -102,6 +102,9 @@ func (m *Module) Close() error {
 // will called with an optional error
 func (m *Module) Register(vm *duktape.Context) error {
 
+	fmt.Println("[DApp] Register Start")
+
+	fmt.Println("[DApp] renderModal Start")
 	_, err := vm.PushGlobalGoFunction("renderModal", func(context *duktape.Context) int {
 		sysLog.Debug("render modal")
 
@@ -162,11 +165,13 @@ func (m *Module) Register(vm *duktape.Context) error {
 		return 0
 
 	})
+	fmt.Println("[DApp] renderModal End")
 
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("[DApp] newModalUIID Start")
 	_, err = vm.PushGlobalGoFunction("newModalUIID", func(context *duktape.Context) int {
 		// validate function call
 		v := validator.New()
@@ -215,6 +220,7 @@ func (m *Module) Register(vm *duktape.Context) error {
 		return 0
 
 	})
+	fmt.Println("[DApp] newModalUIID/Register End")
 	return err
 }
 

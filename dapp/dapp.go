@@ -49,6 +49,7 @@ func (d *DApp) ID() string {
 }
 
 func (d *DApp) OpenDApp(context string) error {
+	fmt.Println("[DApp] OpenDApp Start")
 	return d.dAppRenderer.OpenDApp(context)
 }
 
