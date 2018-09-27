@@ -4,45 +4,37 @@ import (
 	"testing"
 
 	log "github.com/op/go-logging"
+	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 func TestModule_OpenDAppError(t *testing.T) {
 
 	l := log.MustGetLogger("")
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	m := New(l)
 	require.Nil(t, m.Register(vm))
 
-	_, err := vm.PushGlobalGoFunction("callbackTestModuleOpenDAppError", func(context *duktape.Context) int {
+	vm.Call("setOpenHandler", vm, func(context otto.Value, cb otto.Value) otto.Value {
 
-		if !context.IsObject(0) {
-			panic("callbackTestFuncCallSuccess : 0 is not an object")
-		}
-		if !context.GetPropString(0, "key") {
-			panic("callbackTestFuncCallSuccess : key missing")
+		v, err := context.Object().Get("key")
+		if err != nil {
+			panic(err)
 		}
 
-		v := context.ToString(-1)
-
-		if v != "value" {
+		if v.String() != "value" {
 			panic("Expected value of key to be: value")
 		}
 
-		context.Pop()
-		context.PushString("I am an error")
-		context.Call(1)
+		cb.Call(cb, "I am an error")
 
-		return 0
+		return otto.Value{}
+
 	})
-	require.Nil(t, err)
-	err = vm.PevalString(`setOpenHandler(callbackTestModuleOpenDAppError)`)
-	require.Nil(t, err)
-	vm.PevalString(`callbackTestModuleOpenDAppError`)
-	err = m.OpenDApp(`{key: "value"}`)
+
+	err := m.OpenDApp(`{key: "value"}`)
 	require.EqualError(t, err, "I am an error")
 
 }
@@ -51,38 +43,29 @@ func TestModule_OpenDAppSuccess(t *testing.T) {
 
 	l := log.MustGetLogger("")
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	m := New(l)
 	require.Nil(t, m.Register(vm))
 
-	_, err := vm.PushGlobalGoFunction("callbackTestModuleOpenDAppSuccess", func(context *duktape.Context) int {
+	vm.Call("setOpenHandler", vm, func(context otto.Value, cb otto.Value) otto.Value {
 
-		if !context.IsObject(0) {
-			panic("callbackTestFuncCallSuccess : 0 is not an object")
-		}
-		if !context.GetPropString(0, "key") {
-			panic("callbackTestFuncCallSuccess : key missing")
+		v, err := context.Object().Get("key")
+		if err != nil {
+			panic(err)
 		}
 
-		v := context.ToString(-1)
-
-		if v != "value" {
+		if v.String() != "value" {
 			panic("Expected value of key to be: value")
 		}
 
-		context.Pop()
-		context.PushUndefined()
-		context.Call(1)
+		cb.Call(cb, nil)
 
-		return 0
+		return otto.Value{}
+
 	})
-	require.Nil(t, err)
-	err = vm.PevalString(`setOpenHandler(callbackTestModuleOpenDAppSuccess)`)
-	require.Nil(t, err)
-	err = vm.PevalString(`callbackTestModuleOpenDAppSuccess`)
-	require.Nil(t, err)
-	err = m.OpenDApp(`{key: "value"}`)
+
+	err := m.OpenDApp(`{key: "value"}`)
 	require.Nil(t, err)
 
 }
@@ -90,19 +73,17 @@ func TestModule_OpenDAppSuccess(t *testing.T) {
 func TestModule_Close(t *testing.T) {
 
 	// setup
-	vm := duktape.New()
+	vm := otto.New()
 	m := New(nil)
 	require.Nil(t, m.Register(vm))
 
 	// set fake open handler
-	_, err := vm.PushGlobalGoFunction("callbackTestModuleClose", func(context *duktape.Context) int {
+	_, err := vm.Call("setOpenHandler", vm, func(call otto.FunctionCall) otto.Value {
 		m.Close()
-		return 0
+		return otto.Value{}
 	})
 	require.Nil(t, err)
-	err = vm.PevalString(`setOpenHandler(callbackTestModuleClose)`)
-	require.Nil(t, err)
-	vm.PevalString(`callbackTestModuleClose`)
+
 	require.EqualError(t, m.OpenDApp("{}"), "closed the application")
 
 }

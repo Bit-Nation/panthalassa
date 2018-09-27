@@ -6,8 +6,8 @@ import (
 	"time"
 
 	log "github.com/op/go-logging"
+	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 type inMemoryDB struct {
@@ -40,22 +40,19 @@ func TestModulePut(t *testing.T) {
 		storage: map[string][]byte{},
 	}, log.MustGetLogger(""))
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	require.Nil(t, m.Register(vm))
 
 	closer := make(chan struct{}, 1)
-	_, err := vm.PushGlobalGoFunction("callbackDbPut", func(context *duktape.Context) int {
-		errBool := !context.IsUndefined(0)
-		require.False(t, errBool)
+	vm.Call("db.put", vm, "key", "value", func(call otto.FunctionCall) otto.Value {
+		err := call.Argument(0)
+		require.False(t, err.IsDefined())
 
 		closer <- struct{}{}
 
-		return 0
+		return otto.Value{}
 	})
-	require.Nil(t, err)
-
-	vm.PevalString(`dbPut("key","value",callbackDbPut)`)
 
 	select {
 	case <-closer:
@@ -75,26 +72,24 @@ func TestModuleHas(t *testing.T) {
 		},
 	}
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	require.Nil(t, m.Register(vm))
 
 	closer := make(chan struct{}, 1)
+	vm.Call("db.has", vm, "key", func(call otto.FunctionCall) otto.Value {
 
-	_, err := vm.PushGlobalGoFunction("callbackDbHas", func(context *duktape.Context) int {
-		errBool := !context.IsUndefined(0)
-		require.False(t, errBool)
+		err := call.Argument(0)
+		require.False(t, err.IsDefined())
 
-		exist := context.IsBoolean(1)
+		exist, e := call.Argument(1).ToBoolean()
+		require.Nil(t, e)
 		require.True(t, exist)
 
 		closer <- struct{}{}
 
-		return 0
+		return otto.Value{}
 	})
-	require.Nil(t, err)
-
-	vm.PevalString(`dbHas("key",callbackDbHas)`)
 
 	select {
 	case <-closer:
@@ -118,26 +113,24 @@ func TestModuleGet(t *testing.T) {
 		logger: log.MustGetLogger(""),
 	}
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	require.Nil(t, m.Register(vm))
 
 	closer := make(chan struct{}, 1)
-	_, err = vm.PushGlobalGoFunction("callbackDbGet", func(context *duktape.Context) int {
+	vm.Call("db.get", vm, "key", func(call otto.FunctionCall) otto.Value {
 
-		errBool := !context.IsUndefined(0)
-		require.False(t, errBool)
+		err := call.Argument(0)
+		require.False(t, err.IsDefined())
 
-		value := context.ToString(1)
+		value := call.Argument(1).String()
 		require.Equal(t, "value", value)
 
 		closer <- struct{}{}
 
-		return 0
+		return otto.Value{}
 	})
-	require.Nil(t, err)
 
-	vm.PevalString(`dbGet("key",callbackDbGet)`)
 	select {
 	case <-closer:
 	case <-time.After(time.Second * 2):
@@ -159,23 +152,20 @@ func TestModuleDelete(t *testing.T) {
 		},
 	}
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	require.Nil(t, m.Register(vm))
 
 	closer := make(chan struct{}, 1)
+	vm.Call("db.delete", vm, "key", func(call otto.FunctionCall) otto.Value {
 
-	_, err = vm.PushGlobalGoFunction("callbackDbDelete", func(context *duktape.Context) int {
-
-		errBool := !context.IsUndefined(0)
-		require.False(t, errBool)
+		err := call.Argument(0)
+		require.False(t, err.IsDefined())
 
 		closer <- struct{}{}
 
-		return 0
+		return otto.Value{}
 	})
-
-	vm.PevalString(`dbDelete("key", callbackDbDelete)`)
 
 	select {
 	case <-closer:
