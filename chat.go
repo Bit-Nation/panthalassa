@@ -172,6 +172,7 @@ func Messages(chatID int, startStr string, amount int) (string, error) {
 			"created_at": msg.CreatedAt,
 			"received":   msg.Received,
 			"dapp":       dapp,
+			"sender":     msg.Sender,
 		})
 	}
 
