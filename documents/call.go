@@ -5,11 +5,13 @@ import (
 	"errors"
 	"time"
 
+	"fmt"
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
 	common "github.com/ethereum/go-ethereum/common"
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
+	"math/big"
 )
 
 type DocumentCreateCall struct {
@@ -266,12 +268,15 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println(docContentCID)
+	fmt.Println(cidSignature)
 	// submit tx to chain
 	tx, err := d.n.NotarizeTwo(&bind.TransactOpts{
-		From:   common.HexToAddress(ethAddr),
-		Signer: d.km.SignEthTx,
-		Value:  notaryFee,
+		From:     common.HexToAddress(ethAddr),
+		Signer:   d.km.SignEthTx,
+		Value:    notaryFee,
+		GasLimit: 500000,
+		GasPrice: big.NewInt(50000000000),
 	}, docContentCID, cidSignature)
 	if err != nil {
 		return map[string]interface{}{}, err
