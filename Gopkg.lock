@@ -27,6 +27,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/NaySoftware/go-fcm"
+  packages = ["."]
+  revision = "28fff9381d17f35619309c7a5ada41d26030d976"
+
+[[projects]]
+  branch = "master"
   name = "github.com/agl/ed25519"
   packages = [
     ".",
@@ -37,9 +43,47 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/aristanetworks/goarista"
+  packages = ["monotime"]
+  revision = "ff33da284e760fcdb03c33d37a719e5ed30ba844"
+
+[[projects]]
+  name = "github.com/asdine/storm"
+  packages = [
+    ".",
+    "codec",
+    "codec/json",
+    "index",
+    "internal",
+    "q"
+  ]
+  revision = "5a6fe65e3993f63951c8e3f64c812536c9e23595"
+  version = "v2.1.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/beorn7/perks"
+  packages = ["quantile"]
+  revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
+
+[[projects]]
+  branch = "master"
   name = "github.com/btcsuite/btcd"
-  packages = ["btcec"]
+  packages = [
+    "btcec",
+    "chaincfg",
+    "chaincfg/chainhash",
+    "wire"
+  ]
   revision = "f673a4b563b57b9a95832545c878669a7fa801d9"
+
+[[projects]]
+  name = "github.com/btcsuite/btcutil"
+  packages = [
+    ".",
+    "base58"
+  ]
+  revision = "dcd4997b0664bcfd6ef48e4ae9da8396e08b1cd9"
 
 [[projects]]
   name = "github.com/coreos/bbolt"
@@ -60,24 +104,122 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/deckarep/golang-set"
+  packages = ["."]
+  revision = "1d4478f51bed434f1dadf96dcd9b43aabac66795"
+  version = "v1.7"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/edsrzf/mmap-go"
+  packages = ["."]
+  revision = "0bce6a6887123b67a60366d2c9fe2dfb74289d2e"
+
+[[projects]]
   name = "github.com/ethereum/go-ethereum"
   packages = [
+    ".",
+    "accounts",
+    "accounts/abi",
+    "accounts/abi/bind",
+    "accounts/keystore",
+    "accounts/usbwallet",
+    "accounts/usbwallet/internal/trezor",
     "common",
+    "common/bitutil",
+    "common/fdlimit",
     "common/hexutil",
     "common/math",
+    "common/mclock",
+    "common/prque",
+    "consensus",
+    "consensus/clique",
+    "consensus/ethash",
+    "consensus/misc",
+    "core",
+    "core/bloombits",
+    "core/rawdb",
+    "core/state",
+    "core/types",
+    "core/vm",
     "crypto",
+    "crypto/bn256",
+    "crypto/bn256/cloudflare",
+    "crypto/bn256/google",
+    "crypto/ecies",
     "crypto/secp256k1",
     "crypto/sha3",
-    "rlp"
+    "eth",
+    "eth/downloader",
+    "eth/fetcher",
+    "eth/filters",
+    "eth/gasprice",
+    "eth/tracers",
+    "eth/tracers/internal/tracers",
+    "ethclient",
+    "ethdb",
+    "event",
+    "internal/debug",
+    "internal/ethapi",
+    "les",
+    "les/flowcontrol",
+    "light",
+    "log",
+    "log/term",
+    "metrics",
+    "metrics/exp",
+    "miner",
+    "node",
+    "p2p",
+    "p2p/discover",
+    "p2p/discv5",
+    "p2p/nat",
+    "p2p/netutil",
+    "params",
+    "rlp",
+    "rpc",
+    "trie",
+    "whisper/mailserver",
+    "whisper/whisperv6"
   ]
-  revision = "37685930d953bcbe023f9bc65b135a8d8b8f1488"
-  version = "v1.8.12"
+  revision = "89451f7c382ad2185987ee369f16416f89c28a7d"
+  version = "v1.8.15"
 
 [[projects]]
   name = "github.com/fd/go-nat"
   packages = ["."]
   revision = "bad65a492f32121a87197f4a085905c35e2a367e"
   version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/fjl/memsize"
+  packages = [
+    ".",
+    "memsizeui"
+  ]
+  revision = "f6d5545993d68e9e42df43eb57958f898dea3623"
+
+[[projects]]
+  name = "github.com/go-playground/locales"
+  packages = [
+    ".",
+    "currency"
+  ]
+  revision = "f63010822830b6fe52288ee52d5a1151088ce039"
+  version = "v0.12.1"
+
+[[projects]]
+  name = "github.com/go-playground/universal-translator"
+  packages = ["."]
+  revision = "b32fa301c9fe55953584134cb6853a13c87ec0a1"
+  version = "v0.16.0"
+
+[[projects]]
+  name = "github.com/go-stack/stack"
+  packages = ["."]
+  revision = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a"
+  version = "v1.8.0"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -89,10 +231,31 @@
   version = "v1.1.1"
 
 [[projects]]
+  name = "github.com/golang/mock"
+  packages = ["gomock"]
+  revision = "c34cdb4725f4c3844d095133c6e40e448b86589b"
+  version = "v1.1.1"
+
+[[projects]]
   name = "github.com/golang/protobuf"
-  packages = ["proto"]
+  packages = [
+    "proto",
+    "protoc-gen-go/descriptor"
+  ]
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
   version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
+
+[[projects]]
+  name = "github.com/google/uuid"
+  packages = ["."]
+  revision = "d460ce9f8df2e77fb1ba55ca87fafed96c607494"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/gorilla/context"
@@ -125,6 +288,15 @@
   revision = "80a92cca79a8041496ccc9dd773fcb52a57ec6f9"
 
 [[projects]]
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru"
+  ]
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/huin/goupnp"
   packages = [
@@ -154,6 +326,12 @@
     "writer"
   ]
   revision = "75cbd19cc9af4467702602311230785df263b671"
+
+[[projects]]
+  name = "github.com/iris-contrib/go.uuid"
+  packages = ["."]
+  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
+  version = "v2.0.0"
 
 [[projects]]
   name = "github.com/jackpal/gateway"
@@ -189,6 +367,18 @@
     "ratelimit"
   ]
   revision = "b497e2f366b8624394fb2e89c10ab607bebdde0b"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/karalabe/hid"
+  packages = ["."]
+  revision = "2b4488a37358b7283de4f9622553e85ebbe73125"
+
+[[projects]]
+  name = "github.com/kataras/iris"
+  packages = ["core/errors"]
+  revision = "217d9feadc0fc5b317826a901065e0c4c27d3cad"
+  version = "10.7.0"
 
 [[projects]]
   name = "github.com/libp2p/go-addr-util"
@@ -405,6 +595,12 @@
   version = "v0.0.3"
 
 [[projects]]
+  name = "github.com/matttproud/golang_protobuf_extensions"
+  packages = ["pbutil"]
+  revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+  version = "v1.0.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/minio/sha256-simd"
   packages = ["."]
@@ -469,12 +665,64 @@
   version = "v1.0.2"
 
 [[projects]]
+  name = "github.com/pborman/uuid"
+  packages = ["."]
+  revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
+  version = "v1.2"
+
+[[projects]]
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/prometheus/client_golang"
+  packages = ["prometheus"]
+  revision = "c5b7fccd204277076155f10851dad72b76a49317"
+  version = "v0.8.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/prometheus/client_model"
+  packages = ["go"]
+  revision = "5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/prometheus/common"
+  packages = [
+    "expfmt",
+    "internal/bitbucket.org/ww/goautoneg",
+    "model"
+  ]
+  revision = "c7de2306084e37d54b8be01f3541a8464345e9a5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/prometheus/procfs"
+  packages = [
+    ".",
+    "internal/util",
+    "nfs",
+    "xfs"
+  ]
+  revision = "418d78d0b9a7b7de3a6bbc8a23def624cc977bb2"
+
+[[projects]]
+  name = "github.com/prometheus/prometheus"
+  packages = ["util/flock"]
+  revision = "85f23d82a045d103ea7f3c89a91fba4a93e6367a"
+  version = "v2.1.0"
+
+[[projects]]
+  name = "github.com/rjeczalik/notify"
+  packages = ["."]
+  revision = "0f065fa99b48b842c3fd3e2c8b194c6f2b69f6b8"
+  version = "v0.9.1"
+
+[[projects]]
+  branch = "master"
   name = "github.com/robertkrimen/otto"
   packages = [
     ".",
@@ -488,10 +736,53 @@
   revision = "15f95af6e78dcd2030d8195a138bd88d4f403546"
 
 [[projects]]
+  name = "github.com/rs/cors"
+  packages = ["."]
+  revision = "3fb1b69b103a84de38a19c3c6ec073dd6caa4d3f"
+  version = "v1.5.0"
+
+[[projects]]
   name = "github.com/satori/go.uuid"
   packages = ["."]
   revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
   version = "v1.2.0"
+
+[[projects]]
+  name = "github.com/status-im/go-web3js"
+  packages = ["."]
+  revision = "a136c82b1e1f30b5b24118eeff1caa71924e4e3a"
+  version = "0.20.1"
+
+[[projects]]
+  branch = "experimental/fix-logging-old"
+  name = "github.com/status-im/status-go"
+  packages = [
+    "extkeys",
+    "geth/account",
+    "geth/api",
+    "geth/db",
+    "geth/jail",
+    "geth/jail/console",
+    "geth/jail/internal/fetch",
+    "geth/jail/internal/loop",
+    "geth/jail/internal/loop/looptask",
+    "geth/jail/internal/promise",
+    "geth/jail/internal/timers",
+    "geth/jail/internal/vm",
+    "geth/mailservice",
+    "geth/node",
+    "geth/notifications/push/fcm",
+    "geth/params",
+    "geth/peers",
+    "geth/rpc",
+    "geth/signal",
+    "geth/transactions",
+    "metrics/whisper",
+    "shhext",
+    "sign",
+    "static"
+  ]
+  revision = "4f8a957fbb40b74b90a0ebe2c7b80c55c0dc16a6"
 
 [[projects]]
   name = "github.com/stretchr/testify"
@@ -501,6 +792,25 @@
   ]
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/syndtr/goleveldb"
+  packages = [
+    "leveldb",
+    "leveldb/cache",
+    "leveldb/comparer",
+    "leveldb/errors",
+    "leveldb/filter",
+    "leveldb/iterator",
+    "leveldb/journal",
+    "leveldb/memdb",
+    "leveldb/opt",
+    "leveldb/storage",
+    "leveldb/table",
+    "leveldb/util"
+  ]
+  revision = "ae2bd5eed72d46b28834ec3f60db3a3ebedd8dbd"
 
 [[projects]]
   name = "github.com/tiabc/doubleratchet"
@@ -578,6 +888,12 @@
   revision = "cb29a700b01dc3c2fdd743c00cf54685056bb62a"
 
 [[projects]]
+  name = "go.etcd.io/bbolt"
+  packages = ["."]
+  revision = "583e8937c61f1af6513608ccc75c97b6abdf4ff9"
+  version = "v1.3.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
@@ -600,14 +916,22 @@
     "context",
     "html",
     "html/atom",
-    "html/charset"
+    "html/charset",
+    "websocket"
   ]
   revision = "d0887baf81f4598189d4e12a37c6da86f0bba4d0"
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/sync"
+  packages = ["syncmap"]
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
   packages = [
+    "cpu",
     "unix",
     "windows"
   ]
@@ -628,14 +952,51 @@
     "encoding/unicode",
     "internal/gen",
     "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
     "internal/utf8internal",
     "language",
     "runes",
     "transform",
-    "unicode/cldr"
+    "unicode/cldr",
+    "unicode/norm"
   ]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/tools"
+  packages = [
+    "go/ast/astutil",
+    "imports",
+    "internal/fastwalk"
+  ]
+  revision = "677d2ff680c188ddb7dcd2bfa6bc7d3f2f2f75b2"
+
+[[projects]]
+  name = "gopkg.in/go-playground/validator.v9"
+  packages = ["."]
+  revision = "e69e9a28bb62b977fdc58d051f1bb477b7cbe486"
+  version = "v9.21.0"
+
+[[projects]]
+  branch = "v2"
+  name = "gopkg.in/karalabe/cookiejar.v2"
+  packages = ["collections/prque"]
+  revision = "8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57"
+
+[[projects]]
+  branch = "v2"
+  name = "gopkg.in/natefinch/npipe.v2"
+  packages = ["."]
+  revision = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6"
+
+[[projects]]
+  branch = "v3"
+  name = "gopkg.in/olebedev/go-duktape.v3"
+  packages = ["."]
+  revision = "d53328019b21fe1987c97f368f98c072c8f44455"
 
 [[projects]]
   name = "gopkg.in/sourcemap.v1"
@@ -646,9 +1007,15 @@
   revision = "6e83acea0053641eff084973fee085f0c193c61a"
   version = "v1.0.5"
 
+[[projects]]
+  name = "gopkg.in/urfave/cli.v1"
+  packages = ["."]
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "74990307dbe7b3f0288ac0bdaa0a720a17eb375c2486a238482be0e36d92bb57"
+  inputs-digest = "259be0c4cd8a1b7192860ea4411e31bc27b7226a00882ec894176a86fcc76c74"
   solver-name = "gps-cdcl"
   solver-version = 1
