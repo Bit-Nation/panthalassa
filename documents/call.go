@@ -232,16 +232,16 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
-	
+
 	// decrypt document content
 	docContent, err := d.km.AESDecrypt(doc.EncryptedContent)
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
-	
+
 	// assign plain document content
 	doc.Content = docContent
-	
+
 	docContentCID := cid.NewCidV1(cid.Raw, docHash).Bytes()
 
 	// attach cid to document
@@ -261,10 +261,17 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 		return map[string]interface{}{}, err
 	}
 
+	// fetch the notary fee
+	notaryFee, err := d.n.NotaryFee(nil)
+	if err != nil {
+		return nil, err
+	}
+
 	// submit tx to chain
 	tx, err := d.n.NotarizeTwo(&bind.TransactOpts{
 		From:   common.HexToAddress(ethAddr),
 		Signer: d.km.SignEthTx,
+		Value:  notaryFee,
 	}, docContentCID, cidSignature)
 	if err != nil {
 		return map[string]interface{}{}, err
