@@ -66,15 +66,16 @@ func (a *DAppApi) SendEthereumTransaction(value, to, data string) (string, error
 	objTx := map[string]interface{}{
 		"nonce":    ethTx.Nonce,
 		"gasPrice": ethTx.GasPrice,
-		"gas":      ethTx.GasLimit,
+		"gasLimit": ethTx.GasLimit,
 		"to":       ethTx.To,
 		"value":    ethTx.Value,
-		"input":    ethTx.Data,
+		"data":     ethTx.Data,
 		"v":        ethTx.V,
 		"r":        ethTx.R,
 		"s":        ethTx.S,
 		"from":     ethTx.From,
 		"hash":     ethTx.Hash,
+		"chainId":  ethTx.ChainID,
 	}
 
 	raw, err := json.Marshal(objTx)

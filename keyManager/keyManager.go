@@ -328,7 +328,7 @@ func (km KeyManager) SignEthTx(signer types.Signer, addresses common.Address, tx
 	}
 
 	// convert gas
-	txMap["gas"], err = numToHex(txMap, "gas")
+	txMap["gas"], err = numToHex(txMap, "gasLimit")
 	if err != nil {
 		return nil, err
 	}

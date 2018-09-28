@@ -226,23 +226,22 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	if err := d.s.db.One("ID", int(docID), &doc); err != nil {
 		return map[string]interface{}{}, err
 	}
-	
+
 	// decrypt document content
 	docContent, err := d.km.AESDecrypt(doc.EncryptedContent)
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
-	
+
 	// assign plain document content
 	doc.Content = docContent
-	
-	
+
 	// hash document
 	docHash, err := mh.Sum(doc.Content, mh.SHA2_256, -1)
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
-	
+
 	docContentCID := cid.NewCidV1(cid.Raw, docHash).Bytes()
 
 	// attach cid to document

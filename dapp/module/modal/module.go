@@ -9,9 +9,9 @@ import (
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
+	otto "github.com/robertkrimen/otto"
 	uuid "github.com/satori/go.uuid"
 	ed25519 "golang.org/x/crypto/ed25519"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 type Device interface {
@@ -22,12 +22,12 @@ var sysLog = log.Logger("modal")
 
 type addModalID struct {
 	id     string
-	closer *duktape.Context
+	closer *otto.Value
 }
 
 type fetchModalCloser struct {
 	id       string
-	respChan chan *duktape.Context
+	respChan chan *otto.Value
 }
 
 type Module struct {
@@ -56,7 +56,7 @@ func New(l *logger.Logger, device Device, dAppIDKey ed25519.PublicKey) *Module {
 
 	go func() {
 
-		modals := map[string]*duktape.Context{}
+		modals := map[string]*otto.Value{}
 
 		// exit if channels are closed
 		if m.addModalIDChan == nil || m.fetchModalCloserChan == nil || m.deleteModalID == nil {
@@ -100,9 +100,10 @@ func (m *Module) Close() error {
 // the second parameter should be the layout to render
 // and the third parameter is an optional callback that
 // will called with an optional error
-func (m *Module) Register(vm *duktape.Context) error {
+func (m *Module) Register(vm *otto.Otto) error {
 
-	_, err := vm.PushGlobalGoFunction("renderModal", func(context *duktape.Context) int {
+	err := vm.Set("renderModal", func(call otto.FunctionCall) otto.Value {
+
 		sysLog.Debug("render modal")
 
 		// validate function call
@@ -113,16 +114,19 @@ func (m *Module) Register(vm *duktape.Context) error {
 		v.Set(1, &validator.TypeString)
 		// callback
 		v.Set(2, &validator.TypeFunction)
-		if err := v.Validate(context); err != nil {
-			m.logger.Error(err.Error())
-			return 1
+		if err := v.Validate(vm, call); err != nil {
+			m.logger.Error(err.String())
+			return otto.Value{}
 		}
 
 		// modal ui id
-		uiID := context.ToString(0)
+		uiID := call.Argument(0).String()
+
+		// callback
+		cb := call.Argument(2)
 
 		// make sure ui id is registered
-		mIdChan := make(chan *duktape.Context)
+		mIdChan := make(chan *otto.Value)
 		m.fetchModalCloserChan <- fetchModalCloser{
 			id:       uiID,
 			respChan: mIdChan,
@@ -131,35 +135,37 @@ func (m *Module) Register(vm *duktape.Context) error {
 		// a modal closer can only exist with relation to a modal ID.
 		// So if the modal closer exist the modal id exist as well
 		if modalCloser == nil {
-			errMsg := fmt.Sprintf("MissingModalID: modal UI ID: '%s' does not exist", uiID)
-			context.PushString(errMsg)
-			context.PushString(uiID)
-			context.Call(2)
-			return 1
+			errMsg := fmt.Sprintf("modal UI ID: '%s' does not exist", uiID)
+			if _, err := cb.Call(cb, vm.MakeCustomError("MissingModalID", errMsg), uiID); err != nil {
+				m.logger.Error(errMsg)
+			}
+			return otto.Value{}
 		}
 
 		// get layout
-		layout := context.ToString(1)
+		layout := call.Argument(1).String()
 
 		sysLog.Debugf("going to render: %s with UI id %s", layout, uiID)
 
 		// execute show modal action in
 		// context of request limitation
-		// @TODO figure out why concurrently using "go func" instead of "func" makes the vm/context lose the stack
-		func() {
+		go func() {
 			// request to show modal
 			if err := m.device.RenderModal(uiID, layout, m.dAppIDKey); err != nil {
-				context.PushString(`Error: failed to render modal ` + err.Error())
-				context.Call(1)
+				_, err = cb.Call(cb, vm.MakeCustomError("Error", "failed to render modal"))
+				if err != nil {
+					m.logger.Error(err.Error())
+				}
 				return
 			}
 
-			context.PushUndefined()
-			context.Call(1)
+			if _, err := cb.Call(cb); err != nil {
+				m.logger.Error(err.Error())
+			}
 
 		}()
 
-		return 0
+		return otto.Value{}
 
 	})
 
@@ -167,62 +173,62 @@ func (m *Module) Register(vm *duktape.Context) error {
 		return err
 	}
 
-	_, err = vm.PushGlobalGoFunction("newModalUIID", func(context *duktape.Context) int {
+	return vm.Set("newModalUIID", func(call otto.FunctionCall) otto.Value {
+
 		// validate function call
 		v := validator.New()
 		// close handler
 		v.Set(0, &validator.TypeFunction)
 		// callback
 		v.Set(1, &validator.TypeFunction)
-		if err := v.Validate(context); err != nil {
-			m.logger.Error(err.Error())
-			return 1
+		if err := v.Validate(vm, call); err != nil {
+			m.logger.Error(err.String())
+			return otto.Value{}
 		}
+
+		cb := call.Argument(1)
 
 		// create new id
 		id, err := uuid.NewV4()
 		if err != nil {
-			context.PushString("Error " + err.Error())
-			context.Call(1)
-			return 1
+			_, err = cb.Call(cb, vm.MakeCustomError("Error", err.Error()))
+			if err != nil {
+				m.logger.Error(err.Error())
+			}
+			return otto.Value{}
 		}
 
 		// increase request limitation counter
-		throttlingFunc := func(dec chan struct{}) {
+		m.modalIDsReqLim.Exec(func(dec chan struct{}) {
+
 			// add ui id & closer to stack
+			closer := call.Argument(0)
 			m.addModalIDChan <- addModalID{
 				id:     id.String(),
-				closer: context,
+				closer: &closer,
 			}
 
 			// call callback
-			context.PopN(0)
-			context.PushUndefined()
-			context.PushString(id.String())
-			context.Call(2)
+			_, err = cb.Call(cb, nil, id.String())
+			if err != nil {
+				// in the case of an error we would like to remove the id
+				// and decrease our request limitation
+				m.deleteModalID <- id.String()
+				m.logger.Error(err.Error())
+			}
+		})
 
-			//@TODO find a way to determine if the callback errored out
-			//if err != nil {
-			// in the case of an error we would like to remove the id
-			// and decrease our request limitation
-			//	m.deleteModalID <- id.String()
-			//	m.logger.Error(err.Error())
-			//}
-		}
-		dec := make(chan struct{}, 1)
-		throttlingFunc(dec)
-		//m.modalIDsReqLim.Exec(throttlingFunc)
-		return 0
+		return otto.Value{}
 
 	})
-	return err
+
 }
 
 // close the modal
 func (m *Module) CloseModal(uiID string) {
 
 	// fetch closer
-	respChan := make(chan *duktape.Context)
+	respChan := make(chan *otto.Value)
 	m.fetchModalCloserChan <- fetchModalCloser{
 		id:       uiID,
 		respChan: respChan,
@@ -233,7 +239,9 @@ func (m *Module) CloseModal(uiID string) {
 	}
 
 	// close modal
-	closer.Call(0)
+	if _, err := closer.Call(*closer); err != nil {
+		m.logger.Error(err.Error())
+	}
 
 	// finish close (decrease counter & delete from id's")
 	m.deleteModalID <- uiID

@@ -5,10 +5,10 @@ import (
 	"time"
 
 	log "github.com/op/go-logging"
+	otto "github.com/robertkrimen/otto"
 	uuid "github.com/satori/go.uuid"
 	require "github.com/stretchr/testify/require"
 	ed25519 "golang.org/x/crypto/ed25519"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 type testDevice struct {
@@ -24,45 +24,45 @@ func TestModule_CloseModal(t *testing.T) {
 	// create modal module
 	logger := log.MustGetLogger("")
 	m := New(logger, nil, []byte(""))
-	vm := duktape.New()
+	vm := otto.New()
 	require.Nil(t, m.Register(vm))
 
 	// closer
 	closed := false
-
-	_, err := vm.PushGlobalGoFunction("callbackCloserCloseModal", func(context *duktape.Context) int {
+	closer := func() {
 		closed = true
-		return 0
-	})
-	require.Nil(t, err)
+	}
 
 	closeTest := make(chan struct{}, 1)
 
 	// create new uuid
-	_, err = vm.PushGlobalGoFunction("callbackTestModuleCloseModal", func(context *duktape.Context) int {
+	_, err := vm.Call("newModalUIID", vm, closer, func(call otto.FunctionCall) otto.Value {
+
 		// fetch callback data
-		errBool := context.IsUndefined(0)
-		modalID := context.ToString(1)
+		err := call.Argument(0)
+		modalID := call.Argument(1)
 
 		// error must be undefined
-		require.True(t, errBool)
+		require.True(t, err.IsUndefined())
+
 		// convert returned id to uuid
-		id, convertErr := uuid.FromString(modalID)
+		id, convertErr := uuid.FromString(modalID.String())
 		require.Nil(t, convertErr)
-		require.Equal(t, modalID, id.String())
+		require.Equal(t, modalID.String(), id.String())
+
 		// id must be registered in modal id map
-		respChan := make(chan *duktape.Context)
+		respChan := make(chan *otto.Value)
 		m.fetchModalCloserChan <- fetchModalCloser{
 			id:       id.String(),
 			respChan: respChan,
 		}
 		require.NotNil(t, <-respChan)
+
 		// close modal
-		vm.PevalString(`callbackCloserCloseModal`)
 		m.CloseModal(id.String())
 
 		// id must NOT be registered in modal id map
-		respChan = make(chan *duktape.Context)
+		respChan = make(chan *otto.Value)
 		m.fetchModalCloserChan <- fetchModalCloser{
 			id:       id.String(),
 			respChan: respChan,
@@ -72,10 +72,8 @@ func TestModule_CloseModal(t *testing.T) {
 
 		// close test
 		closeTest <- struct{}{}
-		return 0
+		return otto.Value{}
 	})
-	require.Nil(t, err)
-	err = vm.PevalString(`newModalUIID(callbackCloserCloseModal,callbackTestModuleCloseModal)`)
 	require.Nil(t, err)
 
 	select {
@@ -105,28 +103,28 @@ func TestModule_RenderModal(t *testing.T) {
 	// create module
 	logger := log.MustGetLogger("")
 	m := New(logger, device, []byte("id pub key"))
-	vm := duktape.New()
+	vm := otto.New()
 	require.Nil(t, m.Register(vm))
 
 	// we just register a fake it here to just
 	// make sure that we have an ID in the vm
 	m.addModalIDChan <- addModalID{
 		id:     uiID,
-		closer: &duktape.Context{},
+		closer: &otto.Value{},
 	}
 
 	done := make(chan struct{}, 1)
-	_, err := vm.PushGlobalGoFunction("callbackTestModuleCloseModal", func(context *duktape.Context) int {
+
+	_, err := vm.Call("renderModal", vm, uiID, "{jsx: 'tree'}", func(call otto.FunctionCall) otto.Value {
+
 		// make sure device has been called
 		require.True(t, calledDevice)
 
 		// close test
 		done <- struct{}{}
 
-		return 0
+		return otto.Value{}
 	})
-	require.Nil(t, err)
-	err = vm.PevalString(`renderModal("` + uiID + `","{jsx: 'tree'}",callbackTestModuleCloseModal)`)
 	require.Nil(t, err)
 
 	select {
@@ -142,19 +140,17 @@ func TestModal_RenderWithoutID(t *testing.T) {
 	// create module
 	logger := log.MustGetLogger("")
 	m := New(logger, nil, []byte("id pub key"))
-	vm := duktape.New()
+	vm := otto.New()
 	require.Nil(t, m.Register(vm))
 
 	done := make(chan struct{}, 1)
-	_, err := vm.PushGlobalGoFunction("callbackTestModalRenderWithoutID", func(context *duktape.Context) int {
-		err := context.ToString(0)
-		require.Equal(t, "MissingModalID: modal UI ID: 'id_do_not_exist' does not exist", err)
+
+	vm.Call("renderModal", vm, "id_do_not_exist", "", func(call otto.FunctionCall) otto.Value {
+		err := call.Argument(0)
+		require.Equal(t, "MissingModalID: modal UI ID: 'id_do_not_exist' does not exist", err.String())
 		done <- struct{}{}
-		return 0
+		return otto.Value{}
 	})
-	require.Nil(t, err)
-	err = vm.PevalString(`renderModal("id_do_not_exist", "", callbackTestModalRenderWithoutID)`)
-	require.Nil(t, err)
 
 	select {
 	case <-done:
@@ -169,42 +165,39 @@ func TestModal_RequestLimitation(t *testing.T) {
 	// create module
 	logger := log.MustGetLogger("")
 	m := New(logger, nil, []byte("id pub key"))
-	vm := duktape.New()
+	vm := otto.New()
 	require.Nil(t, m.Register(vm))
 
-	_, err := vm.PushGlobalGoFunction("callbackCloserRequestLimitation", func(context *duktape.Context) int {
-		return 0
-	})
-	require.Nil(t, err)
+	closer := func() otto.Value {
+		return otto.Value{}
+	}
 
 	// make sure that current amount of registered ids is 0
 	require.Equal(t, uint(0), m.modalIDsReqLim.Current())
 
 	// closer
 	done := make(chan struct{}, 1)
-	_, err = vm.PushGlobalGoFunction("callbackTestModalRequestLimitation", func(context *duktape.Context) int {
+
+	vm.Call("newModalUIID", vm, closer, func(call otto.FunctionCall) otto.Value {
+
 		// newModalUIID must register a new id
-		//@TODO Fix throttling and uncomment line below to check if throttling works correctly, connected to commented m.modalIDsReqLim.Exec(throttlingFunc)
-		//require.Equal(t, uint(1), m.modalIDsReqLim.Current())
+		require.Equal(t, uint(1), m.modalIDsReqLim.Current())
 
 		// close modal with UI ID
-		id := context.ToString(0)
-		vm.PevalString(`callbackCloserRequestLimitation`)
-		m.CloseModal(id)
+		id := call.Argument(1)
+		m.CloseModal(id.String())
 
 		// wait a bit to sync go routines
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 10)
 
 		// make sure id was removed from current
 		require.Equal(t, uint(0), m.modalIDsReqLim.Current())
 
 		done <- struct{}{}
 
-		return 0
+		return otto.Value{}
 	})
-	require.Nil(t, err)
-	err = vm.PevalString(`newModalUIID(callbackCloserRequestLimitation,callbackTestModalRequestLimitation)`)
-	require.Nil(t, err)
+
 	select {
 	case <-done:
 	case <-time.After(time.Second * 3):

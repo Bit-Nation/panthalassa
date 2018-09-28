@@ -11,8 +11,8 @@ import (
 	"time"
 
 	storm "github.com/asdine/storm"
-	bolt "github.com/coreos/bbolt"
 	require "github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 type migration struct {
