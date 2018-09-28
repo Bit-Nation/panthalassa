@@ -167,7 +167,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	}
 
 	// rinkeby addresses
-	notaryMultiAddr = common.HexToAddress("0x5e04e983bb438d70471848d7f24416fa0a9a7de1")
+	notaryMultiAddr = common.HexToAddress("0xe4d2032fdda10d4e6f483e2dea6857abc0e3cbf8")
 
 	notaryContract, err := documents.NewNotaryMulti(notaryMultiAddr, ethClient)
 	if err != nil {
