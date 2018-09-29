@@ -6,11 +6,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/Bit-Nation/panthalassa/crypto/aes"
-	"github.com/Bit-Nation/panthalassa/keyManager"
-	"github.com/Bit-Nation/panthalassa/queue"
-	"github.com/Bit-Nation/x3dh"
-	"github.com/asdine/storm"
+	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	queue "github.com/Bit-Nation/panthalassa/queue"
+	x3dh "github.com/Bit-Nation/x3dh"
+	storm "github.com/asdine/storm"
 	dr "github.com/tiabc/doubleratchet"
 	bolt "go.etcd.io/bbolt"
 )

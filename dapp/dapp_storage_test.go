@@ -11,8 +11,8 @@ import (
 
 	uiApi "github.com/Bit-Nation/panthalassa/uiapi"
 	storm "github.com/asdine/storm"
-	bolt "github.com/coreos/bbolt"
 	require "github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 

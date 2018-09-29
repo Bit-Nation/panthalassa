@@ -62,6 +62,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// device api
 	deviceApi := api.New(client)
+	km.Api = deviceApi
 
 	// create p2p network
 	p2pNetwork, err := p2p.New()
@@ -153,8 +154,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		return err
 	}
 
-	var notaryMulti common.Address
-	var notary common.Address
+	var notaryMultiAddr common.Address
 
 	networkID, err := ethClient.NetworkID(context.Background())
 	if err != nil {
@@ -167,14 +167,13 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	}
 
 	// rinkeby addresses
-	notary = common.HexToAddress("0xd75afa5c92cefded2862d2770f6a0929af74067d")
-	notaryMulti = common.HexToAddress("0x00d238247ae4324f952d2c9a297dd5f76ed0e7c0")
+	notaryMultiAddr = common.HexToAddress("0xe4d2032fdda10d4e6f483e2dea6857abc0e3cbf8")
 
-	notaryContract, err := documents.NewNotaryMulti(notaryMulti, ethClient)
+	notaryContract, err := documents.NewNotaryMulti(notaryMultiAddr, ethClient)
 	if err != nil {
 		return err
 	}
-	notariseCall := documents.NewDocumentNotariseCall(docStorage, km, notaryContract, notary)
+	notariseCall := documents.NewDocumentNotariseCall(docStorage, km, notaryContract)
 	if err := dcr.Register(notariseCall); err != nil {
 		return err
 	}

@@ -6,8 +6,8 @@ import (
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	keyStore "github.com/Bit-Nation/panthalassa/keyStore"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
+	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 func TestModule_Register(t *testing.T) {
@@ -26,11 +26,13 @@ func TestModule_Register(t *testing.T) {
 	// create address module
 	mod := New(km)
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	mod.Register(vm)
 
-	v := vm.ToString(0)
-	require.Equal(t, "0x748A6536dE0a8b1902f808233DD75ec4451cdFC6", v)
+	v, err := vm.Run(`ethereumAddress`)
+	require.Nil(t, err)
+
+	require.Equal(t, "0x748A6536dE0a8b1902f808233DD75ec4451cdFC6", v.String())
 
 }
