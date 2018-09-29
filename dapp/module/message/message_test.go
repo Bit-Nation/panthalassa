@@ -66,7 +66,7 @@ func TestPersistMessageSuccessfully(t *testing.T) {
 	// storage mock
 	chatStorage := db.NewChatStorage(createStorm(), []func(e db.MessagePersistedEvent){}, createKeyManager())
 	chatStorage.AddListener(func(e db.MessagePersistedEvent) {
-		chat, _ := chatStorage.GetChat(chatPubKey)
+		chat, _ := chatStorage.GetChatByPartner(chatPubKey)
 		if err != nil {
 			panic(err)
 		}
@@ -97,7 +97,8 @@ func TestPersistMessageSuccessfully(t *testing.T) {
 		closer <- struct{}{}
 	})
 	// create chat
-	require.Nil(t, chatStorage.CreateChat(chatPubKey))
+	_, err = chatStorage.CreateChat(chatPubKey)
+	require.Nil(t, err)
 
 	msgModule := New(chatStorage, dAppPubKey, nil)
 	require.Nil(t, msgModule.Register(vm))

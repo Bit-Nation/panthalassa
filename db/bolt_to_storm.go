@@ -289,11 +289,12 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 
 		return chats.ForEach(func(partner, _ []byte) error {
 
-			if err := chatDB.CreateChat(partner); err != nil {
+			_, err := chatDB.CreateChat(partner)
+			if err != nil {
 				return err
 			}
 
-			chat, err := chatDB.GetChat(partner)
+			chat, err := chatDB.GetChatByPartner(partner)
 			if err != nil {
 				return err
 			}

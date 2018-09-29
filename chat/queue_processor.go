@@ -1,14 +1,11 @@
 package chat
 
 import (
-	"encoding/base64"
-	"encoding/json"
+	"encoding/hex"
 	"errors"
-	"fmt"
 
 	db "github.com/Bit-Nation/panthalassa/db"
 	queue "github.com/Bit-Nation/panthalassa/queue"
-	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 // processor that submits messages from the queue to the backend
@@ -39,50 +36,21 @@ func (p *SubmitMessagesProcessor) ValidJob(j queue.Job) error {
 }
 
 // get data from job
-func (p *SubmitMessagesProcessor) jobToData(j queue.Job) (ed25519.PublicKey, int64, error) {
-	// validate message id
-	var messageId int64
-	var messageIdErr error
-	messageIdInterface, oki := j.Data["db_message_id"]
+func (p *SubmitMessagesProcessor) jobToData(j queue.Job) (int, int64, error) {
+
+	// fetch chatID
+	chatID, oki := j.Data["chat_id"].(int)
 	if !oki {
-		return nil, 0, errors.New("db_message_id is missing")
+		return 0, 0, errors.New("expected chat id to be a float64")
 	}
-	switch msgId := messageIdInterface.(type) {
-	case json.Number:
-		messageId, messageIdErr = msgId.Int64()
-		if messageIdErr != nil {
-			return nil, 0, messageIdErr
-		}
-	case int64:
-		messageId = msgId
-	default:
-		return nil, 0, errors.New("Expected : json.Number/int64, Got : " + fmt.Sprint(msgId))
-	}
-	if messageId == 0 {
-		return nil, 0, errors.New("message id is 0")
-	}
-	// check partner
-	var partner []byte
-	var partnerErr error
-	partnerInterface, oki := j.Data["partner"]
+
+	messageID, oki := j.Data["db_message_id"].(int64)
 	if !oki {
-		return nil, 0, errors.New("partner is missing")
+		return 0, 0, errors.New("expected message id to be a float64")
 	}
-	switch potentialPartner := partnerInterface.(type) {
-	case string:
-		partner, partnerErr = base64.StdEncoding.DecodeString(potentialPartner)
-		if partnerErr != nil {
-			return nil, 0, partnerErr
-		}
-	case ed25519.PublicKey:
-		partner = potentialPartner
-	default:
-		return nil, 0, errors.New("Expected : base64 string/ed25519.PublicKey, Got : " + fmt.Sprint(potentialPartner))
-	}
-	if len(partner) != 32 {
-		return nil, 0, errors.New("invalid partner id length")
-	}
-	return partner, messageId, nil
+
+	return int(chatID), messageID, nil
+
 }
 
 func (p *SubmitMessagesProcessor) Process(j queue.Job) error {
@@ -93,12 +61,12 @@ func (p *SubmitMessagesProcessor) Process(j queue.Job) error {
 	}
 
 	// get data from job map
-	partner, messageID, err := p.jobToData(j)
+	chatId, messageID, err := p.jobToData(j)
 	if err != nil {
 		return err
 	}
 
-	chat, err := p.chatDB.GetChat(partner)
+	chat, err := p.chatDB.GetChat(chatId)
 	if err != nil {
 		return err
 	}
@@ -112,10 +80,30 @@ func (p *SubmitMessagesProcessor) Process(j queue.Job) error {
 		return errors.New("failed to fetch message")
 	}
 
-	// send message
-	err = p.chat.SendMessage(partner, *msg)
-	if err != nil {
-		return err
+	if chat.IsGroupChat() {
+
+		for _, groupMember := range chat.Partners {
+
+			// make sure we don't send to our self
+			idPubKey, err := p.chat.km.IdentityPublicKey()
+			if err != nil {
+				return err
+			}
+			if idPubKey == hex.EncodeToString(groupMember) {
+				continue
+			}
+
+			msg.GroupChatID = chat.GroupChatRemoteID
+			if err := p.chat.SendMessage(groupMember, *msg); err != nil {
+				return err
+			}
+
+		}
+	} else {
+		err = p.chat.SendMessage(chat.Partner, *msg)
+		if err != nil {
+			return err
+		}
 	}
 
 	// delete job

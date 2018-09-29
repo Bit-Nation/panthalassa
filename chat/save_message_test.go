@@ -16,11 +16,19 @@ func TestChat_SavePrivateMessage(t *testing.T) {
 
 	km := createKeyManager()
 
+	chatStorage := db.NewChatStorage(createStorm(), []func(e db.MessagePersistedEvent){}, km)
+
 	c := Chat{
-		chatStorage: db.NewChatStorage(createStorm(), []func(e db.MessagePersistedEvent){}, km),
+		chatStorage: chatStorage,
 		km:          km,
 	}
 
-	require.Nil(t, c.SavePrivateMessage(pub, []byte("hi")))
+	_, err = chatStorage.CreateChat(pub)
+	require.Nil(t, err)
+
+	chat, err := chatStorage.GetChatByPartner(pub)
+	require.Nil(t, err)
+
+	require.Nil(t, c.SaveMessage(chat.ID, []byte("hi")))
 
 }

@@ -30,7 +30,28 @@ func (c *Chat) SendMessage(receiver ed25519.PublicKey, dbMessage db.Message) err
 		Message:   dbMessage.Message,
 		MessageID: dbMessage.ID,
 		// this version is NOT the same as the version from the database message
-		Version: 1,
+		Version:     1,
+		GroupChatID: dbMessage.GroupChatID,
+	}
+
+	// attach add user data
+	if dbMessage.AddUserToChat != nil {
+		addUserMsg := dbMessage.AddUserToChat
+		groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.GroupChatID)
+		if err != nil {
+			return err
+		}
+		plainMessage.AddUserPrivChat = &bpb.PlainChatMessage_AddUserPrivGroupChat{
+			Users: func() [][]byte {
+				users := [][]byte{}
+				for _, u := range dbMessage.AddUserToChat.Users {
+					users = append(users, u)
+				}
+				return users
+			}(),
+			ChatID:    addUserMsg.ChatID,
+			GroupName: groupChat.GroupChatName,
+		}
 	}
 
 	// in the case this is a DApp message,

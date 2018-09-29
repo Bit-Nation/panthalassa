@@ -117,16 +117,17 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 	logger.Debugf("double ratchet message %s", drMessage)
 
 	// make sure chat exist
-	chat, err := c.chatStorage.GetChat(msg.Sender)
+	chat, err := c.chatStorage.GetChatByPartner(msg.Sender)
 	if err != nil {
 		return err
 	}
 	if chat == nil {
-		if err := c.chatStorage.CreateChat(msg.Sender); err != nil {
+		_, err = c.chatStorage.CreateChat(msg.Sender)
+		if err != nil {
 			return err
 		}
 	}
-	chat, err = c.chatStorage.GetChat(msg.Sender)
+	chat, err = c.chatStorage.GetChatByPartner(msg.Sender)
 	if err != nil {
 		return err
 	}
@@ -189,14 +190,28 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 			if err != nil {
 				return err
 			}
+
 			// convert proto plain message to decrypted message
 			dbMessage, err := protoPlainMsgToMessage(&decryptedMsg)
-			dbMessage.Status = db.StatusPersisted
-			dbMessage.Sender = sender
-			dbMessage.Received = true
 			if err != nil {
 				return err
 			}
+			dbMessage.Status = db.StatusPersisted
+			dbMessage.Sender = sender
+			dbMessage.Received = true
+
+			// persist group chat message in the correct chat
+			if len(dbMessage.GroupChatID) == 200 && dbMessage.AddUserToChat == nil {
+				groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.GroupChatID)
+				if err != nil {
+					return err
+				}
+				if groupChat == nil {
+					return fmt.Errorf("couldn't find group chat for id: %x", dbMessage.GroupChatID)
+				}
+				return groupChat.PersistMessage(dbMessage)
+			}
+
 			return chat.PersistMessage(dbMessage)
 		}
 
@@ -284,11 +299,41 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 
 		// convert plain protobuf message to database message
 		dbMessage, err := protoPlainMsgToMessage(&plainMsg)
+		if err != nil {
+			return err
+		}
 		dbMessage.Sender = sender
 		dbMessage.Status = db.StatusPersisted
 		dbMessage.Received = true
-		if err != nil {
-			return err
+
+		if dbMessage.AddUserToChat != nil {
+
+			// fetch group chat
+			groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.AddUserToChat.ChatID)
+			if err != nil {
+				return err
+			}
+
+			// when the group chat doesn't exist we need to create it
+			if groupChat == nil {
+				return c.chatStorage.CreateGroupChatFromMsg(dbMessage)
+			}
+
+			return nil
+
+		}
+
+		// persist group chat message in the correct chat
+		if len(dbMessage.GroupChatID) == 200 && dbMessage.AddUserToChat == nil {
+
+			groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.GroupChatID)
+			if err != nil {
+				return err
+			}
+			if groupChat == nil {
+				return fmt.Errorf("couldn't find group chat for id: %x", dbMessage.GroupChatID)
+			}
+			return groupChat.PersistMessage(dbMessage)
 		}
 
 		return chat.PersistMessage(dbMessage)
@@ -329,18 +374,46 @@ func (c *Chat) handleReceivedMessage(msg *bpb.ChatMessage) error {
 		return err
 	}
 
-	// persist message
-	if err := chat.PersistMessage(dbMessage); err != nil {
-		return err
-	}
-
 	// if the decryption didn't fail we want to mark
 	// the shared secret as accepted
 	if !sharedSec.Accepted {
-		fmt.Println("going to accept shared secret")
-		return c.sharedSecStorage.Accept(sharedSec)
+		if err := c.sharedSecStorage.Accept(sharedSec); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	// create group chat / add members
+	if dbMessage.AddUserToChat != nil {
+
+		// fetch group chat
+		groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.AddUserToChat.ChatID)
+		if err != nil {
+			return err
+		}
+
+		// @todo add handle of new user
+
+		// when the group chat doesn't exist we need to create it
+		if groupChat == nil {
+			return c.chatStorage.CreateGroupChatFromMsg(dbMessage)
+		}
+
+		return nil
+
+	}
+
+	// persist group chat message in the correct chat
+	if len(dbMessage.GroupChatID) == 200 && dbMessage.AddUserToChat == nil {
+		groupChat, err := c.chatStorage.GetGroupChatByRemoteID(dbMessage.GroupChatID)
+		if err != nil {
+			return err
+		}
+		if groupChat == nil {
+			return fmt.Errorf("couldn't find group chat for id: %x", dbMessage.GroupChatID)
+		}
+		return groupChat.PersistMessage(dbMessage)
+	}
+
+	return chat.PersistMessage(dbMessage)
 
 }

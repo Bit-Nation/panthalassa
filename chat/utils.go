@@ -14,8 +14,8 @@ import (
 	ed25519 "golang.org/x/crypto/ed25519"
 )
 
-func (c *Chat) MarkMessagesAsRead(partner ed25519.PublicKey) error {
-	return c.chatStorage.ReadMessages(partner)
+func (c *Chat) MarkMessagesAsRead(chatID int) error {
+	return c.chatStorage.ReadMessages(chatID)
 }
 
 type drDhPair struct {
@@ -165,12 +165,21 @@ func hashChatMessage(msg bpb.ChatMessage) (mh.Multihash, error) {
 
 // turns a received plain protobuf message into a database message
 func protoPlainMsgToMessage(msg *bpb.PlainChatMessage) (db.Message, error) {
-
 	m := db.Message{
-		ID:        msg.MessageID,
-		Message:   msg.Message,
-		CreatedAt: msg.CreatedAt,
-		Version:   uint(msg.Version),
+		ID:          msg.MessageID,
+		Message:     msg.Message,
+		CreatedAt:   msg.CreatedAt,
+		Version:     uint(msg.Version),
+		GroupChatID: msg.GroupChatID,
+	}
+
+	if msg.AddUserPrivChat != nil {
+		m.AddUserToChat = &db.AddUserToChat{}
+		m.AddUserToChat.ChatID = msg.AddUserPrivChat.ChatID
+		for _, user := range msg.AddUserPrivChat.Users {
+			m.AddUserToChat.Users = append(m.AddUserToChat.Users, user)
+		}
+		m.AddUserToChat.ChatName = msg.AddUserPrivChat.GroupName
 	}
 
 	if isDAppMessage(msg) {

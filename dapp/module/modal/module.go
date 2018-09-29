@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/ipfs/go-log"
+	ed25519 "golang.org/x/crypto/ed25519"
+
 	reqLim "github.com/Bit-Nation/panthalassa/dapp/request_limitation"
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
-	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
 	otto "github.com/robertkrimen/otto"
 	uuid "github.com/satori/go.uuid"
-	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 type Device interface {

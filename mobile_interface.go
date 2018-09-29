@@ -194,6 +194,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		db:          dbInstance,
 		dAppStorage: dAppStorage,
 		dyncall:     dcr,
+		chatDB:      chatStorage,
 	}
 
 	return nil

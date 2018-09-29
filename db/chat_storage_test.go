@@ -97,8 +97,9 @@ func TestChatMessages(t *testing.T) {
 	chatStor := NewChatStorage(storm, []func(e MessagePersistedEvent){}, km)
 
 	// create chat
-	require.Nil(t, chatStor.CreateChat(partner))
-	chat, err := chatStor.GetChat(partner)
+	_, err = chatStor.CreateChat(partner)
+	require.Nil(t, err)
+	chat, err := chatStor.GetChatByPartner(partner)
 	require.Nil(t, err)
 	require.NotNil(t, chat)
 
