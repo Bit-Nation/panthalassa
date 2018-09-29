@@ -1,37 +1,35 @@
 package callbacks
 
 import (
-	"strconv"
 	"testing"
 	"time"
 
 	log "github.com/op/go-logging"
+	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 func TestFuncRegistration(t *testing.T) {
 
 	m := New(nil)
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	require.Nil(t, m.Register(vm))
 
 	require.Equal(t, uint(0), m.reqLim.Count())
-	funcId, err := vm.PushGlobalGoFunction("callbackTestFuncRegistration", func(context *duktape.Context) int {
-		return 0
+	funcId, err := vm.Call(`registerFunction`, vm, func(call otto.FunctionCall) otto.Value {
+		return otto.Value{}
 	})
-	require.Nil(t, err)
-	err = vm.PevalString(`registerFunction(callbackTestFuncRegistration)`)
 	require.Nil(t, err)
 	require.Equal(t, uint(1), m.reqLim.Count())
 
-	id := funcId
-	require.Equal(t, int(1), id)
+	id, err := funcId.ToInteger()
+	require.Nil(t, err)
+	require.Equal(t, int64(1), id)
 
 	// fetch function and assert
-	respChan := make(chan *duktape.Context)
+	respChan := make(chan *otto.Value)
 	m.fetchFunctionChan <- fetchFunction{
 		id:       1,
 		respChan: respChan,
@@ -43,22 +41,22 @@ func TestFuncRegistration(t *testing.T) {
 func TestFuncUnRegisterSuccess(t *testing.T) {
 
 	m := New(nil)
-	vm := duktape.New()
+	vm := otto.New()
 	require.Nil(t, m.Register(vm))
 
 	// register function
-	funcId, err := vm.PushGlobalGoFunction("callbackTestFuncUnRegisterSuccess", func(context *duktape.Context) int {
-		return 0
+	funcId, err := vm.Call(`registerFunction`, vm, func(call otto.FunctionCall) otto.Value {
+		return otto.Value{}
 	})
 	require.Nil(t, err)
-	err = vm.PevalString(`registerFunction(callbackTestFuncUnRegisterSuccess)`)
-	require.Nil(t, err)
+
 	// make sure the id is the one we expect it to be
-	id := funcId
-	require.Equal(t, int(1), id)
+	id, err := funcId.ToInteger()
+	require.Nil(t, err)
+	require.Equal(t, int64(1), id)
 
 	// make sure function exist
-	respChan := make(chan *duktape.Context)
+	respChan := make(chan *otto.Value)
 	m.fetchFunctionChan <- fetchFunction{
 		id:       1,
 		respChan: respChan,
@@ -67,15 +65,21 @@ func TestFuncUnRegisterSuccess(t *testing.T) {
 	require.Equal(t, uint(1), m.reqLim.Count())
 
 	// un-register function that has never been registered
-	err = vm.PevalString(`unRegisterFunction(23565)`)
+	returnedValue, err := vm.Call(`unRegisterFunction`, vm, 23565)
 	require.Nil(t, err)
+	returnedValueStr, err := returnedValue.ToString()
+	require.Nil(t, err)
+	require.Equal(t, "undefined", returnedValueStr)
 	// request limitation must still be one since function that have not been registered
 	// can't decrease the counter
 	require.Equal(t, uint(1), m.reqLim.Count())
 
 	// successfully un-register function
-	err = vm.PevalString(`unRegisterFunction(` + strconv.Itoa(id) + `)`)
+	returnedValue, err = vm.Call(`unRegisterFunction`, vm, id)
 	require.Nil(t, err)
+	returnedValueStr, err = returnedValue.ToString()
+	require.Nil(t, err)
+	require.Equal(t, "undefined", returnedValueStr)
 	// wait for the go routine to sync up
 	time.Sleep(time.Millisecond * 100)
 	// should be 0 since the the function id we passed in exists
@@ -86,40 +90,37 @@ func TestFuncUnRegisterSuccess(t *testing.T) {
 func TestFuncCallSuccess(t *testing.T) {
 
 	m := New(nil)
-	vm := duktape.New()
+	vm := otto.New()
 	require.Nil(t, m.Register(vm))
 
-	_, err := vm.PushGlobalGoFunction("callbackTestFuncCallSuccess", func(context *duktape.Context) int {
+	_, err := vm.Call(`registerFunction`, vm, func(call otto.FunctionCall) otto.Value {
 
-		if !context.IsObject(0) {
-			panic("callbackTestFuncCallSuccess : 0 is not an object")
-		}
-		if !context.GetPropString(0, "key") {
-			panic("callbackTestFuncCallSuccess : key missing")
+		valueFromObj, err := call.Argument(0).Object().Get("key")
+		if err != nil {
+			panic(err)
 		}
 
-		valueFromObj := context.ToString(-1)
-		context.Pop()
-		if valueFromObj != "value" {
+		if valueFromObj.String() != "value" {
 			panic("expected value of key to be: value")
 		}
 
-		if !context.IsFunction(1) {
+		cb := call.Argument(1)
+
+		if !cb.IsFunction() {
 			panic("expected second argument to be a callback")
 		}
 
-		context.PushUndefined()
-		context.Call(1)
+		_, err = cb.Call(cb)
+		if err != nil {
+			m.logger.Error(err.Error())
+		}
 
-		return 0
+		return otto.Value{}
 	})
 	require.Nil(t, err)
 
-	err = vm.PevalString(`registerFunction(callbackTestFuncCallSuccess)`)
-	require.Nil(t, err)
-
 	// make sure function exist
-	respChan := make(chan *duktape.Context)
+	respChan := make(chan *otto.Value)
 	m.fetchFunctionChan <- fetchFunction{
 		id:       1,
 		respChan: respChan,
@@ -134,40 +135,39 @@ func TestFuncCallError(t *testing.T) {
 
 	m := New(nil)
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	require.Nil(t, m.Register(vm))
 
-	_, err := vm.PushGlobalGoFunction("callbackTestFuncCallError", func(context *duktape.Context) int {
+	_, err := vm.Call(`registerFunction`, vm, func(call otto.FunctionCall) otto.Value {
 
-		if !context.IsObject(0) {
-			panic("callbackTestFuncCallSuccess : 0 is not an object")
-		}
-		if !context.GetPropString(0, "key") {
-			panic("callbackTestFuncCallSuccess : key missing")
+		valueFromObj, err := call.Argument(0).Object().Get("key")
+		if err != nil {
+			panic(err)
 		}
 
-		valueFromObj := context.ToString(-1)
-		if valueFromObj != "value" {
+		if valueFromObj.String() != "value" {
 			panic("expected value of key to be: value")
 		}
 
-		if !context.IsFunction(1) {
+		cb := call.Argument(1)
+
+		if !cb.IsFunction() {
 			panic("expected second argument to be a callback")
 		}
 
-		context.Pop()
-		context.PushString("I am an error")
-		context.Call(1)
+		_, err = cb.Call(cb, "I am an error")
 
-		return 0
+		if err != nil {
+			m.logger.Error(err.Error())
+		}
+
+		return otto.Value{}
 	})
-	require.Nil(t, err)
-	err = vm.PevalString(`registerFunction(callbackTestFuncCallError)`)
 	require.Nil(t, err)
 
 	// make sure function exist
-	respChan := make(chan *duktape.Context)
+	respChan := make(chan *otto.Value)
 	m.fetchFunctionChan <- fetchFunction{
 		id:       1,
 		respChan: respChan,
@@ -182,81 +182,64 @@ func TestFuncCallBackTwice(t *testing.T) {
 
 	m := New(log.MustGetLogger(""))
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	require.Nil(t, m.Register(vm))
-	_, err := vm.PushGlobalGoFunction("callbackTestFuncCallBackTwiceTestUndefined", func(context *duktape.Context) int {
-		if !context.IsUndefined(0) {
-			panic("expected value to be undefined")
-		}
-		return 0
-	})
-	require.Nil(t, err)
 
-	_, err = vm.PushGlobalGoFunction("callbackTestFuncCallBackTwiceTestAlreadyCalled", func(context *duktape.Context) int {
-		if !context.IsString(0) {
-			panic("expected value to be string")
-		}
-		if context.ToString(0) != "Callback: Already called callback" {
-			panic("Expected an error that tells me that I alrady called the callback")
-		}
-		return 0
-	})
-	require.Nil(t, err)
+	_, err := vm.Call(`registerFunction`, vm, func(call otto.FunctionCall) otto.Value {
 
-	_, err = vm.PushGlobalGoFunction("callbackTestFuncCallBackTwice", func(context *duktape.Context) int {
-
-		if !context.IsObject(0) {
-			panic("callbackTestFuncCallSuccess : 0 is not an object")
-		}
-		if !context.GetPropString(0, "key") {
-			panic("callbackTestFuncCallSuccess : key missing")
+		valueFromObj, err := call.Argument(0).Object().Get("key")
+		if err != nil {
+			panic(err)
 		}
 
-		valueFromObj := context.ToString(-1)
-
-		if valueFromObj != "value" {
+		if valueFromObj.String() != "value" {
 			panic("expected value of key to be: value")
 		}
 
-		if !context.IsFunction(1) {
+		cb := call.Argument(1)
+
+		if !cb.IsFunction() {
 			panic("expected second argument to be a callback")
 		}
-		context.Pop()
-		context.DupTop()
-		context.PushUndefined()
-		context.PevalString(`callbackTestFuncCallBackTwiceTestUndefined`)
-		context.Call(2)
 
-		context.Pop()
-		context.PushUndefined()
-		context.PevalString(`callbackTestFuncCallBackTwiceTestAlreadyCalled`)
-		context.Call(2)
+		val, err := cb.Call(cb)
+		if err != nil {
+			panic(err)
+		}
+		if !val.IsUndefined() {
+			panic("expected value to be undefined")
+		}
 
-		return 0
+		val, err = cb.Call(cb)
+		if err != nil {
+			panic(err)
+		}
+		if val.String() != "Callback: Already called callback" {
+			panic("Expected an error that tells me that I alrady called the callback")
+		}
+
+		return otto.Value{}
 
 	})
 	require.Nil(t, err)
-	err = vm.PevalString(`registerFunction(callbackTestFuncCallBackTwice)`)
-	require.Nil(t, err)
 
 	// make sure function exist
-	respChan := make(chan *duktape.Context)
+	respChan := make(chan *otto.Value)
 	m.fetchFunctionChan <- fetchFunction{
 		id:       1,
 		respChan: respChan,
 	}
 	require.NotNil(t, <-respChan)
 
-	err = m.CallFunction(1, `{key: "value"}`)
-	require.Nil(t, err)
+	m.CallFunction(1, `{key: "value"}`)
 
 }
 
 func TestModule_CallFunctionThatIsNotRegistered(t *testing.T) {
 
 	m := New(log.MustGetLogger(""))
-	vm := duktape.New()
+	vm := otto.New()
 	require.Nil(t, m.Register(vm))
 
 	err := m.CallFunction(1, "{}")
@@ -267,17 +250,14 @@ func TestModule_CallFunctionThatIsNotRegistered(t *testing.T) {
 func TestModule_Close(t *testing.T) {
 
 	m := New(log.MustGetLogger(""))
-	vm := duktape.New()
+	vm := otto.New()
 	require.Nil(t, m.Register(vm))
 
-	_, err := vm.PushGlobalGoFunction("callbackTestModuleClose", func(context *duktape.Context) int {
-		m.Close()
-		return 0
-	})
-	require.Nil(t, err)
-
 	// register function
-	err = vm.PevalString(`registerFunction(callbackTestModuleClose)`)
+	_, err := vm.Call("registerFunction", vm, func(call otto.FunctionCall) otto.Value {
+		m.Close()
+		return otto.Value{}
+	})
 	require.Nil(t, err)
 
 	require.EqualError(t, m.CallFunction(1, "{}"), "closed application")

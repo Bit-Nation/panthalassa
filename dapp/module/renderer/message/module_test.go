@@ -4,29 +4,28 @@ import (
 	"testing"
 
 	log "github.com/op/go-logging"
+	otto "github.com/robertkrimen/otto"
 	require "github.com/stretchr/testify/require"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 func TestModule_RenderMessageError(t *testing.T) {
 
 	l := log.MustGetLogger("")
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	m := New(l)
 	require.Nil(t, m.Register(vm))
-	_, err := vm.PushGlobalGoFunction("callbackTestModuleRenderMessageError", func(context *duktape.Context) int {
-		context.PushString("I am an error")
-		context.Call(1)
-		return 0
-	})
-	require.Nil(t, err)
-	err = vm.PevalString("setMessageRenderer(callbackTestModuleRenderMessageError)")
-	require.Nil(t, err)
 
-	vm.PevalString(`callbackTestModuleRenderMessageError`)
-	_, err = m.RenderMessage(`{}`)
+	vm.Call("setMessageRenderer", vm, func(payload otto.Value, cb otto.Value) otto.Value {
+
+		cb.Call(cb, "I am an error")
+
+		return otto.Value{}
+
+	})
+
+	_, err := m.RenderMessage(`{}`)
 	require.EqualError(t, err, "I am an error")
 
 }
@@ -35,35 +34,28 @@ func TestModule_RenderMessageSuccess(t *testing.T) {
 
 	l := log.MustGetLogger("")
 
-	vm := duktape.New()
+	vm := otto.New()
 
 	m := New(l)
 	require.Nil(t, m.Register(vm))
-	_, err := vm.PushGlobalGoFunction("callbackTestModuleRenderMessageSuccess", func(context *duktape.Context) int {
 
-		if !context.IsObject(0) {
-			panic("callbackTestFuncCallSuccess : 0 is not an object")
-		}
-		if !context.GetPropString(0, "message") {
-			panic("callbackTestFuncCallSuccess : message missing")
+	vm.Call("setMessageRenderer", vm, func(payload otto.Value, cb otto.Value) otto.Value {
+
+		msg, err := payload.Object().Get("message")
+		if err != nil {
+			panic(err)
 		}
 
-		if !context.IsObject(-1) {
+		if !msg.IsObject() {
 			panic("Expected message to be an object")
 		}
 
-		context.Pop()
-		context.PushUndefined()
-		context.PushString(`{}`)
-		context.Call(2)
+		cb.Call(cb, nil, "{}")
 
-		return 0
+		return otto.Value{}
 
 	})
-	require.Nil(t, err)
-	err = vm.PevalString("setMessageRenderer(callbackTestModuleRenderMessageSuccess)")
-	require.Nil(t, err)
-	vm.PevalString(`callbackTestModuleRenderMessageSuccess`)
+
 	layout, err := m.RenderMessage(`{message: {}, context: {}}`)
 	require.Nil(t, err)
 	require.Equal(t, "{}", layout)
@@ -72,19 +64,16 @@ func TestModule_RenderMessageSuccess(t *testing.T) {
 
 func TestModule_Close(t *testing.T) {
 
-	vm := duktape.New()
+	vm := otto.New()
 	m := New(log.MustGetLogger(""))
 	require.Nil(t, m.Register(vm))
 
-	_, err := vm.PushGlobalGoFunction("callbackTestModuleClose", func(context *duktape.Context) int {
+	vm.Call("setMessageRenderer", vm, func(call otto.FunctionCall) otto.Value {
 		m.Close()
-		return 0
+		return otto.Value{}
 	})
-	require.Nil(t, err)
-	err = vm.PevalString(`setMessageRenderer(callbackTestModuleClose)`)
-	require.Nil(t, err)
-	vm.PevalString(`callbackTestModuleClose`)
-	_, err = m.RenderMessage("{}")
+
+	_, err := m.RenderMessage("{}")
 	require.EqualError(t, err, "closed the application")
 
 }

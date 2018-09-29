@@ -14,13 +14,13 @@ import (
 	storm "github.com/asdine/storm"
 	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
+	otto "github.com/robertkrimen/otto"
 )
 
 var sysLog = log.Logger("dapp")
 
 type DApp struct {
-	vm     *duktape.Context
+	vm     *otto.Otto
 	logger *logger.Logger
 	app    *Data
 	// will be called when the app shut down
@@ -34,14 +34,15 @@ type DApp struct {
 
 // close DApp
 func (d *DApp) Close() {
-	defer d.vm.DestroyHeap()
-	d.logger.Info(fmt.Sprintf("shutting down: %s (%s)", hex.EncodeToString(d.app.UsedSigningKey), d.app.Name))
-	for _, mod := range d.vmModules {
-		if err := mod.Close(); err != nil {
-			sysLog.Error(err)
+	d.vm.Interrupt <- func() {
+		d.logger.Info(fmt.Sprintf("shutting down: %s (%s)", hex.EncodeToString(d.app.UsedSigningKey), d.app.Name))
+		for _, mod := range d.vmModules {
+			if err := mod.Close(); err != nil {
+				sysLog.Error(err)
+			}
 		}
+		d.closeChan <- d.app
 	}
-	d.closeChan <- d.app
 }
 
 func (d *DApp) ID() string {
@@ -73,7 +74,8 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 	}
 
 	// create VM
-	vm := duktape.New()
+	vm := otto.New()
+	vm.Interrupt = make(chan func(), 1)
 
 	// register all vm modules
 	for _, m := range vmModules {
@@ -130,8 +132,7 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 
 	// start the DApp async
 	go func() {
-		// Synonymous to vm.Run in Otto
-		err := vm.PevalString(string(app.Code))
+		_, err := vm.Run(app.Code)
 		if err != nil {
 			l.Errorf(err.Error())
 		}
@@ -146,6 +147,7 @@ func New(l *logger.Logger, app *Data, vmModules []module.Module, closer chan<- *
 		}
 		return dApp, nil
 	case <-time.After(timeOut):
+		vm.Interrupt <- func() {}
 		closer <- app
 		return nil, errors.New("timeout - failed to start DApp")
 	}

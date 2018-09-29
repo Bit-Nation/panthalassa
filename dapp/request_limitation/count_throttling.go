@@ -11,13 +11,12 @@ type CountThrottling struct {
 	concurrency uint
 	coolDown    time.Duration
 	// the channel should be called when the function succeed
-	stack          chan func(chan struct{}, chan struct{})
+	stack          chan func(chan struct{})
 	maxQueue       uint
 	queueFullError error
 	currentChan    chan chan uint
 	inWorkChan     chan chan uint
 	decCurrent     chan struct{}
-	vmDone         chan struct{}
 }
 
 var countThrottlingSleep = time.Second
@@ -28,13 +27,12 @@ func NewCountThrottling(concurrency uint, coolDown time.Duration, maxQueue uint,
 	t := &CountThrottling{
 		concurrency:    concurrency,
 		coolDown:       coolDown,
-		stack:          make(chan func(chan struct{}, chan struct{}), maxQueue),
+		stack:          make(chan func(chan struct{}), maxQueue),
 		maxQueue:       maxQueue,
 		queueFullError: queueFullError,
 		currentChan:    make(chan chan uint),
 		inWorkChan:     make(chan chan uint),
 		decCurrent:     make(chan struct{}),
-		vmDone:         make(chan struct{}),
 	}
 
 	// "in work" related channels
@@ -100,7 +98,7 @@ func NewCountThrottling(concurrency uint, coolDown time.Duration, maxQueue uint,
 			case job := <-t.stack:
 				incInWork <- struct{}{}
 				incCurrent <- struct{}{}
-				go job(t.decCurrent, t.vmDone)
+				go job(t.decCurrent)
 				go func() {
 					<-time.After(t.coolDown)
 					decInWork <- struct{}{}
@@ -133,11 +131,10 @@ func (t *CountThrottling) Current() uint {
 	return <-cq
 }
 
-func (t *CountThrottling) Exec(cb func(dec chan struct{}, vmDone chan struct{})) error {
+func (t *CountThrottling) Exec(cb func(dec chan struct{})) error {
 	if len(t.stack) >= int(t.maxQueue) {
 		return t.queueFullError
 	}
 	t.stack <- cb
-	t.vmDone <- struct{}{}
 	return nil
 }

@@ -8,7 +8,7 @@ import (
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
 	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
+	otto "github.com/robertkrimen/otto"
 )
 
 var sysLogger = log.Logger("send eth tx")
@@ -37,104 +37,84 @@ func (m *Module) Close() error {
 	return nil
 }
 
-func (m *Module) Register(vm *duktape.Context) error {
+func (m *Module) Register(vm *otto.Otto) error {
 
 	// send an ethereum transaction
 	// musst be called with an object that holds value, to and data
-	_, err := vm.PushGlobalGoFunction("sendETHTransaction", func(context *duktape.Context) int {
-		var itemsToPopBeforeCallback int
+	return vm.Set("sendETHTransaction", func(call otto.FunctionCall) otto.Value {
+
 		sysLogger.Debug("send eth transaction")
 
 		// validate function call
 		v := validator.New()
 		v.Set(0, &validator.TypeObject)
 		v.Set(1, &validator.TypeFunction)
-		// utils to handle an occurred error
-		handleError := func(errMsg string) int {
-			if context.IsFunction(1) {
-				context.PopN(itemsToPopBeforeCallback)
-				context.PushString(errMsg)
-				context.Call(1)
-				return 0
-			}
-			m.logger.Error(errMsg)
-			return 1
+		if err := v.Validate(vm, call); err != nil {
+			m.logger.Error(err.String())
+			return *err
 		}
 
-		if err := v.Validate(context); err != nil {
-			m.logger.Error(err.Error())
-			return 1
-		}
+		cb := call.Argument(1)
 
 		// validate transaction object
+		obj := call.Argument(0).Object()
 		objVali := validator.NewObjValidator()
 		objVali.Set("value", validator.ObjTypeString, true)
 		objVali.Set("to", validator.ObjTypeAddress, true)
 		objVali.Set("data", validator.ObjTypeString, true)
-		if err := objVali.Validate(vm, 0); err != nil {
-			handleError(err.Error())
-			return 1
+		if err := objVali.Validate(vm, *obj); err != nil {
+			cb.Call(cb, err.String())
+			return otto.Value{}
 		}
+
 		// execute in the context of the throttling
 		// request limitation
-		throttlingFunc := func(vmDone chan struct{}) {
-			defer func() {
-				<-vmDone
-			}()
-			if !context.GetPropString(0, "to") {
-				err := errors.New(`key "to" doesn't exist`)
-				handleError(err.Error())
-				return
-			}
-			to := context.ToString(-1)
-			itemsToPopBeforeCallback++
-			itemsToPopBeforeCallback++
+		m.throttling.Exec(func() {
 
-			if !context.GetPropString(0, "value") {
-				err := errors.New(`key "value" doesn't exist`)
-				handleError(err.Error())
+			to, err := obj.Get("to")
+			if err != nil {
+				if _, err := cb.Call(cb, err.Error()); err != nil {
+					m.logger.Error(err.Error())
+				}
 				return
 			}
-			value := context.ToString(-1)
-			itemsToPopBeforeCallback++
-			itemsToPopBeforeCallback++
 
-			if !context.GetPropString(0, "data") {
-				err := errors.New(`key "data" doesn't exist`)
-				handleError(err.Error())
+			value, err := obj.Get("value")
+			if err != nil {
+				if _, err := cb.Call(cb, err.Error()); err != nil {
+					m.logger.Error(err.Error())
+				}
 				return
 			}
-			data := context.ToString(-1)
-			itemsToPopBeforeCallback++
-			itemsToPopBeforeCallback++
+
+			data, err := obj.Get("data")
+			if err != nil {
+				if _, err := cb.Call(cb, err.Error()); err != nil {
+					m.logger.Error(err.Error())
+				}
+				return
+			}
 
 			// try to sign a transaction
 			tx, err := m.ethApi.SendEthereumTransaction(
-				value,
-				to,
-				data,
+				value.String(),
+				to.String(),
+				data.String(),
 			)
 
 			// exit on error
 			if err != nil {
-				handleError(err.Error())
+				cb.Call(cb, err.Error())
+				return
 			}
 
 			// call callback with transaction
-			// See https://duktape.org/api.html
-			// Each function description includes Stack : (No effect on value stack) or a description of the effect it has on the stack
-			// When we call functions which modify the stack, we need to Pop them in order for things to work as intended
-			context.PopN(itemsToPopBeforeCallback)
-			context.PushUndefined()
-			context.PushString(tx)
-			context.Call(2)
-			return
+			cb.Call(cb, nil, tx)
 
-		}
-		m.throttling.Exec(throttlingFunc)
+		})
 
-		return 0
+		return otto.Value{}
 
 	})
-	return err
+
 }
