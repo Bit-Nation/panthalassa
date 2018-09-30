@@ -8,7 +8,6 @@ import (
 	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
 	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
 	common "github.com/ethereum/go-ethereum/common"
-	types "github.com/ethereum/go-ethereum/core/types"
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
 )
@@ -195,18 +194,16 @@ func (d *DocumentDeleteCall) Handle(data map[string]interface{}) (map[string]int
 }
 
 type DocumentSubmitCall struct {
-	s          *Storage
-	km         *keyManager.KeyManager
-	n          *NotaryMulti
-	notaryAddr common.Address
+	s  *Storage
+	km *keyManager.KeyManager
+	n  *NotaryMulti
 }
 
-func NewDocumentNotariseCall(s *Storage, km *keyManager.KeyManager, n *NotaryMulti, notaryAddr common.Address) *DocumentSubmitCall {
+func NewDocumentNotariseCall(s *Storage, km *keyManager.KeyManager, n *NotaryMulti) *DocumentSubmitCall {
 	return &DocumentSubmitCall{
-		s:          s,
-		km:         km,
-		n:          n,
-		notaryAddr: notaryAddr,
+		s:  s,
+		km: km,
+		n:  n,
 	}
 }
 
@@ -259,12 +256,23 @@ func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]int
 	// attach signature to doc
 	doc.Signature = cidSignature
 
+	ethAddr, err := d.km.GetEthereumAddress()
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// fetch the notary fee
+	notaryFee, err := d.n.NotaryFee(nil)
+	if err != nil {
+		return nil, err
+	}
+
 	// submit tx to chain
 	tx, err := d.n.NotarizeTwo(&bind.TransactOpts{
-		Signer: func(signer types.Signer, addresses common.Address, transaction *types.Transaction) (*types.Transaction, error) {
-			return transaction, nil
-		},
-	}, d.notaryAddr, docContentCID, cidSignature)
+		From:   common.HexToAddress(ethAddr),
+		Signer: d.km.SignEthTx,
+		Value:  notaryFee,
+	}, docContentCID, cidSignature)
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
