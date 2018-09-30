@@ -62,6 +62,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// device api
 	deviceApi := api.New(client)
+	km.Api = deviceApi
 
 	// create p2p network
 	p2pNetwork, err := p2p.New()
@@ -153,28 +154,29 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		return err
 	}
 
-	var notaryMulti common.Address
-	var notary common.Address
-
 	networkID, err := ethClient.NetworkID(context.Background())
 	if err != nil {
 		return err
 	}
 
-	// make sure network is correct
-	if networkID.Int64() != int64(4) {
-		return errors.New("there is only a notary for the rinkeby testnet")
+	var notaryMultiAddr common.Address
+
+	if networkID.Int64() == int64(4) {
+		notaryMultiAddr = common.HexToAddress("0xe4d2032fdda10d4e6f483e2dea6857abc0e3cbf8")
+	} else if networkID.Int64() == int64(1) {
+		notaryMultiAddr = common.HexToAddress("0xb54d5dcbadefe0838b3fb4cae3aa071c553aa297")
+	} else {
+		return errors.New("no notary available for network")
 	}
 
 	// rinkeby addresses
-	notary = common.HexToAddress("0xd75afa5c92cefded2862d2770f6a0929af74067d")
-	notaryMulti = common.HexToAddress("0x00d238247ae4324f952d2c9a297dd5f76ed0e7c0")
+	notaryMultiAddr = common.HexToAddress("0xe4d2032fdda10d4e6f483e2dea6857abc0e3cbf8")
 
-	notaryContract, err := documents.NewNotaryMulti(notaryMulti, ethClient)
+	notaryContract, err := documents.NewNotaryMulti(notaryMultiAddr, ethClient)
 	if err != nil {
 		return err
 	}
-	notariseCall := documents.NewDocumentNotariseCall(docStorage, km, notaryContract, notary)
+	notariseCall := documents.NewDocumentNotariseCall(docStorage, km, notaryContract)
 	if err := dcr.Register(notariseCall); err != nil {
 		return err
 	}
