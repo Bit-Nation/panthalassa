@@ -154,16 +154,19 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		return err
 	}
 
-	var notaryMultiAddr common.Address
-
 	networkID, err := ethClient.NetworkID(context.Background())
 	if err != nil {
 		return err
 	}
 
-	// make sure network is correct
-	if networkID.Int64() != int64(4) {
-		return errors.New("there is only a notary for the rinkeby testnet")
+	var notaryMultiAddr common.Address
+
+	if networkID.Int64() == int64(4) {
+		notaryMultiAddr = common.HexToAddress("0xe4d2032fdda10d4e6f483e2dea6857abc0e3cbf8")
+	} else if networkID.Int64() == int64(1) {
+		notaryMultiAddr = common.HexToAddress("0xb54d5dcbadefe0838b3fb4cae3aa071c553aa297")
+	} else {
+		return errors.New("no notary available for network")
 	}
 
 	// rinkeby addresses
