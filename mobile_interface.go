@@ -170,7 +170,8 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	}
 
 	// rinkeby addresses
-	notaryMultiAddr = common.HexToAddress("0xe4d2032fdda10d4e6f483e2dea6857abc0e3cbf8")
+	// @TODO Figure out if the notaryMultiAddr override of the if conditional above was done on purpose
+	//notaryMultiAddr = common.HexToAddress("0xe4d2032fdda10d4e6f483e2dea6857abc0e3cbf8")
 
 	notaryContract, err := documents.NewNotaryMulti(notaryMultiAddr, ethClient)
 	if err != nil {
