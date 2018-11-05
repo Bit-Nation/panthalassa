@@ -4,7 +4,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
+	"strings"
+
+	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
+	ed25519 "golang.org/x/crypto/ed25519"
 
 	api "github.com/Bit-Nation/panthalassa/api"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
@@ -19,8 +24,6 @@ import (
 	common "github.com/ethereum/go-ethereum/common"
 	types "github.com/ethereum/go-ethereum/core/types"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
-	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
-	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 type KeyManager struct {
@@ -295,23 +298,50 @@ func (km KeyManager) SignEthTx(signer types.Signer, addresses common.Address, tx
 
 	// convert to ethereum hex string
 	numToHex := func(txData map[string]interface{}, toTransform string) (string, error) {
+		// Determine the type of txData
+		switch txData[toTransform].(type) {
+		case json.Number:
+			// If it's a json number then it must be properly formated
+			toTransformInt64, err := txData[toTransform].(json.Number).Int64()
+			if err != nil {
+				return "", err
+			}
+			return "0x" + strconv.FormatInt(toTransformInt64, 16), nil
 
-		gasPriceStr, ok := txData["gasPrice"].(string)
-		if ok {
-			return "", errors.New("gas price must be a string")
-		}
-		gasPrice, err := strconv.Atoi(gasPriceStr)
-		if err != nil {
-			return "", err
-		}
+		case string:
+			// We need to differentiate for example gasLimit:203508 which is also a string and hash:0x76e1139e7dae7e9cd3dede29a111405dceff8b74722e5ec9b0dbc179e258dfd0
+			txDataShard := txData[toTransform].(string)
 
-		return "0x" + strconv.FormatInt(int64(gasPrice), 16), nil
+			// If the string starts with 0x0 and is not representing 0
+			if strings.HasPrefix(txDataShard, "0x0") && len(txDataShard) > 3 {
+				// Remove the leading zero to avoid unmarshalling issues json: cannot unmarshal hex number with leading zero digits into Go value of type *hexutil.Big
+				// This doesn't corrupt the signature as removing the leading zero as outlined below, still makes the hex number resolve into the same big int
+				// 0x044238ae18e64a4ffa2828dad4fa7c516845461b85bdec53f697067567f39b2d
+				// 0x44238ae18e64a4ffa2828dad4fa7c516845461b85bdec53f697067567f39b2d
+				txDataShard = strings.Replace(txDataShard, "0x0", "0x", 1)
+			}
 
-	}
+			// If the string starts with 0x it likely doesn't need any future modification
+			if strings.HasPrefix(txDataShard, "0x") {
+				return txDataShard, nil
+			}
+
+			// If it doesn't start with 0x we try to convert it into integer which will be formated properly
+			txDataShardInt, err := strconv.Atoi(txDataShard)
+			if err != nil {
+				return "", errors.New("[keyManager.go] " + toTransform + " " + err.Error())
+			}
+			return "0x" + strconv.FormatInt(int64(txDataShardInt), 16), nil
+
+		} // switch txData[toTransform].(type)
+		return "", errors.New("[keyManager.go] " + toTransform + " " + "is of invalid type " + fmt.Sprintf("%T", txData[toTransform]))
+	} // numToHex
 
 	// unmarshal tx
 	var txMap map[string]interface{}
-	if err := json.Unmarshal([]byte(submittedTx), &txMap); err != nil {
+	jsonDecoder := json.NewDecoder(strings.NewReader(submittedTx))
+	jsonDecoder.UseNumber()
+	if err := jsonDecoder.Decode(&txMap); err != nil {
 		return nil, err
 	}
 
@@ -333,8 +363,19 @@ func (km KeyManager) SignEthTx(signer types.Signer, addresses common.Address, tx
 		return nil, err
 	}
 
+	txMap["gasLimit"], err = numToHex(txMap, "gasLimit")
+	if err != nil {
+		return nil, err
+	}
+
 	// convert value
 	txMap["value"], err = numToHex(txMap, "value")
+	if err != nil {
+		return nil, err
+	}
+
+	// convert chainId
+	txMap["chainId"], err = numToHex(txMap, "chainId")
 	if err != nil {
 		return nil, err
 	}
