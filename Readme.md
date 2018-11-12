@@ -50,7 +50,7 @@ However, you don't need to pay attention to it, since you just have to use the m
 
 ## Maintainers
 
-[@florianlenz](https://github.com/florianlenz)
+[@borjantrajanoski](https://github.com/borjantrajanoski)
 
 ## Contribute
 
@@ -60,4 +60,4 @@ Small note: If editing the README, please conform to the [standard-readme](https
 
 ## License
 
-MIT © 2018 florian@bitnation.co
+MIT © 2018 BITNATION
