@@ -73,9 +73,9 @@ func (a *DAppApi) SendEthereumTransaction(value, to, data string) (string, error
 		"v":        ethTx.V,
 		"r":        ethTx.R,
 		"s":        ethTx.S,
-		"chainId":  ethTx.ChainID,
 		"from":     ethTx.From,
 		"hash":     ethTx.Hash,
+		"chainId":  ethTx.ChainID,
 	}
 
 	raw, err := json.Marshal(objTx)

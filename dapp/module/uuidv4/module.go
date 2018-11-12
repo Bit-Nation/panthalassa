@@ -1,12 +1,11 @@
 package uuidv4
 
 import (
-	log "github.com/ipfs/go-log"
-
 	validator "github.com/Bit-Nation/panthalassa/dapp/validator"
+	log "github.com/ipfs/go-log"
 	logger "github.com/op/go-logging"
+	otto "github.com/robertkrimen/otto"
 	uuid "github.com/satori/go.uuid"
-	duktape "gopkg.in/olebedev/go-duktape.v3"
 )
 
 var newUuid = uuid.NewV4
@@ -29,37 +28,42 @@ func (r *UUIDV4) Close() error {
 	return nil
 }
 
-func (r *UUIDV4) Register(vm *duktape.Context) error {
+func (r *UUIDV4) Register(vm *otto.Otto) error {
 
-	_, err := vm.PushGlobalGoFunction("uuidV4", func(context *duktape.Context) int {
+	return vm.Set("uuidV4", func(call otto.FunctionCall) otto.Value {
 
 		sysLogger.Debug("generate uuidv4")
 
 		// validate function call
 		v := validator.New()
 		v.Set(0, &validator.TypeFunction)
-		if err := v.Validate(context); err != nil {
-			//vm.Run(`throw new Error("uuidV4 expects an callback as it's parameter")`)
-			return 1
+		if err := v.Validate(vm, call); err != nil {
+			vm.Run(`throw new Error("uuidV4 expects an callback as it's parameter")`)
+			return otto.Value{}
 		}
+
+		cb := call.Argument(0)
 
 		// create uuid
 		id, err := newUuid()
+
 		// call callback with error
 		if err != nil {
-			context.PushString(err.Error())
-			context.PushUndefined()
-			context.Call(2)
-			return 1
+			_, err = cb.Call(call.This, err.Error())
+			if err != nil {
+				r.logger.Error(err.Error())
+			}
+			return otto.Value{}
 		}
 
 		// call callback with uuid
-		context.PushUndefined()
-		context.PushString(id.String())
-		context.Call(2)
+		_, err = cb.Call(call.This, nil, id.String())
+		if err != nil {
+			r.logger.Error(err.Error())
+		}
 
-		return 0
+		return otto.Value{}
 
 	})
-	return err
+
 }

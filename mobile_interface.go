@@ -1,6 +1,7 @@
 package panthalassa
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -22,11 +23,13 @@ import (
 	profile "github.com/Bit-Nation/panthalassa/profile"
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
-	"github.com/asdine/storm"
-	bolt "github.com/coreos/bbolt"
+	storm "github.com/asdine/storm"
+	common "github.com/ethereum/go-ethereum/common"
+	ethclient "github.com/ethereum/go-ethereum/ethclient"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
+	bolt "go.etcd.io/bbolt"
 )
 
 var panthalassaInstance *Panthalassa
@@ -59,6 +62,7 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 
 	// device api
 	deviceApi := api.New(client)
+	km.Api = deviceApi
 
 	// create p2p network
 	p2pNetwork, err := p2p.New()
@@ -139,10 +143,42 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 	// dyncall registry
 	dcr := dyncall.New()
 
-	if err := RegisterDocumentCalls(dcr, dbInstance, km); err != nil {
+	// register document related calls
+	docStorage := documents.NewStorage(dbInstance, km)
+	if err := RegisterDocumentCalls(dcr, docStorage, km); err != nil {
 		return err
 	}
 
+	ethClient, err := ethclient.Dial(config.EthWsEndpoint)
+	if err != nil {
+		return err
+	}
+
+	var notaryMultiAddr common.Address
+
+	networkID, err := ethClient.NetworkID(context.Background())
+	if err != nil {
+		return err
+	}
+
+	// make sure network is correct
+	if networkID.Int64() != int64(4) {
+		return errors.New("there is only a notary for the rinkeby testnet")
+	}
+
+	// rinkeby addresses
+	notaryMultiAddr = common.HexToAddress("0xe4d2032fdda10d4e6f483e2dea6857abc0e3cbf8")
+
+	notaryContract, err := documents.NewNotaryMulti(notaryMultiAddr, ethClient)
+	if err != nil {
+		return err
+	}
+	notariseCall := documents.NewDocumentNotariseCall(docStorage, km, notaryContract)
+	if err := dcr.Register(notariseCall); err != nil {
+		return err
+	}
+
+	// register contract calls
 	if err := RegisterContactCalls(dcr, dbInstance); err != nil {
 		return err
 	}
@@ -158,13 +194,13 @@ func start(dbDir string, km *keyManager.KeyManager, config StartConfig, client, 
 		db:          dbInstance,
 		dAppStorage: dAppStorage,
 		dyncall:     dcr,
+		chatDB:      chatStorage,
 	}
 
 	return nil
 }
 
-func RegisterDocumentCalls(dcr *dyncall.Registry, dbInstance *storm.DB, km *keyManager.KeyManager) error {
-	docStorage := documents.NewStorage(dbInstance, km)
+func RegisterDocumentCalls(dcr *dyncall.Registry, docStorage *documents.Storage, km *keyManager.KeyManager) error {
 
 	// register document all call
 	allCall := documents.NewDocumentAllCall(docStorage)

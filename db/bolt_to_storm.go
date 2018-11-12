@@ -11,8 +11,8 @@ import (
 	queue "github.com/Bit-Nation/panthalassa/queue"
 	x3dh "github.com/Bit-Nation/x3dh"
 	storm "github.com/asdine/storm"
-	bolt "github.com/coreos/bbolt"
 	dr "github.com/tiabc/doubleratchet"
+	bolt "go.etcd.io/bbolt"
 )
 
 type BoltToStormMigration struct {
@@ -289,11 +289,12 @@ func (m *BoltToStormMigration) Migrate(db *storm.DB) error {
 
 		return chats.ForEach(func(partner, _ []byte) error {
 
-			if err := chatDB.CreateChat(partner); err != nil {
+			_, err := chatDB.CreateChat(partner)
+			if err != nil {
 				return err
 			}
 
-			chat, err := chatDB.GetChat(partner)
+			chat, err := chatDB.GetChatByPartner(partner)
 			if err != nil {
 				return err
 			}

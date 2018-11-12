@@ -4,7 +4,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"strconv"
 
+	api "github.com/Bit-Nation/panthalassa/api"
 	aes "github.com/Bit-Nation/panthalassa/crypto/aes"
 	scrypt "github.com/Bit-Nation/panthalassa/crypto/scrypt"
 	ks "github.com/Bit-Nation/panthalassa/keyStore"
@@ -14,6 +16,8 @@ import (
 	identity "github.com/Bit-Nation/panthalassa/keyStore/migration/identity"
 	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
 	x3dh "github.com/Bit-Nation/x3dh"
+	common "github.com/ethereum/go-ethereum/common"
+	types "github.com/ethereum/go-ethereum/core/types"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	lp2pCrypto "github.com/libp2p/go-libp2p-crypto"
 	ed25519 "golang.org/x/crypto/ed25519"
@@ -22,6 +26,7 @@ import (
 type KeyManager struct {
 	keyStore ks.Store
 	account  Store
+	Api      *api.API
 }
 
 type Store struct {
@@ -275,6 +280,98 @@ func (km KeyManager) AESEncrypt(plainText aes.PlainText) (aes.CipherText, error)
 	}
 
 	return aes.CTREncrypt(plainText, aesSecret)
+}
+
+func (km KeyManager) SignEthTx(signer types.Signer, addresses common.Address, tx *types.Transaction) (*types.Transaction, error) {
+
+	submittedTx, err := km.Api.SendEthereumTransaction(
+		tx.Value().String(),
+		tx.To().String(),
+		hex.EncodeToString(tx.Data()),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// convert to ethereum hex string
+	numToHex := func(txData map[string]interface{}, toTransform string) (string, error) {
+
+		gasPriceStr, ok := txData["gasPrice"].(string)
+		if ok {
+			return "", errors.New("gas price must be a string")
+		}
+		gasPrice, err := strconv.Atoi(gasPriceStr)
+		if err != nil {
+			return "", err
+		}
+
+		return "0x" + strconv.FormatInt(int64(gasPrice), 16), nil
+
+	}
+
+	// unmarshal tx
+	var txMap map[string]interface{}
+	if err := json.Unmarshal([]byte(submittedTx), &txMap); err != nil {
+		return nil, err
+	}
+
+	// convert nonce
+	txMap["nonce"], err = numToHex(txMap, "nonce")
+	if err != nil {
+		return nil, err
+	}
+
+	// convert gas price
+	txMap["gasPrice"], err = numToHex(txMap, "gasPrice")
+	if err != nil {
+		return nil, err
+	}
+
+	// convert gas
+	txMap["gas"], err = numToHex(txMap, "gasLimit")
+	if err != nil {
+		return nil, err
+	}
+
+	// convert value
+	txMap["value"], err = numToHex(txMap, "value")
+	if err != nil {
+		return nil, err
+	}
+
+	// map input
+	txMap["input"] = txMap["data"]
+
+	// convert signature v
+	txMap["v"], err = numToHex(txMap, "v")
+	if err != nil {
+		return nil, err
+	}
+
+	// convert signature r
+	txMap["r"], err = numToHex(txMap, "r")
+	if err != nil {
+		return nil, err
+	}
+
+	// convert signature s
+	txMap["s"], err = numToHex(txMap, "s")
+	if err != nil {
+		return nil, err
+	}
+
+	// turn mutated transaction into encoded json
+	txJson, err := json.Marshal(txMap)
+	if err != nil {
+		return nil, err
+	}
+
+	signedTx := &types.Transaction{}
+	if err := signedTx.UnmarshalJSON(txJson); err != nil {
+		return nil, err
+	}
+
+	return signedTx, nil
 }
 
 func (km KeyManager) ChatIdKeyPair() (x3dh.KeyPair, error) {

@@ -1,13 +1,14 @@
 package db
 
 import (
-	km "github.com/Bit-Nation/panthalassa/keyManager"
-	ks "github.com/Bit-Nation/panthalassa/keyStore"
-	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
-	bolt "github.com/coreos/bbolt"
 	"os"
 	"path/filepath"
 	"time"
+
+	km "github.com/Bit-Nation/panthalassa/keyManager"
+	ks "github.com/Bit-Nation/panthalassa/keyStore"
+	mnemonic "github.com/Bit-Nation/panthalassa/mnemonic"
+	bolt "go.etcd.io/bbolt"
 )
 
 func createKeyManager() *km.KeyManager {
