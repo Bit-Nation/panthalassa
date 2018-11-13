@@ -13,7 +13,7 @@ import (
 	"time"
 
 	storm "github.com/asdine/storm"
-	bolt "github.com/coreos/bbolt"
+	bolt "go.etcd.io/bbolt"
 )
 
 type Migration interface {

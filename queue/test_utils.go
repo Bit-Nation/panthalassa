@@ -7,7 +7,8 @@ import (
 
 	"crypto/rand"
 	"encoding/hex"
-	bolt "github.com/coreos/bbolt"
+
+	bolt "go.etcd.io/bbolt"
 )
 
 type testProcessor struct {

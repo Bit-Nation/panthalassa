@@ -2,12 +2,10 @@ package chat
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"sync"
-
 	"strconv"
+	"sync"
 
 	preKey "github.com/Bit-Nation/panthalassa/chat/prekey"
 	db "github.com/Bit-Nation/panthalassa/db"
@@ -118,7 +116,7 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 		err := c.queue.AddJob(queue.Job{
 			Type: "MESSAGE:SUBMIT",
 			Data: map[string]interface{}{
-				"partner":       e.Chat.Partner,
+				"chat_id":       e.Chat.ID,
 				"db_message_id": e.Message.UniqueMsgID,
 			},
 		})
@@ -142,9 +140,10 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"db_id":      strconv.FormatInt(e.Message.UniqueMsgID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"chat":       hex.EncodeToString(e.Chat.Partner),
+			"chat":       e.Chat.ID,
 			"received":   e.Message.Received,
 			"dapp":       dapp,
+			"sender":     e.Message.Sender,
 		})
 	}
 
@@ -153,9 +152,10 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"db_id":      strconv.FormatInt(e.Message.UniqueMsgID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"chat":       hex.EncodeToString(e.Chat.Partner),
+			"chat":       e.Chat.ID,
 			"received":   e.Message.Received,
 			"dapp":       dapp,
+			"sender":     e.Message.Sender,
 		})
 	}
 
@@ -164,9 +164,10 @@ func (c *Chat) handlePersistedMessage(e db.MessagePersistedEvent) {
 			"db_id":      strconv.FormatInt(e.Message.UniqueMsgID, 10),
 			"content":    string(e.Message.Message),
 			"created_at": e.Message.CreatedAt,
-			"chat":       hex.EncodeToString(e.Chat.Partner),
+			"chat":       e.Chat.ID,
 			"received":   e.Message.Received,
 			"dapp":       dapp,
+			"sender":     e.Message.Sender,
 		})
 	}
 

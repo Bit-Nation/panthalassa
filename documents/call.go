@@ -4,6 +4,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"time"
+
+	keyManager "github.com/Bit-Nation/panthalassa/keyManager"
+	bind "github.com/ethereum/go-ethereum/accounts/abi/bind"
+	common "github.com/ethereum/go-ethereum/common"
+	cid "github.com/ipfs/go-cid"
+	mh "github.com/multiformats/go-multihash"
 )
 
 type DocumentCreateCall struct {
@@ -97,6 +103,9 @@ func (c *DocumentAllCall) Handle(data map[string]interface{}) (map[string]interf
 			"mime_type":   d.MimeType,
 			"description": d.Description,
 			"title":       d.Title,
+			"hash":        d.CID,
+			"signature":   d.Signature,
+			"tx_hash":     d.TransactionHash,
 		})
 	}
 	return map[string]interface{}{
@@ -181,5 +190,95 @@ func (d *DocumentDeleteCall) Handle(data map[string]interface{}) (map[string]int
 	}
 
 	return map[string]interface{}{}, d.s.db.DeleteStruct(&doc)
+
+}
+
+type DocumentSubmitCall struct {
+	s  *Storage
+	km *keyManager.KeyManager
+	n  *NotaryMulti
+}
+
+func NewDocumentNotariseCall(s *Storage, km *keyManager.KeyManager, n *NotaryMulti) *DocumentSubmitCall {
+	return &DocumentSubmitCall{
+		s:  s,
+		km: km,
+		n:  n,
+	}
+}
+
+func (d *DocumentSubmitCall) CallID() string {
+	return "DOCUMENT:NOTARISE"
+}
+
+func (d *DocumentSubmitCall) Validate(map[string]interface{}) error {
+	return nil
+}
+
+func (d *DocumentSubmitCall) Handle(data map[string]interface{}) (map[string]interface{}, error) {
+
+	docID, k := data["doc_id"].(float64)
+	if !k {
+		return map[string]interface{}{}, errors.New("expect doc_id to be an integer")
+	}
+
+	var doc Document
+	if err := d.s.db.One("ID", int(docID), &doc); err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// decrypt document content
+	docContent, err := d.km.AESDecrypt(doc.EncryptedContent)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// assign plain document content
+	doc.Content = docContent
+
+	// hash document
+	docHash, err := mh.Sum(doc.Content, mh.SHA2_256, -1)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	docContentCID := cid.NewCidV1(cid.Raw, docHash).Bytes()
+
+	// attach cid to document
+	doc.CID = docContentCID
+
+	// sign cid
+	cidSignature, err := d.km.IdentitySign(docContentCID)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// attach signature to doc
+	doc.Signature = cidSignature
+
+	ethAddr, err := d.km.GetEthereumAddress()
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	// fetch the notary fee
+	notaryFee, err := d.n.NotaryFee(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// submit tx to chain
+	tx, err := d.n.NotarizeTwo(&bind.TransactOpts{
+		From:   common.HexToAddress(ethAddr),
+		Signer: d.km.SignEthTx,
+		Value:  notaryFee,
+	}, docContentCID, cidSignature)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	doc.TransactionHash = tx.Hash().Hex()
+
+	return map[string]interface{}{}, d.s.Save(&doc)
 
 }
