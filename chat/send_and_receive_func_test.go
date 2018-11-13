@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	ed25519 "golang.org/x/crypto/ed25519"
+
 	backend "github.com/Bit-Nation/panthalassa/backend"
 	db "github.com/Bit-Nation/panthalassa/db"
 	profile "github.com/Bit-Nation/panthalassa/profile"
@@ -12,7 +14,6 @@ import (
 	uiapi "github.com/Bit-Nation/panthalassa/uiapi"
 	bpb "github.com/Bit-Nation/protobuffers"
 	require "github.com/stretchr/testify/require"
-	ed25519 "golang.org/x/crypto/ed25519"
 )
 
 type chatTestBackendTransport struct {
@@ -470,7 +471,7 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 				// make sure message is as we expect it to be
 				require.Equal(t, "Greeting @all", string(msg.Message))
-				require.Equal(t, "Group between alice and bob", msgEv.Chat.Name)
+				require.Equal(t, "Group between alice and bob", msgEv.Chat.GroupChatName)
 				require.Equal(t, hex.EncodeToString(bobIDKey), hex.EncodeToString(msg.Sender))
 				require.Equal(t, uint(1), msg.Version)
 				require.Equal(t, db.StatusPersisted, msg.Status)
@@ -501,7 +502,7 @@ func TestGroupChatBetweenAliceAndBob(t *testing.T) {
 
 				// make sure the messages is as we expect it to be
 				require.Equal(t, "hi @all", string(msg.Message))
-				require.Equal(t, "Group between alice and bob", msgEv.Chat.Name)
+				require.Equal(t, "Group between alice and bob", msgEv.Chat.GroupChatName)
 				require.True(t, msg.Received)
 				require.Equal(t, db.StatusPersisted, msg.Status)
 				require.Equal(t, uint(1), msg.Version)

@@ -93,7 +93,7 @@ func TestAPI_SendEthereumTransaction(t *testing.T) {
 				To:       tx.To,
 				Value:    tx.Value,
 				Data:     tx.Data,
-				V:        "v_of_tx",
+				V:        23,
 				R:        "r_of_tx",
 				S:        "s_of_tx",
 				ChainID:  4,
@@ -113,5 +113,5 @@ func TestAPI_SendEthereumTransaction(t *testing.T) {
 
 	resp, err := api.SendEthereumTransaction("100", "0x1f75bb626ad018f3354259b10ab2e74bc0e0f267", "0xf3")
 	require.Nil(t, err)
-	require.Equal(t, `{"chainId":4,"data":"0xf3","from":"my_address","gasLimit":"100000000000","gasPrice":"1000000000","hash":"tx-hash","nonce":3,"r":"r_of_tx","s":"s_of_tx","to":"0x1f75bb626ad018f3354259b10ab2e74bc0e0f267","v":"v_of_tx","value":"100"}`, resp)
+	require.Equal(t, `{"chainId":4,"data":"0xf3","from":"my_address","gasLimit":"100000000000","gasPrice":"1000000000","hash":"tx-hash","nonce":3,"r":"r_of_tx","s":"s_of_tx","to":"0x1f75bb626ad018f3354259b10ab2e74bc0e0f267","v":23,"value":"100"}`, resp)
 }
