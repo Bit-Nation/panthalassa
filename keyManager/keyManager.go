@@ -327,11 +327,11 @@ func (km KeyManager) SignEthTx(signer types.Signer, addresses common.Address, tx
 			}
 
 			// If it doesn't start with 0x we try to convert it into integer which will be formated properly
-			txDataShardInt, err := strconv.Atoi(txDataShard)
+			txDataShardInt64, err := strconv.ParseInt(txDataShard, 10, 64)
 			if err != nil {
 				return "", errors.New("[keyManager.go] " + toTransform + " " + err.Error())
 			}
-			return "0x" + strconv.FormatInt(int64(txDataShardInt), 16), nil
+			return "0x" + strconv.FormatInt(txDataShardInt64, 16), nil
 
 		} // switch txData[toTransform].(type)
 		return "", errors.New("[keyManager.go] " + toTransform + " " + "is of invalid type " + fmt.Sprintf("%T", txData[toTransform]))
