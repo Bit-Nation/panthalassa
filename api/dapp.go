@@ -59,7 +59,7 @@ func (a *DAppApi) SendEthereumTransaction(value, to, data string) (string, error
 
 	ethTx := resp.Msg.SendEthereumTransaction
 	if ethTx == nil {
-		resp.Closer <- errors.New("got nil ethTx response")
+		resp.Closer <- nil
 		return "", errors.New("got nil ethTx response")
 	}
 
