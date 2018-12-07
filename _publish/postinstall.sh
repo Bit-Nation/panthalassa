@@ -7,5 +7,5 @@ pwd
 PACKAGE_VERSION=$1
 
 echo "Downloading Panthalassa Binary Release ${PACKAGE_VERSION}"
-curl "https://github.com/Bit-Nation/panthalassa/releases/download/${PACKAGE_VERSION}/panthalassa-binaries-${PACKAGE_VERSION}.zip" -o panthalassa.zip
+curl -L "https://github.com/Bit-Nation/panthalassa/releases/download/${PACKAGE_VERSION}/panthalassa-binaries-${PACKAGE_VERSION}.zip" -o panthalassa.zip
 unzip panthalassa.zip
