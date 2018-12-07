@@ -24,8 +24,8 @@ If you find a bug / vulnerability please DO NOT open an issue. Write to `securit
 
 ## Background
 [Pangea](https://github.com/Bit-Nation/BITNATION-Pangea-mobile) is the mobile interface to our blockchain jurisdiction. While smart contract's are "onchain" (on a blockchain like Ethereum) communication happens offchain.
-Since current chat systems like WhatsApp and Telegram are hevaly centralized, we are using a p2p system to send messages between peers so that bitnaiton doesn't become a central point of failure.
-We are using [libp2p](https://github.com/libp2p) for the p2p network, which is a great project.
+Since current chat systems like WhatsApp and Telegram are hevaly centralized, we are using a p2p system to send messages between peers to avoid Bitnaiton becoming a central point of failure.
+We are using [libp2p](https://github.com/libp2p) developed by Protocol Laboratories for the p2p network.
 
 ## Install
 
