@@ -1,5 +1,5 @@
 {
-  "name": "testpackage-panthalassa",
+  "name": "panthalassa",
   "version": "0.0.0",
   "description": "",
   "scripts": {
@@ -7,6 +7,7 @@
     "postinstall": "./postinstall.sh $npm_package_version"
   },
   "author": "Bitnation",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {"url": "https://github.com/Bit-Nation/panthalassa"}
 }
   
