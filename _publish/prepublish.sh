@@ -9,7 +9,7 @@ set -x
 NPM_PACKAGE_NAME=panthalassa
 
 echo "Exit if the 'production' branch does not contain this tag."
-git merge-base --is-ancestor $BITRISE_GIT_TAG production
+git merge-base --is-ancestor $BITRISE_GIT_TAG origin/production
 
 echo "Exit if package already exists on npm:"
 ! npm show $NPM_PACKAGE_NAME@* version | grep $BITRISE_GIT_TAG
