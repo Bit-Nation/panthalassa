@@ -16,8 +16,8 @@ echo "Exit if package already exists on npm:"
 
 echo "Exit if package doesn't exist on the web:"
 github_download_status=$(curl --head --silent https://github.com/Bit-Nation/panthalassa/releases/download/${BITRISE_GIT_TAG}/panthalassa-binaries-${BITRISE_GIT_TAG}.zip | head -n 1)
-if ! echo "$github_download_status" | grep -q 200
+if ! echo "$github_download_status" | grep -q 302
 then
   echo "Published release not found on Github. Aborting. Status code: ${github_download_status}"
-  return 1
+  exit 1
 fi
